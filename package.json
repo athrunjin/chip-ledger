@@ -1,0 +1,25 @@
+{
+  "name": "holdem-assistant",
+  "private": true,
+  "description": "线下德州扑克组局助手 —— 买入记账、结算、保险、抽水、计时与玩家报告",
+  "author": "Cheng Jin",
+  "license": "UNLICENSED",
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @holdem/web dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.3",
+    "typescript": "7.0.2"
+  }
+}
