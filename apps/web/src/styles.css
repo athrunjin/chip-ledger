@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+/*
+ * 设计令牌
+ * 牌桌绒布绿做底色，筹码边缘的金色做唯一强调色。
+ * 默认跟随系统深浅色；线下牌局多在室内夜间，深色是主要场景。
+ */
+@theme {
+  --font-sans:
+    "Archivo Variable", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei",
+    system-ui, sans-serif;
+
+  --color-felt-950: #0e1b16;
+  --color-felt-900: #13241e;
+  --color-felt-800: #1a3129;
+  --color-felt-700: #1d5c47;
+  --color-felt-500: #3f9a78;
+  --color-felt-100: #e3ebe6;
+  --color-felt-50: #f2f5f2;
+  --color-bone: #f3efe2;
+  --color-chip-gold: #d6b04c;
+  --color-chip-gold-deep: #9a7a22;
+}
+
+:root {
+  --bg: var(--color-felt-50);
+  --surface: #ffffff;
+  --text: #15211c;
+  --muted: #5b6b64;
+  --line: #d3ddd7;
+  --accent: var(--color-felt-700);
+  --accent-text: var(--color-bone);
+  --highlight: var(--color-chip-gold-deep);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: var(--color-felt-950);
+    --surface: var(--color-felt-900);
+    --text: #e7ede9;
+    --muted: #93a59d;
+    --line: #26413a;
+    --accent: var(--color-felt-500);
+    --accent-text: var(--color-felt-950);
+    --highlight: var(--color-chip-gold);
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-text: var(--accent-text);
+  --color-highlight: var(--highlight);
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-bg font-sans text-text antialiased;
+    /* 金额统一用等宽数字，列对齐，跳动时不抖 */
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--highlight);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      /* biome-ignore lint/complexity/noImportantStyles: 必须压过所有组件动画，尊重"减少动态效果"系统设置 */
+      animation-duration: 0.01ms !important;
+      /* biome-ignore lint/complexity/noImportantStyles: 同上 */
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
