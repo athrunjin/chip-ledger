@@ -25,7 +25,7 @@ function MePage() {
           <InDevelopment milestone="M6" />
         </div>
       </section>
-      <p className="mt-6 text-center text-xs text-muted">德州助手 · 开发版 {__APP_VERSION__}</p>
+      <p className="mt-6 text-center text-xs text-muted">德州之王 · 开发版 {__APP_VERSION__}</p>
     </Page>
   );
 }
