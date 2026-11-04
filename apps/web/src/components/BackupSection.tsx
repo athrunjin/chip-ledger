@@ -21,17 +21,20 @@ export function BackupSection() {
   const fileInput = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<Status>();
+  // 提前读好数据：系统分享必须由点击直接触发，点击后再读数据库，iOS 可能拒绝分享
+  const [backup, setBackup] = useState(() => repository.backup.exportAll());
 
   async function handleExport() {
     setBusy(true);
     setStatus(undefined);
     try {
       const now = new Date();
-      const text = serializeBackup(await repository.backup.exportAll(), now.getTime());
+      const text = serializeBackup(await backup, now.getTime());
       const day = [now.getFullYear(), now.getMonth() + 1, now.getDate()].join("-");
       await shareFile(new Blob([text], { type: "application/json" }), `德州之王备份-${day}.json`);
-    } catch {
-      setStatus({ tone: "error", text: "导出失败，请重试。" });
+    } catch (error) {
+      const reason = error instanceof Error ? `（${error.name}）` : "";
+      setStatus({ tone: "error", text: `导出失败${reason}，请重试。` });
     } finally {
       setBusy(false);
     }
@@ -57,6 +60,7 @@ export function BackupSection() {
       }
       const result = await repository.backup.restore(parsed.data);
       await queryClient.invalidateQueries();
+      setBackup(repository.backup.exportAll());
       setStatus({ tone: "ok", text: restoreSummary(result) });
     } catch (error) {
       setStatus({

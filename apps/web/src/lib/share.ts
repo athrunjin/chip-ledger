@@ -4,12 +4,12 @@ export async function shareFile(blob: Blob, fileName: string) {
   if (navigator.canShare?.({ files: [file] })) {
     try {
       await navigator.share({ files: [file] });
+      return;
     } catch (error) {
       // 用户取消分享不算失败
       if (error instanceof DOMException && error.name === "AbortError") return;
-      throw error;
+      // 其他失败（例如 iOS 判定不是用户手势触发）改走下载
     }
-    return;
   }
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
