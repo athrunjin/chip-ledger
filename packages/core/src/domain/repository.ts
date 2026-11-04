@@ -30,6 +30,8 @@ export interface LedgerRepository {
   listByGame(gameId: string): Promise<LedgerEvent[]>;
   /** 事件 ID 已存在时失败，已有记录不会被覆盖。 */
   append(event: LedgerEvent): Promise<void>;
+  /** 一次追加多条：全部成功或全部不写入。 */
+  appendAll(events: readonly LedgerEvent[]): Promise<void>;
 }
 
 /** 这位组织者的全部数据。 */

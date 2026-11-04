@@ -14,6 +14,7 @@
 | [0007](0007-domain-model-and-repository.md) | 领域模型和数据仓库接口放在 core，Dexie 实现放在 apps/web | 已采纳 |
 | [0008](0008-pinyin-initials.md) | 用 pinyin-pro 在应用层生成拼音首字母 | 已采纳 |
 | [0009](0009-backup-format.md) | JSON 备份用版本化格式，恢复时只新增不覆盖 | 已采纳 |
+| [0010](0010-buy-in-hands.md) | 按手买入：牌局固定 1 手的筹码数，账本继续记录筹码 | 已采纳 |
 
 ## 模板
 

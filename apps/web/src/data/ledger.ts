@@ -1,4 +1,4 @@
-import type { LedgerEvent } from "@holdem/core";
+import { adjustHands, type HandChange, type LedgerEvent } from "@holdem/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { GUEST_ORGANIZER_ID, repository } from ".";
@@ -12,6 +12,11 @@ export function newEventMeta(gameId: string) {
   };
 }
 
+/** 同一局的写入排队执行，连点时每次都基于上一次的结果。 */
+function ledgerScope(gameId: string) {
+  return { id: `ledger-${gameId}` };
+}
+
 export function useLedger(gameId: string) {
   return useQuery({
     queryKey: ["ledger", gameId, "events"],
@@ -22,7 +27,36 @@ export function useLedger(gameId: string) {
 export function useAppendEvent(gameId: string) {
   const queryClient = useQueryClient();
   return useMutation({
+    scope: ledgerScope(gameId),
     mutationFn: (event: LedgerEvent) => repository.ledger.append(event),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ledger", gameId] }),
+  });
+}
+
+interface HandsInput {
+  readonly playerId: string;
+  readonly handChips: number;
+  readonly change: HandChange;
+}
+
+export function useAdjustHands(gameId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    scope: ledgerScope(gameId),
+    mutationFn: async ({ playerId, handChips, change }: HandsInput) => {
+      const events = await repository.ledger.listByGame(gameId);
+      const { reversedEventIds, buy } = adjustHands(events, playerId, handChips, change);
+      await repository.ledger.appendAll([
+        ...reversedEventIds.map(
+          (reversedEventId): LedgerEvent => ({
+            ...newEventMeta(gameId),
+            type: "reversal",
+            reversedEventId,
+          }),
+        ),
+        ...(buy ? [{ ...newEventMeta(gameId), ...buy, playerId }] : []),
+      ]);
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ledger", gameId] }),
   });
 }

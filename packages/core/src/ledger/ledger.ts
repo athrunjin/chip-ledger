@@ -74,6 +74,51 @@ export function lastBuyChips(events: readonly LedgerEvent[]): number | undefined
   return activeChipEvents(events).findLast((e) => e.type !== "cash_out")?.chips;
 }
 
+/** 手数变化：`by` 在现有基础上加减，`to` 直接改成目标手数。 */
+export type HandChange = { readonly by: number } | { readonly to: number };
+
+/** 账本只追加，调整手数要拆成冲正和一笔新的买入。 */
+export interface HandAdjustment {
+  readonly reversedEventIds: readonly string[];
+  readonly buy?: { readonly type: "buy_in" | "rebuy"; readonly chips: number };
+}
+
+/**
+ * 算出把玩家调整到目标手数要追加哪些事件。最少保留 1 手。
+ *
+ * 增加时记一笔差额。减少时从最近的买入往回冲正，冲过头的部分再记一笔补回来。
+ */
+export function adjustHands(
+  events: readonly LedgerEvent[],
+  playerId: string,
+  handChips: number,
+  change: HandChange,
+): HandAdjustment {
+  const buys = activeChipEvents(events).filter(
+    (e) => e.playerId === playerId && e.type !== "cash_out",
+  );
+  const bought = buys.reduce((total, e) => total + e.chips, 0);
+  const requested = "to" in change ? change.to * handChips : bought + change.by * handChips;
+  const target = Math.max(requested, handChips);
+
+  if (target === bought) return { reversedEventIds: [] };
+  if (target > bought) {
+    const type = buys.length === 0 ? "buy_in" : "rebuy";
+    return { reversedEventIds: [], buy: { type, chips: target - bought } };
+  }
+
+  const reversedEventIds: string[] = [];
+  let remaining = bought - target;
+  for (const buy of buys.toReversed()) {
+    if (remaining <= 0) break;
+    reversedEventIds.push(buy.id);
+    remaining -= buy.chips;
+  }
+  if (remaining === 0) return { reversedEventIds };
+  const type = reversedEventIds.length === buys.length ? "buy_in" : "rebuy";
+  return { reversedEventIds, buy: { type, chips: -remaining } };
+}
+
 /** 按牌局比例把筹码换算成现金，四舍五入到分。 */
 export function chipsToCents(chips: number, ratio: ChipRatio): Cents {
   return multiply(ratio.amount, chips / ratio.chips, "half-up");

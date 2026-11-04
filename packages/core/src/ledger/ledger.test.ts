@@ -5,6 +5,7 @@ import type { ChipEvent, LedgerEvent, ReversalEvent } from "../domain";
 import { cents } from "../money";
 import {
   activeChipEvents,
+  adjustHands,
   canReverse,
   chipsToCents,
   lastBuyChips,
@@ -144,5 +145,77 @@ describe("chipsToCents", () => {
     expect(chipsToCents(1000, { chips: 100, amount: cents(100) })).toBe(1000);
     expect(chipsToCents(1, { chips: 3, amount: cents(100) })).toBe(33);
     expect(chipsToCents(2, { chips: 3, amount: cents(100) })).toBe(67);
+  });
+});
+
+describe("adjustHands", () => {
+  const hand = 200;
+
+  it("第一次买入记 buy_in", () => {
+    expect(adjustHands([], "a", hand, { to: 2 })).toEqual({
+      reversedEventIds: [],
+      buy: { type: "buy_in", chips: 400 },
+    });
+  });
+
+  it("增加时记一笔差额的补码", () => {
+    const events = [chip("1", "buy_in", "a", 200)];
+    expect(adjustHands(events, "a", hand, { by: 1 }).buy).toEqual({ type: "rebuy", chips: 200 });
+    expect(adjustHands(events, "a", hand, { to: 4 }).buy).toEqual({ type: "rebuy", chips: 600 });
+  });
+
+  it("减少时冲正最近的补码", () => {
+    const events = [chip("1", "buy_in", "a", 200), chip("2", "rebuy", "a", 200)];
+    expect(adjustHands(events, "a", hand, { by: -1 })).toEqual({ reversedEventIds: ["2"] });
+  });
+
+  it("那一笔超过要减的手数时，冲正后补回差额", () => {
+    const events = [chip("1", "buy_in", "a", 200), chip("2", "rebuy", "a", 600)];
+    expect(adjustHands(events, "a", hand, { to: 2 })).toEqual({
+      reversedEventIds: ["2"],
+      buy: { type: "rebuy", chips: 200 },
+    });
+  });
+
+  it("首次买入也被冲正时，补回的那笔仍是 buy_in", () => {
+    const events = [chip("1", "buy_in", "a", 600)];
+    expect(adjustHands(events, "a", hand, { to: 1 })).toEqual({
+      reversedEventIds: ["1"],
+      buy: { type: "buy_in", chips: 200 },
+    });
+  });
+
+  it("最少保留 1 手，手数没变时不产生事件", () => {
+    const events = [chip("1", "buy_in", "a", 200)];
+    expect(adjustHands(events, "a", hand, { by: -1 })).toEqual({ reversedEventIds: [] });
+    expect(adjustHands(events, "a", hand, { to: 1 })).toEqual({ reversedEventIds: [] });
+  });
+
+  it("跳过已撤销的记录和其他玩家", () => {
+    const events = [
+      chip("1", "buy_in", "a", 200),
+      chip("2", "rebuy", "a", 200),
+      reversal("r", "2"),
+      chip("3", "buy_in", "b", 200),
+    ];
+    expect(adjustHands(events, "a", hand, { to: 3 }).buy?.chips).toBe(400);
+  });
+
+  it("任意调整后买入总额等于目标手数", () => {
+    const hands = fc.integer({ min: 1, max: 20 });
+    fc.assert(
+      fc.property(fc.array(hands, { minLength: 1, maxLength: 10 }), hands, (buys, target) => {
+        const events: LedgerEvent[] = buys.map((n, i) =>
+          chip(`e${i}`, i === 0 ? "buy_in" : "rebuy", "a", n * hand),
+        );
+        const { reversedEventIds, buy } = adjustHands(events, "a", hand, { to: target });
+        const next: LedgerEvent[] = [
+          ...events,
+          ...reversedEventIds.map((id) => reversal(`r-${id}`, id)),
+          ...(buy ? [chip("new", buy.type, "a", buy.chips)] : []),
+        ];
+        expect(summarizeByPlayer(next)[0]?.boughtChips).toBe(target * hand);
+      }),
+    );
   });
 });

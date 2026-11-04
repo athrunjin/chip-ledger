@@ -30,6 +30,7 @@ function GameSettingsPage() {
         initial={toGameSettingsForm(game)}
         submitLabel="保存"
         ratioLocked={hasLedgerEvents}
+        showBuyIn={!hasLedgerEvents || game.handChips !== undefined}
         saving={saveGame.isPending}
         saveFailed={saveGame.isError}
         onSubmit={handleSubmit}

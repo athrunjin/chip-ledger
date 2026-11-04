@@ -28,6 +28,10 @@ export interface Game {
   readonly smallBlind: Cents;
   readonly bigBlind: Cents;
   readonly chipRatio: ChipRatio;
+  /** 一个买入是多少个大盲。这个功能之前的牌局没有，继续按筹码数记录。 */
+  readonly buyInBigBlinds?: number;
+  /** 1 手的筹码数。有账本事件后不再变化，改盲注也不影响（ADR 0010）。 */
+  readonly handChips?: number;
   readonly status: GameStatus;
   readonly createdAt: Timestamp;
   /** 确认结算的时间。重新打开后清除。 */

@@ -4,6 +4,8 @@ import { TextField } from "@/components/TextField";
 import { newPlayer, usePlayers, useSavePlayer } from "@/data/players";
 
 const MAX_SUGGESTIONS = 8;
+/** 输入框失焦后稍等再收起候选，否则点候选时按钮已经消失。 */
+const COLLAPSE_DELAY_MS = 150;
 
 const pillClass =
   "inline-flex min-h-11 items-center rounded-full border border-line bg-surface px-4 font-medium";
@@ -19,6 +21,7 @@ export function AddPlayerToGame({ excludedIds, onPick }: AddPlayerToGameProps) {
   const { data: players = [] } = usePlayers();
   const savePlayer = useSavePlayer();
   const [query, setQuery] = useState("");
+  const [focused, setFocused] = useState(false);
 
   const available = players.filter(({ id }) => !excludedIds.has(id));
   const matches = searchPlayers(available, query).slice(0, MAX_SUGGESTIONS);
@@ -27,6 +30,8 @@ export function AddPlayerToGame({ excludedIds, onPick }: AddPlayerToGameProps) {
     players.map(({ name }) => name),
   );
   const newName = parsed.ok && matches.length === 0 ? parsed.name : undefined;
+  // 牌局开始后候选默认收起，给玩家列表留出位置
+  const showMatches = query !== "" || focused || excludedIds.size === 0;
 
   function pick(player: Player) {
     setQuery("");
@@ -40,17 +45,18 @@ export function AddPlayerToGame({ excludedIds, onPick }: AddPlayerToGameProps) {
   }
 
   return (
-    <section className="mt-6">
-      <h2 className="mb-2 text-lg font-semibold">加入玩家</h2>
+    <section className="mt-2">
       <TextField
         id="add-player"
-        label="名字或拼音首字母"
+        label="加入玩家：名字或拼音首字母"
         value={query}
         issue={savePlayer.isError ? "保存失败，请重试" : undefined}
         inputMode="text"
         onChange={setQuery}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setTimeout(() => setFocused(false), COLLAPSE_DELAY_MS)}
       />
-      {(matches.length > 0 || newName !== undefined) && (
+      {showMatches && (matches.length > 0 || newName !== undefined) && (
         <ul className="mt-2 flex flex-wrap gap-2">
           {matches.map((player) => (
             <li key={player.id}>

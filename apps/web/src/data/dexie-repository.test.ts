@@ -96,6 +96,16 @@ describe("Dexie 数据仓库", () => {
     expect(events.map((e) => e.occurredAt)).toEqual([1]);
   });
 
+  it("批量追加时一条失败则全部不写入", async () => {
+    await repository.ledger.append(buyIn("e1", "me", "g1", 1));
+
+    await expect(
+      repository.ledger.appendAll([buyIn("e2", "me", "g1", 2), buyIn("e1", "me", "g1", 3)]),
+    ).rejects.toThrow();
+    const events = await repository.ledger.listByGame("g1");
+    expect(events.map((e) => e.id)).toEqual(["e1"]);
+  });
+
   it("读取时看不到其他组织者的数据", async () => {
     await other.games.save(game("g", "other", 1));
     await other.players.save(player("p", "other", "Eve"));

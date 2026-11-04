@@ -46,6 +46,13 @@ const edit = (change: (backup: Record<string, unknown>) => void) => {
 };
 
 describe("备份文件", () => {
+  it("保留牌局的买入设置", () => {
+    const [game] = data.games;
+    if (!game) throw new Error("缺少牌局");
+    const withBuyIn = { ...data, games: [{ ...game, buyInBigBlinds: 100, handChips: 200 }] };
+    expect(parseBackup(serializeBackup(withBuyIn, 1))).toEqual({ ok: true, data: withBuyIn });
+  });
+
   it("序列化后再解析，数据完全一致", () => {
     expect(parseBackup(serializeBackup(data, 1))).toEqual({ ok: true, data });
   });
