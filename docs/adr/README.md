@@ -11,6 +11,7 @@
 | [0004](0004-money-as-integer-cents.md)  | 金额一律用整数分表示                                  | 已采纳 |
 | [0005](0005-guest-and-account-modes.md) | 游客模式与账户模式，通过数据仓库接口隔离存储          | 已采纳 |
 | [0006](0006-monorepo-and-tooling.md)    | pnpm 单仓库与工程工具                                 | 已采纳 |
+| [0007](0007-domain-model-and-repository.md) | 领域模型和数据仓库接口放在 core，Dexie 实现放在 apps/web | 已采纳 |
 
 ## 模板
 
