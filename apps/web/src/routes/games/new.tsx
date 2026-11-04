@@ -34,7 +34,7 @@ function NewGamePage() {
     <Page title="开一局">
       {!games.isPending && (
         <GameSettingsForm
-          // 默认沿用最近一局的设置
+          // Carry over the latest game's settings by default
           initial={toGameSettingsForm(games.data?.[0] ?? DEFAULT_GAME_SETTINGS)}
           submitLabel="开局"
           saving={saveGame.isPending}

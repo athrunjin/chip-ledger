@@ -1,23 +1,23 @@
-/** 玩家库：名字校验和搜索。 */
+/** Player list: name validation and search. */
 import type { Player } from "../domain";
 
 export const MAX_PLAYER_NAME_LENGTH = 30;
 
-/** 问题代码。文案由界面决定。 */
+/** Issue codes. The UI decides the wording. */
 export type PlayerNameIssue = "empty" | "too-long" | "duplicate";
 
 export type ParsedPlayerName =
   | { readonly ok: true; readonly name: string }
   | { readonly ok: false; readonly issue: PlayerNameIssue };
 
-/** 用来比较名字：去掉空白，忽略大小写。 */
+/** For comparing names: removes whitespace and ignores case. */
 function comparable(text: string): string {
   return text.replace(/\s/g, "").toLowerCase();
 }
 
 /**
- * 校验并规范化名字。`otherNames` 是其他玩家的名字：玩家库靠名字选人，
- * 同名会选错，所以不允许重名，真有同名的可以写成「小王2」。
+ * Validates and normalizes a name. `otherNames` holds the other players' names: players are picked by name,
+ * so duplicates would pick the wrong person and are not allowed. Real namesakes can be written like 小王2.
  */
 export function parsePlayerName(input: string, otherNames: readonly string[]): ParsedPlayerName {
   const name = input.trim().replace(/\s+/g, " ");
@@ -30,7 +30,7 @@ export function parsePlayerName(input: string, otherNames: readonly string[]): P
   return { ok: true, name };
 }
 
-/** 按名字或拼音首字母搜索，不区分大小写，保持原有顺序。查询为空时返回全部。 */
+/** Searches by name or pinyin initials, ignoring case and keeping the original order. An empty query returns everyone. */
 export function searchPlayers(players: readonly Player[], query: string): Player[] {
   const key = comparable(query);
   if (key === "") return [...players];

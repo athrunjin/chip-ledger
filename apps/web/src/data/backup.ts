@@ -64,7 +64,7 @@ export type ParsedBackup =
   | { readonly ok: true; readonly data: BackupData }
   | { readonly ok: false; readonly issue: BackupIssue };
 
-/** 账本事件必须指向备份里存在的牌局和玩家，否则恢复后账目对不上。 */
+/** Ledger events must point to games and players in the backup, or the books will not balance after a restore. */
 function linksAreValid({ games, players, ledgerEvents }: BackupData): boolean {
   const gameIds = new Set(games.map((g) => g.id));
   const playerIds = new Set(players.map((p) => p.id));

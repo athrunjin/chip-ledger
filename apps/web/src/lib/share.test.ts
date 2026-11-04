@@ -19,7 +19,7 @@ afterEach(() => {
 });
 
 describe("shareFile", () => {
-  it("支持系统分享时不下载", async () => {
+  it("does not download when the system share is supported", async () => {
     const click = stubDownload();
     stubShare(() => Promise.resolve());
 
@@ -27,7 +27,7 @@ describe("shareFile", () => {
     expect(click).not.toHaveBeenCalled();
   });
 
-  it("不支持系统分享时下载", async () => {
+  it("downloads when the system share is not supported", async () => {
     const click = stubDownload();
     vi.stubGlobal("navigator", {});
 
@@ -35,17 +35,17 @@ describe("shareFile", () => {
     expect(click).toHaveBeenCalledOnce();
   });
 
-  it("系统分享被拒绝时改走下载", async () => {
+  it("falls back to download when the system share is refused", async () => {
     const click = stubDownload();
-    stubShare(() => Promise.reject(new DOMException("需要用户手势", "NotAllowedError")));
+    stubShare(() => Promise.reject(new DOMException("needs a user gesture", "NotAllowedError")));
 
     await shareFile(blob, "a.json");
     expect(click).toHaveBeenCalledOnce();
   });
 
-  it("用户取消分享时不下载，也不报错", async () => {
+  it("neither downloads nor reports an error when the user cancels", async () => {
     const click = stubDownload();
-    stubShare(() => Promise.reject(new DOMException("取消", "AbortError")));
+    stubShare(() => Promise.reject(new DOMException("cancelled", "AbortError")));
 
     await shareFile(blob, "a.json");
     expect(click).not.toHaveBeenCalled();

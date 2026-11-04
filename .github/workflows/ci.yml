@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   check:
-    name: 规范 · 类型 · 测试 · 构建
+    name: Lint · Types · Tests · Build
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -24,17 +24,17 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
-      - name: 安装依赖
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: 代码规范（Biome）
+      - name: Lint (Biome)
         run: pnpm exec biome ci .
 
-      - name: 类型检查
+      - name: Type check
         run: pnpm typecheck
 
-      - name: 单元测试
+      - name: Unit tests
         run: pnpm test
 
-      - name: 构建
+      - name: Build
         run: pnpm build

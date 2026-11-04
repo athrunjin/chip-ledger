@@ -4,19 +4,19 @@ import { TextField } from "@/components/TextField";
 import { newPlayer, usePlayers, useSavePlayer } from "@/data/players";
 
 const MAX_SUGGESTIONS = 8;
-/** 输入框失焦后稍等再收起候选，否则点候选时按钮已经消失。 */
+/** Wait briefly after the input loses focus before collapsing, or a tapped suggestion would already be gone. */
 const COLLAPSE_DELAY_MS = 150;
 
 const pillClass =
   "inline-flex min-h-11 items-center rounded-full border border-line bg-surface px-4 font-medium";
 
 interface AddPlayerToGameProps {
-  /** 已经在这局里的玩家，不再出现在候选里 */
+  /** Players already in this game, left out of the suggestions */
   excludedIds: ReadonlySet<string>;
   onPick: (player: Player) => void;
 }
 
-/** 从玩家库选人买入；搜不到时可以直接新建。 */
+/** Pick a player from the list to buy in, or create one if the search finds nothing. */
 export function AddPlayerToGame({ excludedIds, onPick }: AddPlayerToGameProps) {
   const { data: players = [] } = usePlayers();
   const savePlayer = useSavePlayer();
@@ -30,7 +30,7 @@ export function AddPlayerToGame({ excludedIds, onPick }: AddPlayerToGameProps) {
     players.map(({ name }) => name),
   );
   const newName = parsed.ok && matches.length === 0 ? parsed.name : undefined;
-  // 牌局开始后候选默认收起，给玩家列表留出位置
+  // Once the game has players, keep suggestions collapsed to leave room for the player list
   const showMatches = query !== "" || focused || excludedIds.size === 0;
 
   function pick(player: Player) {

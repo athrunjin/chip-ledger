@@ -1,36 +1,36 @@
-# 0003. 后端：Supabase，按可多地区部署设计
+# 0003. Back end: Supabase, designed for multi-region deployment
 
-- 状态：已采纳
-- 日期：2026-10-28
+- Status: Accepted
+- Date: 2026-10-28
 
-## 背景
+## Context
 
-- 登录后需要云端保存玩家库、历史牌局，并在多设备间同步。
-- 以后会商业化（包月或按局收费）。
-- 需要考虑中国大陆用户。
+- After sign-in, the player list and past games need cloud storage and multi-device sync.
+- The product will be monetized later (monthly plan or per-game fee).
+- Users in mainland China need to be considered.
 
-## 考虑过的选项
+## Options considered
 
-|          | Supabase                                                                                                      | Firebase                                                                      |
-| -------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| 中国大陆 | 官方云在国内访问慢且不稳定，但**开源可自建**：阿里云 RDS Supabase、MemFire Cloud 或自建，客户端代码只需换地址 | Auth、Firestore、云函数、存储在大陆基本不可达，**不能自建**，国内版需重写后端 |
-| 数据模型 | Postgres，适合玩家—牌局—账本的关系数据和统计报表                                                              | Firestore 为 NoSQL，统计报表别扭；SQL Connect 仍在谷歌云上                    |
-| 其他     | 免费版一周无访问会暂停（上线后用 Pro 版）；行级权限有学习成本                                                 | 最成熟，Firestore 自带离线；锁定谷歌平台                                      |
+|                | Supabase                                                                                                                                                            | Firebase                                                                                                       |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Mainland China | The official cloud is slow and unreliable there, but it's **open source and self-hostable**: Alibaba Cloud RDS Supabase, MemFire Cloud or self-hosted, with only the address changing on the client | Auth, Firestore, functions and storage are largely unreachable there, it **can't be self-hosted**, and a China version would need a rewritten back end |
+| Data model     | Postgres, which suits relational player–game–ledger data and reporting                                                                                               | Firestore is NoSQL and awkward for reporting; SQL Connect still runs on Google Cloud                           |
+| Other          | The free tier pauses after a week without traffic (use Pro in production); row-level security takes some learning                                                    | Most mature, Firestore has built-in offline support; locked to Google's platform                               |
 
-也考虑过 PocketBase（简单、便宜，但生态小）、Convex（闭源）和自建 FastAPI
-（算账逻辑需要用 Python 再写一遍，与前端 TypeScript 版本难以保持一致）。
+Also considered: PocketBase (simple and cheap, small ecosystem), Convex (closed source) and a custom FastAPI service
+(the ledger logic would need a second Python version that's hard to keep in step with the TypeScript one).
 
-## 决定
+## Decision
 
-采用 Supabase。第一阶段只部署澳洲版（悉尼区域），但架构从第一天起支持多地区：
+Use Supabase. The first phase deploys only an Australian instance (Sydney region), but the architecture supports multiple regions from day one:
 
-- 服务端地址由配置注入，不写死在代码中；
-- 数据库结构变更以 SQL 迁移文件保存在仓库，可应用到任何 Supabase 实例；
-- 业务规则放在 `packages/core`，不依赖 Supabase 专有能力；
-- 国内版以后单独部署实例（数据留在境内），前端放国内 CDN。
+- The server address is injected through configuration, never hard-coded.
+- Schema changes are kept in the repository as SQL migrations that can be applied to any Supabase instance.
+- Business rules stay in `packages/core` with no dependency on Supabase-specific features.
+- A China version will have its own instance later (data stays in China), with the front end on a Chinese CDN.
 
-## 后果
+## Consequences
 
-- 国内上线前需完成 ICP 备案，并接入国内短信 / 微信登录。
-- 套餐与权益在数据库中建模，用行级权限控制访问；支付渠道以后再接（Stripe / 微信支付 / 支付宝）。
-- 2026 年 2 月印度曾封锁 Supabase 域名，说明平台域名有被封的风险；必要时使用自定义域名或代理。
+- Launching in China requires ICP filing and domestic SMS / WeChat sign-in.
+- Plans and entitlements are modeled in the database with access controlled by row-level security. Payment channels come later (Stripe / WeChat Pay / Alipay).
+- India blocked the Supabase domain in February 2026, which shows platform domains can be blocked. Use a custom domain or proxy if needed.

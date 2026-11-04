@@ -1,4 +1,4 @@
-/** 结算：平衡核对、每人输赢换算现金、转账方案。 */
+/** Settlement: balance check, each player's result in cash, and transfers. */
 import type { ChipRatio } from "../domain";
 import { chipsToCents, type PlayerLedger } from "../ledger";
 import { allocate, type Cents, cents, InvalidMoneyError, ZERO } from "../money";
@@ -11,8 +11,8 @@ export interface BalanceAdjustments {
 const NO_ADJUSTMENTS: BalanceAdjustments = { rakeChips: 0, insuranceChips: 0 };
 
 /**
- * 平衡差额：所有人输赢 + 抽水 + 保险盈亏，平衡时等于 0。
- * 正数表示兑出比买入多。M3、M4 之前抽水和保险都是 0。
+ * Balance difference: all players' results + rake + insurance profit, which is 0 when balanced.
+ * Positive means more was cashed out than bought in. Rake and insurance stay 0 until M3 and M4.
  */
 export function chipDifference(
   players: readonly PlayerLedger[],
@@ -24,18 +24,18 @@ export function chipDifference(
 
 export interface PlayerNet {
   readonly playerId: string;
-  /** 正数赢，负数输。 */
+  /** Positive is a win, negative is a loss. */
   readonly net: Cents;
 }
 
 /**
- * 每人输赢的现金。比例除不尽时逐人取整会差几分，所以先算出赢家总额，
- * 再用 `allocate` 分给赢家和输家，保证所有人之和严格为 0。
- * 只能用于筹码已经平衡的账目。
+ * Each player's result in cash. Rounding per player would be a few cents off when the ratio does not divide evenly,
+ * so the winners' total comes first, then `allocate` shares it across winners and losers so everyone adds up to exactly 0.
+ * Only for books whose chips already balance.
  */
 export function netCents(players: readonly PlayerLedger[], ratio: ChipRatio): PlayerNet[] {
   if (chipDifference(players) !== 0) {
-    throw new InvalidMoneyError("账目不平衡，不能换算输赢");
+    throw new InvalidMoneyError("The books do not balance, so results cannot be converted");
   }
   const chips = players.map((p) => ({ id: p.playerId, net: p.cashedOutChips - p.boughtChips }));
   const winners = chips.filter((p) => p.net > 0);
@@ -79,8 +79,8 @@ function largest(balances: Map<string, number>, sign: 1 | -1): [string, number] 
 }
 
 /**
- * 转账方案：每次让欠得最多的人转给赢得最多的人。每一笔至少结清一个人，
- * 所以最多 n−1 笔。严格最少笔数是 NP 难问题，不追求。
+ * Transfers: each step has the biggest debtor pay the biggest winner. Every transfer settles at least one person,
+ * so there are at most n−1. A strictly minimal count is NP-hard and not attempted.
  */
 export function settleTransfers(nets: readonly PlayerNet[]): Transfer[] {
   const balances = new Map<string, number>(nets.map((p) => [p.playerId, p.net]));

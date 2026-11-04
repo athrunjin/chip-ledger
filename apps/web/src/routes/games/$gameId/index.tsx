@@ -45,9 +45,9 @@ function GamePage() {
 }
 
 /**
- * 正在记的这一笔。
- * `buy` 和 `cash_out` 输入筹码数，其余输入手数：
- * `join` 首次买入，`edit` 改成目标手数，`rejoin` 离桌后在原有基础上补码。
+ * The record being entered.
+ * `buy` and `cash_out` take chips, and the others take hands:
+ * `join` is a first buy-in, `edit` sets a target, and `rejoin` adds hands after leaving.
  */
 type PendingEntry = {
   kind: "buy" | "cash_out" | "join" | "edit" | "rejoin";

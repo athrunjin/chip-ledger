@@ -12,7 +12,7 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
   plugins: [
-    // 必须放在 react() 之前：根据 src/routes 自动生成路由树
+    // Must come before react(): generates the route tree from src/routes
     tanstackRouter({ target: "react", autoCodeSplitting: true }),
     react(),
     tailwindcss(),

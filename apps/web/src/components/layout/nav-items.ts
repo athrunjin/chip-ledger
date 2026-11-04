@@ -1,6 +1,6 @@
 import { Calculator, CircleUser, Coins, Users } from "lucide-react";
 
-/** 主导航。手机端显示在底部，平板及以上显示在左侧。 */
+/** Main navigation. Shown at the bottom on phones and at the side on tablets and up. */
 export const NAV_ITEMS = [
   { to: "/", label: "牌局", icon: Coins },
   { to: "/players", label: "玩家", icon: Users },

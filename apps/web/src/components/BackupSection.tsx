@@ -15,13 +15,13 @@ function restoreSummary({ added, skipped }: RestoreResult) {
     : `恢复完成：新增 ${added} 条记录。`;
 }
 
-/** 游客模式的数据只在本机，换设备或清理浏览器前要靠它备份。 */
+/** Guest data exists only on this device, so back it up before changing devices or clearing the browser. */
 export function BackupSection() {
   const queryClient = useQueryClient();
   const fileInput = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<Status>();
-  // 提前读好数据：系统分享必须由点击直接触发，点击后再读数据库，iOS 可能拒绝分享
+  // Read the data ahead of time: the system share must come directly from a tap, and iOS may refuse it if the database is read after the tap
   const [backup, setBackup] = useState(() => repository.backup.exportAll());
 
   async function handleExport() {

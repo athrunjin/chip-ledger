@@ -1,8 +1,8 @@
 /**
- * 数据仓库接口。界面和业务逻辑只依赖这里，不依赖具体存储（ADR 0005）。
+ * Repository interfaces. UI and business logic depend on these, not on specific storage (ADR 0005).
  *
- * 一个仓库实例绑定一位组织者：读取只返回这位组织者的数据，
- * 写入其他组织者的数据时抛 `ForeignOrganizerError`。
+ * One repository instance is bound to one organizer: reads return only that organizer's data,
+ * and writing another organizer's data throws `ForeignOrganizerError`.
  */
 import type { Game, LedgerEvent, Player } from "./types";
 
@@ -11,30 +11,30 @@ export class ForeignOrganizerError extends Error {
 }
 
 export interface GameRepository {
-  /** 最新的牌局排在前面。 */
+  /** Newest games first. */
   list(): Promise<Game[]>;
   get(id: string): Promise<Game | undefined>;
   save(game: Game): Promise<void>;
 }
 
 export interface PlayerRepository {
-  /** 按名字排序。 */
+  /** Sorted by name. */
   list(): Promise<Player[]>;
   get(id: string): Promise<Player | undefined>;
   save(player: Player): Promise<void>;
 }
 
-/** 账本只追加：故意不提供修改和删除，撤销要追加一条冲正事件。 */
+/** The ledger is append-only: there is deliberately no update or delete, and undoing means appending a reversal event. */
 export interface LedgerRepository {
-  /** 按发生时间排序。 */
+  /** Sorted by time of occurrence. */
   listByGame(gameId: string): Promise<LedgerEvent[]>;
-  /** 事件 ID 已存在时失败，已有记录不会被覆盖。 */
+  /** Fails if the event ID exists, so existing records are never overwritten. */
   append(event: LedgerEvent): Promise<void>;
-  /** 一次追加多条：全部成功或全部不写入。 */
+  /** Appends several events at once: all are written or none are. */
   appendAll(events: readonly LedgerEvent[]): Promise<void>;
 }
 
-/** 这位组织者的全部数据。 */
+/** All of this organizer's data. */
 export interface BackupData {
   readonly games: readonly Game[];
   readonly players: readonly Player[];
@@ -42,15 +42,15 @@ export interface BackupData {
 }
 
 export interface RestoreResult {
-  /** 新增的记录数。 */
+  /** Number of records added. */
   readonly added: number;
-  /** 因 ID 已存在而跳过的记录数。 */
+  /** Number of records skipped because their ID exists. */
   readonly skipped: number;
 }
 
 export interface BackupRepository {
   exportAll(): Promise<BackupData>;
-  /** 合并恢复：只新增，ID 已存在的记录保持原样。全部成功或全部不写入。 */
+  /** Merging restore: only adds records, leaving existing IDs as they are. All are written or none are. */
   restore(data: BackupData): Promise<RestoreResult>;
 }
 

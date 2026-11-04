@@ -1,6 +1,6 @@
 import { pinyin } from "pinyin-pro";
 
-/** 生成名字的拼音首字母，姓氏按姓氏读音，例如「单小明」=> sxm。非中文原样保留。 */
+/** Generates the pinyin initials of a name, reading surnames as surnames, e.g. 单小明 => sxm. Non-Chinese text is kept as is. */
 export function toInitials(name: string): string {
   return pinyin(name, {
     pattern: "first",

@@ -1,33 +1,33 @@
-# 0005. 游客模式与账户模式，通过数据仓库接口隔离存储
+# 0005. Guest and account modes, with storage behind a repository interface
 
-- 状态：已采纳
-- 日期：2026-10-28
+- Status: Accepted
+- Date: 2026-10-28
 
-## 背景
+## Context
 
-牌局现场几乎总有网络，不需要完整的离线同步引擎。但不登录或临时没网时，
-应用仍应能作为单纯的记账和计算工具使用。
+Live games almost always have a network, so a full offline sync engine isn't needed. But when signed out or briefly offline,
+the app should still work as a plain ledger and calculator.
 
-## 考虑过的选项
+## Options considered
 
-- 离线优先 + 同步引擎（Dexie Cloud、PowerSync、ElectricSQL、Zero 等）：复杂度高，部分方案尚不成熟或收费。
-- 纯在线：没网或未登录就无法使用。
-- **两种模式**：游客模式存本机，账户模式在线为主。
+- Offline first with a sync engine (Dexie Cloud, PowerSync, ElectricSQL, Zero and others): high complexity, and some options are immature or paid.
+- Online only: unusable when offline or signed out.
+- **Two modes**: guest mode stores data locally, account mode is mainly online.
 
-## 决定
+## Decision
 
-| 模式     | 时机           | 数据位置                | 功能                                 |
-| -------- | -------------- | ----------------------- | ------------------------------------ |
-| 游客模式 | 未登录或无网络 | 本机 IndexedDB（Dexie） | 记账、结算、保险 / 抽水计算          |
-| 账户模式 | 已登录         | Supabase，在线为主      | 全部功能：玩家库、历史、报告、多设备 |
+| Mode    | When                 | Data location             | Features                                                     |
+| ------- | -------------------- | ------------------------- | ------------------------------------------------------------ |
+| Guest   | Signed out or offline | Local IndexedDB (Dexie)  | Ledger, settlement, insurance / rake calculations            |
+| Account | Signed in            | Supabase, mainly online   | Everything: player list, history, reports, multiple devices  |
 
-- 定义统一的**数据仓库接口**（Repository），提供本机和 Supabase 两种实现；界面和业务逻辑只依赖接口。
-- 账本采用**只追加事件**（买入、补码、兑出、保险、抽水各为一条事件，余额由事件推导），
-  便于撤销和核对，也让以后接入任何同步方案都几乎没有冲突。
-- 网络短暂中断由 TanStack Query 的重试与乐观更新处理。
-- 登录后可一键把游客数据导入账户。
+- Define one **repository interface** with local and Supabase implementations. UI and business logic depend only on the interface.
+- The ledger uses **append-only events** (buy-ins, rebuys, cash-outs, insurance and rake are each an event, and balances are derived from events).
+  This makes undo and auditing easy and leaves almost no conflicts for any future sync approach.
+- Brief network drops are handled by TanStack Query's retries and optimistic updates.
+- After sign-in, guest data can be imported into the account with one tap.
 
-## 后果
+## Consequences
 
-- 新增存储后端（例如国内实例、玩家端只读接口）只需新增一种仓库实现。
-- 每条数据从一开始就带组织者 ID，为多组织者 / 多俱乐部留出空间。
+- A new storage back end (for example a China instance or a read-only player API) only needs a new repository implementation.
+- Every record carries an organizer ID from the start, leaving room for multiple organizers or clubs.

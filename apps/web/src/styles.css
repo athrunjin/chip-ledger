@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
 /*
- * 设计令牌
- * 牌桌绒布绿做底色，筹码边缘的金色做唯一强调色。
- * 默认跟随系统深浅色；线下牌局多在室内夜间，深色是主要场景。
+ * Design tokens
+ * Table-felt green is the base, and the gold of a chip edge is the only accent.
+ * Follows the system theme by default. Live games are mostly indoors at night, so dark is the main mode.
  */
 @theme {
   --font-sans:
@@ -67,7 +67,7 @@
 
   body {
     @apply bg-bg font-sans text-text antialiased;
-    /* 金额统一用等宽数字，列对齐，跳动时不抖 */
+    /* Money uses tabular figures so columns align and numbers do not jitter */
     font-variant-numeric: tabular-nums;
   }
 
@@ -80,9 +80,9 @@
     *,
     *::before,
     *::after {
-      /* biome-ignore lint/complexity/noImportantStyles: 必须压过所有组件动画，尊重"减少动态效果"系统设置 */
+      /* biome-ignore lint/complexity/noImportantStyles: Must override every component animation to respect the reduced motion setting */
       animation-duration: 0.01ms !important;
-      /* biome-ignore lint/complexity/noImportantStyles: 同上 */
+      /* biome-ignore lint/complexity/noImportantStyles: same as above */
       transition-duration: 0.01ms !important;
     }
   }

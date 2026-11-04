@@ -45,38 +45,38 @@ const edit = (change: (backup: Record<string, unknown>) => void) => {
   return JSON.stringify(backup);
 };
 
-describe("备份文件", () => {
-  it("保留牌局的买入设置", () => {
+describe("backup file", () => {
+  it("keeps a game's buy-in settings", () => {
     const [game] = data.games;
-    if (!game) throw new Error("缺少牌局");
+    if (!game) throw new Error("missing game");
     const withBuyIn = { ...data, games: [{ ...game, buyInBigBlinds: 100, handChips: 200 }] };
     expect(parseBackup(serializeBackup(withBuyIn, 1))).toEqual({ ok: true, data: withBuyIn });
   });
 
-  it("序列化后再解析，数据完全一致", () => {
+  it("parses back to identical data after serializing", () => {
     expect(parseBackup(serializeBackup(data, 1))).toEqual({ ok: true, data });
   });
 
-  it("拒绝不是 JSON 或不是备份的文件", () => {
+  it("rejects files that are not JSON or not backups", () => {
     expect(parseBackup("not json")).toEqual({ ok: false, issue: "invalid" });
     expect(parseBackup("{}")).toEqual({ ok: false, issue: "invalid" });
   });
 
-  it("拒绝更新版本的备份", () => {
+  it("rejects backups from a newer version", () => {
     const text = edit((backup) => {
       backup.version = 2;
     });
     expect(parseBackup(text)).toEqual({ ok: false, issue: "newer-version" });
   });
 
-  it("拒绝金额不是整数的数据", () => {
+  it("rejects non-integer money", () => {
     const text = edit((backup) => {
       (backup.games as [{ smallBlind: number }])[0].smallBlind = 1.5;
     });
     expect(parseBackup(text)).toEqual({ ok: false, issue: "invalid" });
   });
 
-  it("拒绝引用不存在的玩家或事件", () => {
+  it("rejects references to missing players or events", () => {
     const missingPlayer = edit((backup) => {
       backup.players = [];
     });

@@ -20,7 +20,7 @@ function SessionsPage() {
   return (
     <Page title="牌局">
       <section className="flex flex-col items-center gap-6 py-10 text-center md:py-16">
-        {/* 开局按钮做成一枚筹码：页面唯一的视觉重点 */}
+        {/* The start button is drawn as a chip: the only visual focus on the page */}
         <Link
           to="/games/new"
           className="group relative grid size-44 place-items-center rounded-full bg-felt-700 text-bone shadow-[0_6px_0_0_rgb(0_0_0/0.25)] transition-transform active:translate-y-1 active:shadow-[0_2px_0_0_rgb(0_0_0/0.25)]"

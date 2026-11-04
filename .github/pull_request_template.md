@@ -1,12 +1,12 @@
-## 做了什么
+## What changed
 
-<!-- 一两句话说明这个 PR 的改动，关联 Issue：Closes #123 -->
+<!-- One or two sentences on this PR. Link the issue: Closes #123 -->
 
-## 怎么验证
+## How it was verified
 
-- [ ] `pnpm check` 通过
-- [ ] 手机尺寸下看过界面（如有界面改动）
+- [ ] `pnpm check` passes
+- [ ] UI checked at phone size (if the UI changed)
 
-## 备注
+## Notes
 
-<!-- 需要特别注意的地方、截图、后续工作 -->
+<!-- Anything to watch out for, screenshots, follow-up work -->

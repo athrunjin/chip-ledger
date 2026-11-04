@@ -10,7 +10,7 @@ interface FormDialogProps {
   children: ReactNode;
 }
 
-/** 录入一笔账目的对话框：标题、表单内容、取消和确定。 */
+/** Dialog for entering one ledger record: title, form content, cancel and confirm. */
 export function FormDialog({
   title,
   submitLabel,

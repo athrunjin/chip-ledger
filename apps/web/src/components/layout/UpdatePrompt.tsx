@@ -1,6 +1,6 @@
 import { useRegisterSW } from "virtual:pwa-register/react";
 
-/** 有新版本时提示刷新。牌局进行中不强制刷新，由组织者自己决定时机。 */
+/** Prompts for a refresh when a new version is ready. Never forces it during a game; the organizer chooses when. */
 export function UpdatePrompt() {
   const {
     needRefresh: [needRefresh, setNeedRefresh],

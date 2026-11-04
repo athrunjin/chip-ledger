@@ -16,7 +16,7 @@ interface LedgerLogProps {
   onReverse: (eventId: string) => void;
 }
 
-/** 账本流水，最新的在前。撤销过的记录保留并划掉。 */
+/** Ledger history, newest first. Undone records stay visible and are struck through. */
 export function LedgerLog({ events, nameOf, editable, onReverse }: LedgerLogProps) {
   const entries = events.filter((e): e is ChipEvent => e.type !== "reversal").toReversed();
 

@@ -1,57 +1,57 @@
-# 开发路线
+# Roadmap
 
-每个里程碑对应一个 GitHub Milestone，里面的每项功能对应一个 Issue。
+Each milestone maps to a GitHub Milestone, and each feature in it maps to an issue.
 
-## M0 项目起步（已完成）
+## M0 Project start (done)
 
-- [x] 确定技术栈（见 [ADR 0001–0006](adr/)）
-- [x] pnpm 单仓库：`apps/web` + `packages/core`
-- [x] 工程规范：TypeScript 严格模式、Biome、Vitest + fast-check
-- [x] 金额工具（整数分）及测试
-- [x] PWA 空壳：底部/侧边导航、可安装、离线缓存、新版本提示
-- [x] GitHub Actions：代码规范、类型检查、测试、构建
-- [x] 部署到 Cloudflare Pages，每个 PR 自动生成预览链接
+- [x] Choose the tech stack (see [ADRs 0001–0006](adr/))
+- [x] pnpm monorepo: `apps/web` + `packages/core`
+- [x] Engineering standards: TypeScript strict mode, Biome, Vitest + fast-check
+- [x] Money utilities (integer cents) with tests
+- [x] PWA shell: bottom/side navigation, installable, offline cache, new-version prompt
+- [x] GitHub Actions: lint, type check, tests, build
+- [x] Deploy to Cloudflare Pages, with a preview link for every PR
 
-## M1 核心记账（MVP —— 可以拿到牌局实际使用）
+## M1 Core ledger (MVP: usable at a real game)
 
-- 牌局设置：盲注、筹码与现金比例、货币
-- 玩家库（游客模式存本机）：添加、搜索（名字 / 拼音首字母）
-- 记账：买入、补码、兑出，按「只追加事件」的账本记录，支持撤销
-- 按手买入：一个买入 = xx 个大盲，在局玩家单行显示、快速加减手数
-- 结算：平衡核对（所有人输赢 + 抽水 + 保险盈亏 = 0），最少转账方案
-- 结算结果生成图片，方便发到群里
-- 数据导出 / 导入（JSON）作为备份
+- Game setup: blinds, chip-to-cash ratio, currency
+- Player list (stored locally in guest mode): add, search (name / pinyin initials)
+- Ledger: buy-ins, rebuys and cash-outs in an append-only ledger, with undo
+- Buying in by hands: one buy-in = xx big blinds, one row per seated player, quick hand adjustments
+- Settlement: balance check (all wins and losses + rake + insurance = 0), fewest transfers
+- Settlement results as an image, for sharing to a group chat
+- Data export / import (JSON) as a backup
 
-## M2 计时与荷官费
+## M2 Timing and dealer fees
 
-- 每位玩家的入座 / 离座时间段（支持中途离开再回来）
-- 按规则计算荷官费：每小时费率、不足一小时的取整方式
+- Each player's time at the table (including leaving and coming back)
+- Dealer fee rules: hourly rate, rounding for part hours
 
-## M3 保险计算器
+## M3 Insurance calculator
 
-- 可配置的赔率表（按 outs 数）
-- 赔付金额、保本额计算
-- 保险记录计入牌局账本
+- Configurable odds table (by number of outs)
+- Payout and break-even calculations
+- Insurance records in the game ledger
 
-## M4 抽水
+## M4 Rake
 
-- 抽水规则：比例、封顶、不见翻牌不抽
-- 每个底池记录与抽水汇总
+- Rake rules: percentage, cap, no flop no drop
+- Per-pot records and rake totals
 
-## M5 玩家报告
+## M5 Player reports
 
-- 按时段统计：参与场次、总买入、水上水下、总时长、每小时盈亏
-- 导出图片 / CSV
+- Statistics by period: games played, total buy-ins, wins and losses, total time, profit per hour
+- Export as image / CSV
 
-## M6 账户与云端
+## M6 Accounts and cloud
 
-- 接入 Supabase：登录、玩家库与历史牌局云端保存、多设备同步
-- 游客数据一键导入账户
-- 预留套餐与权益（包月 / 按局收费），暂不接支付
+- Supabase: sign-in, cloud storage for the player list and past games, multi-device sync
+- One-tap import of guest data into an account
+- Leave room for plans and entitlements (monthly / per game), no payments yet
 
-## M7 以后
+## M7 and beyond
 
-- 玩家端：玩家通过链接或登录查看自己的战绩
-- Capacitor 打包 iOS / Android
-- 国内版：国内 Supabase 实例 + 国内 CDN（需 ICP 备案）、手机号 / 微信登录
-- 支付：Stripe（澳洲）、微信支付 / 支付宝（国内）
+- Player app: players view their own records through a link or by signing in
+- Capacitor packaging for iOS / Android
+- China version: Supabase instance and CDN in China (requires ICP filing), phone number / WeChat sign-in
+- Payments: Stripe (Australia), WeChat Pay / Alipay (China)

@@ -1,72 +1,74 @@
-# 项目背景与已确认的决定
+# Project background and confirmed decisions
 
-记录 ADR 之外的产品背景：需求原文、用户拍板的规则、还没定的事和已知的坑。
-技术选型的详细对比见 [ADR](adr/)，功能排期见 [ROADMAP](ROADMAP.md)。
+This file records the product background that ADRs don't cover: the original requirements, rules the user has settled, open questions and known pitfalls.
+For technology comparisons see the [ADRs](adr/), and for scheduling see the [roadmap](ROADMAP.md).
 
-## 协作方式
+## Working together
 
-- 沟通和界面文案都用简体中文。
-- 大方向由用户拍板：先列出选项、各自优缺点和倾向，不替用户决定。
-- 代码以 GitHub 上的本仓库为准。两台开发机只通过 GitHub 同步，开工前先 `git pull`，收工时推送。
+- Discussions with the user and interface text are in Simplified Chinese. Everything in the repository and on GitHub is in English.
+- The user makes the big decisions: list the options, their trade-offs and a recommendation, and don't decide for them.
+- This GitHub repository is the source of truth. The two development machines only sync through GitHub: run `git pull` before starting and push when done.
 
-## 产品名
+## Product name
 
-- 中文名：**德州之王**；英文名：**King in Texas**。
-- 仓库名 `chip-ledger` 和代码包名 `@holdem/*` 保持中性，不随产品名改动。
-- 英文名本身看不出是扑克产品，对外展示时配副标题说明用途。
+- Chinese name: **德州之王**. English name: **King in Texas**.
+- The repository name `chip-ledger` and the package scope `@holdem/*` stay neutral and don't follow the product name.
+- The English name doesn't say it's a poker product, so add a subtitle wherever it's shown publicly.
 
-## 原始需求
+## Original requirements
 
-用户是**组织者（局头）**，不是玩家。应用是线下德州局的助手：
+The user is an **organizer (the game host)**, not a player. The app assists with live Texas Hold'em games:
 
-- 筹码买入的记录，最后的结算统计
-- 德州「保险」的计算
-- 开局时长的计算（针对每一个玩家，用于计算荷官工资）
-- 抽水局的每个底池的计算
-- 常来的固定玩家库（快速输入名字）
-- 生成针对每个玩家的简单报告：某个时段的参与总场次、水上水下记录、游戏时长记录
+- Recording chip buy-ins and the final settlement
+- Calculating Hold'em "insurance"
+- Tracking session time for each player, to work out dealer pay
+- Calculating each pot in raked games
+- A list of regular players, for entering names quickly
+- A simple report for each player: total games, wins and losses, and time played over a period
 
-适配手机和平板，可以快速访问。编码逻辑要可扩展、规范，方便以后增加用户端的各种数据记录和其他功能。
+It should work on phones and tablets and be quick to open. The code should be extensible and tidy, so that player-side records and other features can be added later.
 
-## 用户的关键表态
+## What the user said on key topics
 
-| 话题   | 表态                                                                         |
-| ------ | ---------------------------------------------------------------------------- |
-| 前端   | 「考虑以后的拓展性为主，React 好了」                                         |
-| 离线   | 几乎不会遇到没有网络的环境；离线或不登录时，作为单纯的记账和计算工具就可以   |
-| 商业化 | 会考虑，大概率是包月使用所有功能或按局收费，暂时不作为重点。现在只预留不实现 |
-| 国内   | 会考虑。国内版单独部署，见 ADR 0003                                          |
-| 仓库   | 公开，但保留所有权利：别人可以看，不能用                                     |
+| Topic         | Position                                                                                                     |
+| ------------- | ------------------------------------------------------------------------------------------------------------ |
+| Front end     | "Long-term extensibility comes first, so React it is"                                                        |
+| Offline       | Almost never without a network. Offline or signed out, a plain ledger and calculator is enough               |
+| Monetization  | Likely, probably a monthly plan for all features or a per-game fee, but not a priority. Prepare, don't build |
+| Mainland China | Likely. The China version is deployed separately, see ADR 0003                                              |
+| Repository    | Public with all rights reserved: others can look but not use                                                 |
 
-## 已确认的规则（2026-11-04）
+## Confirmed rules (2026-11-04)
 
-这些是产品默认行为。按「规则可配置」的原则，具体数值由组织者设置，不写死在代码里。
+These are the product defaults. Rules are configurable by design, so organizers set the actual numbers and they aren't hard-coded.
 
-| 话题     | 决定                                                         |
-| -------- | ------------------------------------------------------------ |
-| 货币     | 开局时可选，沿用上一局；没有上一局时默认人民币               |
-| 筹码比例 | 每局自己设，沿用上一局；没有上一局时 1 筹码 = 1 元           |
-| 买入     | 一个买入默认 100 个大盲，买入和补码按整数手记录              |
-| 抽水     | 按底池比例加封顶                                             |
-| 荷官费   | 按分钟精确计算                                               |
-| 保险     | 内置常见的 outs 赔率表，组织者可以逐项修改                   |
-| 保本额   | 同时显示「保回自己投入」和「保回整个底池」两个数             |
-| 多设备   | 同一局不需要多台设备同时操作。M1 先做游客模式，M6 接 Supabase |
-| 工作流程 | 从 M1 起走「分支 → PR → CI → 合并」                          |
+| Topic         | Decision                                                                                 |
+| ------------- | ---------------------------------------------------------------------------------------- |
+| Currency      | Chosen when starting a game, carried over from the last game. Defaults to CNY if none    |
+| Chip ratio    | Set per game, carried over from the last game. Defaults to 1 chip = 1 yuan if none       |
+| Buy-in        | One buy-in defaults to 100 big blinds. Buy-ins and rebuys are recorded in whole hands    |
+| Rake          | A percentage of the pot with a cap                                                       |
+| Dealer fee    | Calculated exactly by the minute                                                         |
+| Insurance     | Built-in table of common outs odds, each entry editable by the organizer                 |
+| Break-even    | Shows both "recover your own stake" and "recover the whole pot"                          |
+| Multi-device  | No need for several devices on one game. M1 is guest mode, Supabase arrives in M6        |
+| Workflow      | From M1 on: branch → PR → CI → merge                                                     |
 
-## 还没定的事
+"Hand" (手) here means one buy-in unit, not a hand of cards.
 
-- 荷官费的每小时金额（M2）
-- 内置赔率表的具体数字（M3）
-- 抽水比例、封顶金额，以及是否「不见翻牌不抽」（M4）
-- 商标检查和正式域名。部署先用免费的 `*.pages.dev` 子域名，见 Issue #9
+## Open questions
 
-## 已知的坑
+- The hourly dealer fee (M2)
+- The numbers in the built-in odds table (M3)
+- The rake percentage, the cap, and whether there's "no flop, no drop" (M4)
+- Trademark check and a permanent domain. Deployment uses a free `*.pages.dev` subdomain for now, see issue #9
 
-- **路径里不能有引号或空格。** vite-plugin-pwa（workbox）把依赖的绝对路径用单引号写进 `sw.js`，
-  路径里的 `'` 会让生成的代码语法出错。目录名只用小写字母、数字和连字符。
-- **`routeTree.gen.ts` 要提交。** 改路由后它会重新生成，不提交的话干净检出后类型检查会失败。
-- **找不到 node 或 pnpm：** 运行 `source ~/.bashrc` 或新开一个终端。
-- **Docker：** M6 本地跑 Supabase 时才需要。虚拟机磁盘紧张的话先扩容。
-- **国内访问：** Supabase 和 Cloudflare 的官方服务在国内都可能不稳定，国内版另外部署。
-- **Supabase 免费版暂停：** 一周没有访问会暂停，开发期没关系，上线后要用 Pro 版。
+## Known pitfalls
+
+- **Paths must not contain quotes or spaces.** vite-plugin-pwa (workbox) writes absolute dependency paths into `sw.js` in single quotes,
+  so a `'` in a path produces invalid code. Use only lowercase letters, digits and hyphens in directory names.
+- **Commit `routeTree.gen.ts`.** It regenerates when routes change. Without it, type checks fail on a clean checkout.
+- **`node` or `pnpm` not found:** run `source ~/.bashrc` or open a new terminal.
+- **Docker** is only needed to run Supabase locally in M6. Expand the VM's disk first if it's tight.
+- **Access from mainland China:** the official Supabase and Cloudflare services can both be unreliable there, so the China version is deployed separately.
+- **Supabase free tier pausing:** a project pauses after a week without traffic. That's fine in development, but production needs the Pro plan.

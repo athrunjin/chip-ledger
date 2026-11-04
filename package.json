@@ -1,7 +1,7 @@
 {
   "name": "holdem-assistant",
   "private": true,
-  "description": "线下德州扑克组局助手 —— 买入记账、结算、保险、抽水、计时与玩家报告",
+  "description": "Assistant for organizers of live Texas Hold'em games: buy-in ledger, settlement, insurance, rake, timing and player reports",
   "author": "Cheng Jin",
   "license": "UNLICENSED",
   "type": "module",

@@ -1,7 +1,7 @@
 /**
- * 牌局设置：默认值、表单解析和校验、新建与修改。
+ * Game settings: defaults, form parsing and validation, creating and updating.
  *
- * 表单里的值都是用户输入的字符串，这里统一转成整数（分、筹码数）。
+ * Form values are strings typed by the user, converted here to integers (cents, chips).
  */
 import type { Currency, Game, OrganizerId, Timestamp } from "../domain";
 import { cents, toDecimalString, tryParseMoney } from "../money";
@@ -31,7 +31,7 @@ export interface GameSettingsForm {
 
 export type GameSettingsField = Exclude<keyof GameSettingsForm, "currency">;
 
-/** 问题代码。文案由界面决定。 */
+/** Issue codes. The UI decides the wording. */
 export type GameSettingsIssue =
   | "invalid"
   | "not-positive"
@@ -44,7 +44,7 @@ export type ParsedGameSettings =
   | { readonly ok: true; readonly settings: GameSettings }
   | { readonly ok: false; readonly issues: GameSettingsIssues };
 
-/** 这个功能之前的牌局没有买入设置，表单用默认值。 */
+/** Games from before this feature have no buy-in setting, so the form uses the default. */
 export function toGameSettingsForm(
   settings: BaseSettings & Pick<Game, "buyInBigBlinds">,
 ): GameSettingsForm {
@@ -58,7 +58,7 @@ export function toGameSettingsForm(
   };
 }
 
-/** 解析筹码数：非负整数，可以带千分位。无法解析时返回 null。 */
+/** Parses a chip count: a non-negative integer, thousands separators allowed. Returns null if it cannot be parsed. */
 export function parseChips(input: string): number | null {
   const normalized = input.trim().replace(/[,\s]/g, "");
   if (!/^\d+$/.test(normalized)) return null;
@@ -71,7 +71,7 @@ function positiveIssue(value: number | null): GameSettingsIssue | undefined {
   return value > 0 ? undefined : "not-positive";
 }
 
-/** 1 手的筹码数。不能换算成整数筹码时返回 null。 */
+/** Chips per hand, or null if that is not a whole number of chips. */
 export function handChipsFor({
   bigBlind,
   chipRatio,
@@ -83,8 +83,8 @@ export function handChipsFor({
 }
 
 /**
- * `buyInLocked`：已有账本事件时 1 手已经固定，买入设置不生效，
- * 改盲注不需要再检查换算结果。
+ * `buyInLocked`: once the ledger has events the hand size is fixed and the buy-in setting has no effect,
+ * so changing blinds does not need the conversion checked again.
  */
 export function parseGameSettings(
   form: GameSettingsForm,
@@ -140,7 +140,7 @@ export interface NewGameMeta {
   readonly createdAt: Timestamp;
 }
 
-/** 设置加上换算出的 1 手。换算不出整数时不带，牌局按筹码数记录。 */
+/** Settings plus the converted hand size. Without a whole number the field is left out and the game records chips. */
 function withHandChips(settings: GameSettings) {
   const handChips = handChipsFor(settings);
   return handChips === null ? settings : { ...settings, handChips };
@@ -150,21 +150,21 @@ export function createGame(meta: NewGameMeta, settings: GameSettings): Game {
   return { ...meta, ...withHandChips(settings), status: "open" };
 }
 
-/** 确认结算。转账方案不保存，随时可以从账本重新算出来。 */
+/** Confirms settlement. Transfers are not saved because the ledger can always reproduce them. */
 export function settleGame(game: Game, settledAt: Timestamp): Game {
   return { ...game, status: "settled", settledAt };
 }
 
-/** 结算后发现记错了，重新打开继续记账。 */
+/** Reopens a settled game when a mistake turns up, so recording can continue. */
 export function reopenGame(game: Game): Game {
   const { settledAt: _, ...rest } = game;
   return { ...rest, status: "open" };
 }
 
 /**
- * 修改牌局设置。账本事件记录的是筹码数，金额由比例推导，
- * 所以有事件之后不能再改货币和筹码比例，否则已有记录的金额会跟着变。
- * 1 手的筹码数同样固定，否则同一局里「3 手」的含义会不一致。
+ * Updates game settings. Ledger events record chips and amounts come from the ratio,
+ * so the currency and chip ratio cannot change once events exist, or existing amounts would change too.
+ * Chips per hand are fixed too, or "3 hands" would mean different things within a game.
  */
 export function updateGameSettings(
   game: Game,

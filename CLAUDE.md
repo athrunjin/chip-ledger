@@ -1,45 +1,48 @@
 # CLAUDE.md
 
-给 AI 编程助手（Claude Code 等）的项目说明。人类开发者请先看 README.md 和 CONTRIBUTING.md。
+Project notes for AI coding assistants (Claude Code and others). Human developers should start with README.md and CONTRIBUTING.md.
 
-## 项目
+## Project
 
-线下德州扑克组局助手（PWA）：买入记账、结算、保险、抽水、计时、玩家报告。
-产品名：德州之王（King in Texas）。面向组织者，手机 / 平板优先。界面文案用简体中文。
-路线图见 docs/ROADMAP.md，已确认的规则和背景见 docs/CONTEXT.md，
-功能和流程的改进讨论记录在 docs/IMPROVEMENTS.md。
+An assistant (PWA) for organizers of live Texas Hold'em games: buy-in ledger, settlement, insurance, rake, timing and player reports.
+The product name is 德州之王 (King in Texas). It is built for organizers, phone and tablet first. Interface text is in Simplified Chinese.
+The roadmap is in docs/ROADMAP.md, confirmed rules and background are in docs/CONTEXT.md,
+and discussions of feature and process improvements are in docs/IMPROVEMENTS.md.
 
-## 常用命令
+## Common commands
 
 ```bash
-pnpm install          # 安装依赖
-pnpm dev              # 启动开发服务器（apps/web）
-pnpm test             # 全部单元测试
-pnpm typecheck        # 类型检查
-pnpm lint             # Biome 检查；pnpm format 自动修复
-pnpm check            # 提交前完整检查：lint + typecheck + test + build
+pnpm install          # Install dependencies
+pnpm dev              # Start the dev server (apps/web)
+pnpm test             # All unit tests
+pnpm typecheck        # Type check
+pnpm lint             # Biome check; pnpm format fixes issues
+pnpm check            # Full pre-commit check: lint + typecheck + test + build
 ```
 
-## 结构与分层
+## Structure and layers
 
-- `packages/core`：纯业务逻辑（金额、结算、保险、抽水、计时）。只放纯函数和类型，
-  不访问网络、数据库、DOM，不依赖其他包。所有算钱的规则都写在这里。
-- `apps/web`：React 19 + Vite + TanStack Router（文件路由在 `src/routes/`，
-  `routeTree.gen.ts` 自动生成且需提交）+ Tailwind v4。只做展示和交互。
-- 依赖方向：`apps → packages`，反过来不行。
+- `packages/core`: pure business logic (money, settlement, insurance, rake, timing). Pure functions and types only,
+  with no network, database or DOM access and no dependency on other packages. All money rules live here.
+- `apps/web`: React 19 + Vite + TanStack Router (file routes in `src/routes/`;
+  `routeTree.gen.ts` is generated and must be committed) + Tailwind v4. Display and interaction only.
+- Dependencies point from `apps` to `packages`, never the other way.
 
-## 必须遵守
+## Rules
 
-- 金额一律用 `@holdem/core` 的 `Cents`（整数分）。乘比例用 `multiply` 并显式选取整方式，
-  拆分用 `allocate`。不要用浮点数做金额运算（ADR 0004）。
-- 计时记录时间戳、用差值计算，不依赖持续运行的定时器（ADR 0001）。
-- 账本是只追加事件；撤销是追加一条冲正事件，不修改旧记录（ADR 0005）。
-- 存储通过数据仓库接口访问：游客模式 = 本机 Dexie，账户模式 = Supabase（ADR 0005）。
-- `core` 的计算函数必须有 Vitest 单元测试；涉及金额守恒的加 fast-check 性质测试。
-- TypeScript 严格模式，不用 `any`。触控目标不小于 44px。
-- 提交信息用 Conventional Commits，中文说明，例如 `feat(core): 结算时计算最少转账方案`。
-- 影响长期结构的决定，在 `docs/adr/` 新增一篇记录。
+- Money always uses `Cents` (integer cents) from `@holdem/core`. Multiply with `multiply` and an explicit rounding mode,
+  and split with `allocate`. Never use floating-point arithmetic for money (ADR 0004).
+- Timers record timestamps and compute differences. They never rely on a running interval (ADR 0001).
+- The ledger is append-only events. To undo, append a reversal event; never change old records (ADR 0005).
+- Storage goes through the repository interface: guest mode is local Dexie, account mode is Supabase (ADR 0005).
+- Calculations in `core` must have Vitest unit tests. Anything that conserves money also gets a fast-check property test.
+- TypeScript strict mode, no `any`. Touch targets are at least 44px.
+- Commit messages use Conventional Commits in English, for example `feat(core): compute minimal settlement transfers`.
+- Everything in the repository and on GitHub is in English: commit messages, branch names, pull requests, issues, comments,
+  documentation, code comments and test names. Interface text and Chinese sample data in tests stay in Chinese.
+  Discussions with the user are in Chinese.
+- Decisions that affect the long-term structure get a new record in `docs/adr/`.
 
-## 设计令牌
+## Design tokens
 
-牌桌绒布绿为底，筹码金为唯一强调色；深色是主要场景。令牌定义在 `apps/web/src/styles.css`。
+Table-felt green is the base and chip gold is the only accent color; dark is the main mode. Tokens are defined in `apps/web/src/styles.css`.

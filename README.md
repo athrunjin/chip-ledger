@@ -1,65 +1,65 @@
 # 德州之王 · King in Texas
 
-线下德州扑克组局助手。帮组织者在牌局现场完成这些事：
+An assistant for organizers of live Texas Hold'em games. It handles these jobs at the table:
 
-- **买入记账与结算**：记录每位玩家的买入、补码、兑出，散局时自动核对平衡，并算出最少的转账方案
-- **保险计算**：按 outs 数算出赔率、赔付金额和保本额
-- **计时与荷官费**：按每位玩家的在桌时长计费
-- **抽水**：按规则计算每个底池的抽水
-- **固定玩家库**：输入名字或拼音首字母快速选人
-- **玩家报告**：某个时段的参与场次、水上水下、游戏时长
+- **Buy-in ledger and settlement**: records each player's buy-ins, rebuys and cash-outs, checks the balance when the game ends, and works out the fewest transfers
+- **Insurance calculator**: odds, payout and break-even amounts from the number of outs
+- **Timing and dealer fees**: charges by each player's time at the table
+- **Rake**: calculates the rake for each pot according to your rules
+- **Regular player list**: pick a player quickly by name or pinyin initials
+- **Player reports**: games played, winnings and losses, and time played over a period
 
-手机、平板、电脑都能用，可以「添加到主屏幕」像 App 一样打开。
+It works on phones, tablets and computers, and can be added to the home screen to open like an app. The app's interface is in Simplified Chinese.
 
-> 线上地址：<https://king-in-texas.pages.dev/>。目前处于 **M1 核心记账** 阶段，进度见 [开发路线](docs/ROADMAP.md)。
+> Live site: <https://king-in-texas.pages.dev/>. The project is in the **M1 core ledger** phase; see the [roadmap](docs/ROADMAP.md).
 
-## 技术栈
+## Tech stack
 
-| 层       | 选择                                                                    |
-| -------- | ----------------------------------------------------------------------- |
-| 形态     | PWA（以后用 Capacitor 打包上架）                                        |
-| 前端     | React 19 + TypeScript + Vite + TanStack Router                          |
-| 界面     | Tailwind CSS v4（组件按 shadcn/ui 的方式自有维护）                      |
-| 状态     | Zustand（界面状态）+ TanStack Query（云端数据）                         |
-| 本机存储 | Dexie / IndexedDB（游客模式）                                           |
-| 后端     | Supabase（M6 接入；可多地区部署）                                       |
-| 工程     | pnpm 单仓库 · Biome · Vitest + fast-check · Playwright · GitHub Actions |
+| Layer         | Choice                                                                    |
+| ------------- | ------------------------------------------------------------------------- |
+| Form          | PWA (packaged with Capacitor for the app stores later)                    |
+| Front end     | React 19 + TypeScript + Vite + TanStack Router                            |
+| UI            | Tailwind CSS v4 (components owned in the repo, in the style of shadcn/ui) |
+| State         | Zustand (UI state) + TanStack Query (remote data)                         |
+| Local storage | Dexie / IndexedDB (guest mode)                                            |
+| Back end      | Supabase (from M6; can be deployed per region)                            |
+| Tooling       | pnpm monorepo · Biome · Vitest + fast-check · Playwright · GitHub Actions |
 
-每项选择的理由记录在 [架构决策记录（ADR）](docs/adr/) 中。
+The reasons behind each choice are in the [architecture decision records (ADRs)](docs/adr/).
 
-## 项目结构
+## Project structure
 
 ```
 apps/
-  web/                # PWA 前端：界面、路由、交互
+  web/                # PWA front end: UI, routing, interaction
 packages/
-  core/               # 业务核心：金额、结算、保险、抽水、计时（纯函数，不依赖界面和数据库）
+  core/               # Business core: money, settlement, insurance, rake, timing (pure functions, no UI or database)
 docs/
-  ROADMAP.md          # 开发路线与里程碑
-  adr/                # 架构决策记录
-.github/workflows/    # 持续集成
+  ROADMAP.md          # Roadmap and milestones
+  adr/                # Architecture decision records
+.github/workflows/    # Continuous integration
 ```
 
-依赖方向只能是 `apps → packages`，`packages/core` 不依赖任何其他包。算钱的逻辑全部放在 `core`，
-以后的服务端、玩家端、原生 App 都复用它。
+Dependencies only point from `apps` to `packages`, and `packages/core` depends on no other package.
+All money logic lives in `core`, so a future server, player app or native app can reuse it.
 
-## 本地开发
+## Local development
 
-需要 Node.js 22+ 和 pnpm 10（`corepack enable` 即可启用）。
+Requires Node.js 22+ and pnpm 10 (run `corepack enable` to get it).
 
 ```bash
-pnpm install       # 安装依赖
-pnpm dev           # 启动开发服务器（手机连同一 Wi-Fi 可用局域网地址访问）
-pnpm test          # 运行单元测试
-pnpm check         # 提交前完整检查：代码规范 + 类型 + 测试 + 构建
+pnpm install       # Install dependencies
+pnpm dev           # Start the dev server (phones on the same Wi-Fi can use the LAN address)
+pnpm test          # Run unit tests
+pnpm check         # Full pre-commit check: lint + types + tests + build
 ```
 
-## 开发规范
+## Contributing
 
-见 [CONTRIBUTING.md](CONTRIBUTING.md)：分支命名、提交信息格式、代码规范。
+See [CONTRIBUTING.md](CONTRIBUTING.md) for branch names, commit message format and coding standards.
 
-## 版权
+## Copyright
 
-Copyright © 2026 Cheng Jin. 保留所有权利。
+Copyright © 2026 Cheng Jin. All rights reserved.
 
-本仓库公开仅供查看开发过程，**未授予任何使用、复制、修改或分发的许可**。详见 [LICENSE](LICENSE)。
+This repository is public only so that the development process can be viewed. **No license is granted to use, copy, modify or distribute it.** See [LICENSE](LICENSE).
