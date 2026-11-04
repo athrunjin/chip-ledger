@@ -90,13 +90,15 @@ function GameLedger({ game }: { game: Game }) {
     <Page
       title={`${formatGameMoney(smallBlind, currency)} / ${formatGameMoney(bigBlind, currency)}`}
       actions={
-        <Link
-          to="/games/$gameId/settings"
-          params={{ gameId }}
-          className="inline-flex min-h-11 shrink-0 items-center text-highlight"
-        >
-          修改设置
-        </Link>
+        editable && (
+          <Link
+            to="/games/$gameId/settings"
+            params={{ gameId }}
+            className="inline-flex min-h-11 shrink-0 items-center text-highlight"
+          >
+            修改设置
+          </Link>
+        )
       }
     >
       <p className="text-sm text-muted">
@@ -128,6 +130,16 @@ function GameLedger({ game }: { game: Game }) {
         onRebuy={(playerId) => setPending({ kind: "buy", playerId, name: nameOf(playerId) })}
         onCashOut={(playerId) => setPending({ kind: "cash_out", playerId, name: nameOf(playerId) })}
       />
+
+      {ledger.length > 0 && (
+        <Link
+          to="/games/$gameId/settlement"
+          params={{ gameId }}
+          className="mt-4 flex min-h-12 items-center justify-center rounded-xl bg-accent px-6 font-semibold text-accent-text"
+        >
+          {editable ? "结算" : "查看结算"}
+        </Link>
+      )}
 
       {editable && (
         <AddPlayerToGame

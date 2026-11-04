@@ -108,6 +108,17 @@ export function createGame(meta: NewGameMeta, settings: GameSettings): Game {
   return { ...meta, ...settings, status: "open" };
 }
 
+/** 确认结算。转账方案不保存，随时可以从账本重新算出来。 */
+export function settleGame(game: Game, settledAt: Timestamp): Game {
+  return { ...game, status: "settled", settledAt };
+}
+
+/** 结算后发现记错了，重新打开继续记账。 */
+export function reopenGame(game: Game): Game {
+  const { settledAt: _, ...rest } = game;
+  return { ...rest, status: "open" };
+}
+
 /**
  * 修改牌局设置。账本事件记录的是筹码数，金额由比例推导，
  * 所以有事件之后不能再改货币和筹码比例，否则已有记录的金额会跟着变。

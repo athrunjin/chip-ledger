@@ -8,6 +8,8 @@ import {
   type GameSettings,
   type GameSettingsForm,
   parseGameSettings,
+  reopenGame,
+  settleGame,
   toGameSettingsForm,
   updateGameSettings,
 } from "./game";
@@ -102,6 +104,16 @@ describe("createGame", () => {
       ...DEFAULT_GAME_SETTINGS,
       status: "open",
     });
+  });
+});
+
+describe("settleGame / reopenGame", () => {
+  const game = createGame(meta, DEFAULT_GAME_SETTINGS);
+
+  it("结算后记录时间，重新打开后恢复原样", () => {
+    const settled = settleGame(game, 2);
+    expect(settled).toEqual({ ...game, status: "settled", settledAt: 2 });
+    expect(reopenGame(settled)).toEqual(game);
   });
 });
 

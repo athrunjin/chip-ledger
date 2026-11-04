@@ -8,10 +8,15 @@ export const CURRENCY_INFO: Record<
   CNY: { label: "人民币", symbol: "¥", locale: "zh-CN" },
 };
 
-export function formatGameMoney(value: Cents, currency: Currency) {
+export function formatGameMoney(
+  value: Cents,
+  currency: Currency,
+  signDisplay: "auto" | "exceptZero" = "auto",
+) {
   return formatMoney(value, {
     currency,
     locale: CURRENCY_INFO[currency].locale,
+    signDisplay,
     trimZeroCents: true,
   });
 }

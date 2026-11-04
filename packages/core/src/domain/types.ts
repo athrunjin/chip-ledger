@@ -30,6 +30,8 @@ export interface Game {
   readonly chipRatio: ChipRatio;
   readonly status: GameStatus;
   readonly createdAt: Timestamp;
+  /** 确认结算的时间。重新打开后清除。 */
+  readonly settledAt?: Timestamp;
 }
 
 export interface Player {
