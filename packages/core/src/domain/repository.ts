@@ -32,8 +32,29 @@ export interface LedgerRepository {
   append(event: LedgerEvent): Promise<void>;
 }
 
+/** 这位组织者的全部数据。 */
+export interface BackupData {
+  readonly games: readonly Game[];
+  readonly players: readonly Player[];
+  readonly ledgerEvents: readonly LedgerEvent[];
+}
+
+export interface RestoreResult {
+  /** 新增的记录数。 */
+  readonly added: number;
+  /** 因 ID 已存在而跳过的记录数。 */
+  readonly skipped: number;
+}
+
+export interface BackupRepository {
+  exportAll(): Promise<BackupData>;
+  /** 合并恢复：只新增，ID 已存在的记录保持原样。全部成功或全部不写入。 */
+  restore(data: BackupData): Promise<RestoreResult>;
+}
+
 export interface Repository {
   readonly games: GameRepository;
   readonly players: PlayerRepository;
   readonly ledger: LedgerRepository;
+  readonly backup: BackupRepository;
 }

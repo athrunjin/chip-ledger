@@ -13,6 +13,7 @@
 | [0006](0006-monorepo-and-tooling.md)    | pnpm 单仓库与工程工具                                 | 已采纳 |
 | [0007](0007-domain-model-and-repository.md) | 领域模型和数据仓库接口放在 core，Dexie 实现放在 apps/web | 已采纳 |
 | [0008](0008-pinyin-initials.md) | 用 pinyin-pro 在应用层生成拼音首字母 | 已采纳 |
+| [0009](0009-backup-format.md) | JSON 备份用版本化格式，恢复时只新增不覆盖 | 已采纳 |
 
 ## 模板
 

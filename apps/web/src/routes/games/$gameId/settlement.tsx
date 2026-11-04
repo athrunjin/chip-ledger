@@ -17,7 +17,8 @@ import { useGame, useSaveGame } from "@/data/games";
 import { useLedger } from "@/data/ledger";
 import { usePlayers } from "@/data/players";
 import { formatGameMoney } from "@/lib/currency";
-import { renderSettlementImage, shareImage } from "@/lib/settlement-image";
+import { renderSettlementImage } from "@/lib/settlement-image";
+import { shareFile } from "@/lib/share";
 
 export const Route = createFileRoute("/games/$gameId/settlement")({
   component: SettlementPage,
@@ -106,7 +107,7 @@ function SettlementResult({ game, nets, nameOf }: SettlementResultProps) {
         })),
       });
       const day = [date.getFullYear(), date.getMonth() + 1, date.getDate()].join("-");
-      await shareImage(image, `结算-${day}.png`);
+      await shareFile(image, `结算-${day}.png`);
     } catch {
       setShareFailed(true);
     } finally {

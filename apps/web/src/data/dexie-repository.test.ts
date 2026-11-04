@@ -108,6 +108,47 @@ describe("Dexie 数据仓库", () => {
     expect(await repository.ledger.listByGame("g")).toEqual([]);
   });
 
+  it("导出后恢复到空库，数据完全一致", async () => {
+    await repository.games.save(game("g", "me", 1));
+    await repository.players.save(player("p", "me", "Alice"));
+    await repository.ledger.append(buyIn("e", "me", "g", 1));
+    await other.games.save(game("foreign", "other", 1));
+    const backup = await repository.backup.exportAll();
+
+    const target = createGuestDatabase(`test-${crypto.randomUUID()}`);
+    const restored = createDexieRepository(target, "me");
+    expect(await restored.backup.restore(backup)).toEqual({ added: 3, skipped: 0 });
+    expect(await restored.backup.exportAll()).toEqual(backup);
+    expect(backup.games.map((g) => g.id)).toEqual(["g"]);
+    await Dexie.delete(target.name);
+  });
+
+  it("恢复时跳过已有记录，不覆盖本机数据", async () => {
+    await repository.games.save({ ...game("g", "me", 1), status: "settled" });
+    await repository.ledger.append(buyIn("e", "me", "g", 1));
+
+    const result = await repository.backup.restore({
+      games: [game("g", "me", 1), game("new", "me", 2)],
+      players: [],
+      ledgerEvents: [buyIn("e", "me", "g", 99)],
+    });
+
+    expect(result).toEqual({ added: 1, skipped: 2 });
+    expect((await repository.games.get("g"))?.status).toBe("settled");
+    expect((await repository.ledger.listByGame("g")).map((e) => e.occurredAt)).toEqual([1]);
+  });
+
+  it("恢复其他组织者的备份时失败，不写入任何数据", async () => {
+    const restore = repository.backup.restore({
+      games: [game("mine", "me", 1), game("theirs", "other", 1)],
+      players: [],
+      ledgerEvents: [],
+    });
+
+    await expect(restore).rejects.toThrow(ForeignOrganizerError);
+    expect(await repository.games.list()).toEqual([]);
+  });
+
   it("不能写入其他组织者的数据", async () => {
     await expect(repository.games.save(game("g", "other", 1))).rejects.toThrow(
       ForeignOrganizerError,
