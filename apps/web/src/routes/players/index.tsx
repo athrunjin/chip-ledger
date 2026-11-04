@@ -3,9 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Search } from "lucide-react";
 import { useState } from "react";
 import { Page } from "@/components/Page";
-import { GUEST_ORGANIZER_ID } from "@/data";
-import { usePlayers, useSavePlayer } from "@/data/players";
-import { toInitials } from "@/lib/pinyin";
+import { newPlayer, usePlayers, useSavePlayer } from "@/data/players";
 import { PLAYER_NAME_ISSUE_TEXT } from "@/lib/player-name";
 
 export const Route = createFileRoute("/players/")({
@@ -28,16 +26,7 @@ function PlayersPage() {
 
   function handleAdd() {
     if (newName === undefined) return;
-    savePlayer.mutate(
-      {
-        id: crypto.randomUUID(),
-        organizerId: GUEST_ORGANIZER_ID,
-        name: newName,
-        initials: toInitials(newName),
-        createdAt: Date.now(),
-      },
-      { onSuccess: () => setQuery("") },
-    );
+    savePlayer.mutate(newPlayer(newName), { onSuccess: () => setQuery("") });
   }
 
   return (

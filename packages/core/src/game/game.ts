@@ -46,7 +46,8 @@ export function toGameSettingsForm(settings: GameSettings): GameSettingsForm {
   };
 }
 
-function parseChips(input: string): number | null {
+/** 解析筹码数：非负整数，可以带千分位。无法解析时返回 null。 */
+export function parseChips(input: string): number | null {
   const normalized = input.trim().replace(/[,\s]/g, "");
   if (!/^\d+$/.test(normalized)) return null;
   const value = Number(normalized);
