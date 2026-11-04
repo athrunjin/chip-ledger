@@ -2,7 +2,7 @@
 
 每个里程碑对应一个 GitHub Milestone，里面的每项功能对应一个 Issue。
 
-## M0 项目起步（进行中）
+## M0 项目起步（已完成）
 
 - [x] 确定技术栈（见 [ADR 0001–0006](adr/)）
 - [x] pnpm 单仓库：`apps/web` + `packages/core`
@@ -10,7 +10,7 @@
 - [x] 金额工具（整数分）及测试
 - [x] PWA 空壳：底部/侧边导航、可安装、离线缓存、新版本提示
 - [x] GitHub Actions：代码规范、类型检查、测试、构建
-- [ ] 部署到 Cloudflare Pages，每个 PR 自动生成预览链接
+- [x] 部署到 Cloudflare Pages，每个 PR 自动生成预览链接
 
 ## M1 核心记账（MVP —— 可以拿到牌局实际使用）
 
