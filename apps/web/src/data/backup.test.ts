@@ -76,7 +76,10 @@ describe("backup file", () => {
   it("keeps a game's buy-in settings", () => {
     const [game] = data.games;
     if (!game) throw new Error("missing game");
-    const withBuyIn = { ...data, games: [{ ...game, buyInBigBlinds: 100, handChips: 200 }] };
+    const withBuyIn = {
+      ...data,
+      games: [{ ...game, buyInBigBlinds: 100, handChips: 200, collectorId: "p" }],
+    };
     expect(parseBackup(serializeBackup(withBuyIn, 1))).toEqual({ ok: true, data: withBuyIn });
   });
 

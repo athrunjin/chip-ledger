@@ -36,6 +36,8 @@ export interface Game {
   readonly handChips?: number;
   readonly status: GameStatus;
   readonly createdAt: Timestamp;
+  /** Who collects and pays out at settlement: a player ID or `ORGANIZER_COLLECTOR`. Missing means the optimal plan. */
+  readonly collectorId?: string;
   /** When settlement was confirmed. Cleared on reopening. */
   readonly settledAt?: Timestamp;
 }

@@ -139,6 +139,12 @@ export function settleGame(game: Game, settledAt: Timestamp): Game {
   return { ...game, status: "settled", settledAt };
 }
 
+/** Saves who collects at settlement. `undefined` goes back to the optimal plan. */
+export function chooseCollector(game: Game, collectorId: string | undefined): Game {
+  const { collectorId: _, ...rest } = game;
+  return collectorId === undefined ? rest : { ...rest, collectorId };
+}
+
 /** Reopens a settled game when a mistake turns up, so recording can continue. */
 export function reopenGame(game: Game): Game {
   const { settledAt: _, ...rest } = game;

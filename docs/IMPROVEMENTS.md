@@ -34,7 +34,7 @@ Records discussions of feature and process improvements: what was proposed, how 
 - Problem: once the books balance, the settlement page has no way back to the game except the bottom navigation.
 - Proposal: add a back button to the page header that returns to the game, in every settlement state.
 - Decision: do.
-- Tracking: no issue yet
+- Tracking: issue #31
 
 ### #I-011 Results first on the settlement page
 
@@ -49,7 +49,7 @@ Records discussions of feature and process improvements: what was proposed, how 
   - Older games without hands show a dash in that column.
   - The shared image uses the same content and order.
 - Decision: do.
-- Tracking: no issue yet
+- Tracking: issue #32
 
 ### #I-012 Collapsible transfers with a collector option
 
@@ -67,7 +67,7 @@ Records discussions of feature and process improvements: what was proposed, how 
   - The chosen plan is saved with the game, so it survives reopening and matches the shared image.
   - The shared image always shows the chosen plan in full, without collapsing.
 - Decision: do.
-- Tracking: no issue yet
+- Tracking: issue #33, [ADR 0012](adr/0012-settlement-collector.md)
 
 ## Done
 

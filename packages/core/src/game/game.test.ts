@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { cents } from "../money";
 import {
+  chooseCollector,
   createGame,
   DEFAULT_GAME_SETTINGS,
   type GameSettings,
@@ -176,6 +177,16 @@ describe("upgradeLegacyGame", () => {
   it("rounds to whole chips and keeps blinds at 1 or more", () => {
     const coarse = { ...legacy, chipRatio: { chips: 1, amount: cents(1000) } };
     expect(upgradeLegacyGame(coarse)).toMatchObject({ smallBlindChips: 1, bigBlindChips: 1 });
+  });
+});
+
+describe("chooseCollector", () => {
+  const game = createGame(meta, DEFAULT_GAME_SETTINGS);
+
+  it("saves a collector and clears it again", () => {
+    const chosen = chooseCollector(game, "p1");
+    expect(chosen.collectorId).toBe("p1");
+    expect(chooseCollector(chosen, undefined)).toEqual(game);
   });
 });
 
