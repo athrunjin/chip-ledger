@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { BackupSection } from "@/components/BackupSection";
 import { InDevelopment } from "@/components/InDevelopment";
 import { Page } from "@/components/Page";
 
@@ -25,6 +26,7 @@ function MePage() {
           <InDevelopment milestone="M6" />
         </div>
       </section>
+      <BackupSection />
       <p className="mt-6 text-center text-xs text-muted">德州之王 · 开发版 {__APP_VERSION__}</p>
     </Page>
   );
