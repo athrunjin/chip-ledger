@@ -36,6 +36,8 @@ export interface Player {
   readonly id: string;
   readonly organizerId: OrganizerId;
   readonly name: string;
+  /** 名字的拼音首字母，小写，用于搜索。生成方式在应用层，`core` 不依赖拼音库。 */
+  readonly initials: string;
   readonly createdAt: Timestamp;
 }
 

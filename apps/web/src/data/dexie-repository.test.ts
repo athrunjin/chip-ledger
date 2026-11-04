@@ -28,6 +28,7 @@ const player = (id: string, organizerId: string, name: string): Player => ({
   id,
   organizerId,
   name,
+  initials: name.toLowerCase(),
   createdAt: 1,
 });
 

@@ -7,3 +7,4 @@
 export * from "./domain";
 export * from "./game";
 export * from "./money";
+export * from "./player";
