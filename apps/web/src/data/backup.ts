@@ -27,6 +27,7 @@ const gameFields = {
   chipRatio: z.object({ chips: chips.positive(), amount: money }),
   buyInBigBlinds: chips.positive().optional(),
   handChips: chips.positive().optional(),
+  collectorId: id.optional(),
   status: z.enum(["open", "settled"]),
   createdAt: timestamp,
   settledAt: timestamp.optional(),

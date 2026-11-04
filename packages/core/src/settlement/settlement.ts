@@ -95,3 +95,25 @@ export function settleTransfers(nets: readonly PlayerNet[]): Transfer[] {
     balances.set(debtor[0], debtor[1] + amount);
   }
 }
+
+/** The collector is an organizer who is not playing, rather than a player ID. */
+export const ORGANIZER_COLLECTOR = "organizer";
+
+/** Transfers through one person: every loser pays the collector, who pays every winner. */
+export function collectorTransfers(nets: readonly PlayerNet[], collectorId: string): Transfer[] {
+  return nets
+    .filter((p) => p.playerId !== collectorId && p.net !== 0)
+    .toSorted((a, b) => a.net - b.net)
+    .map(({ playerId, net }) =>
+      net < 0
+        ? { from: playerId, to: collectorId, amount: cents(-net) }
+        : { from: collectorId, to: playerId, amount: net },
+    );
+}
+
+/** A collector no longer in the game, for example after reopening it, falls back to the optimal plan. */
+export function isValidCollector(nets: readonly PlayerNet[], collectorId: string | undefined) {
+  return (
+    collectorId === ORGANIZER_COLLECTOR || nets.some(({ playerId }) => playerId === collectorId)
+  );
+}

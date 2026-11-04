@@ -18,7 +18,7 @@ Each milestone maps to a GitHub Milestone, and each feature in it maps to an iss
 - Player list (stored locally in guest mode): add, search (name / pinyin initials)
 - Ledger: buy-ins, rebuys and cash-outs in an append-only ledger, with undo
 - Buying in by hands: one buy-in = xx big blinds, one row per seated player, quick hand adjustments
-- Settlement: balance check (all wins and losses + rake + insurance = 0), fewest transfers
+- Settlement: balance check (all wins and losses + rake + insurance = 0), results first, fewest transfers or a collector plan
 - Settlement results as an image, for sharing to a group chat
 - Data export / import (JSON) as a backup
 

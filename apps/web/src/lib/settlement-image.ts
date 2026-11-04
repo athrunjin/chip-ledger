@@ -5,8 +5,17 @@
 export interface SettlementImageData {
   title: string;
   subtitle: string;
+  transferTitle: string;
   transfers: readonly { from: string; to: string; amount: string }[];
-  nets: readonly { name: string; amount: string }[];
+  results: readonly {
+    name: string;
+    hands: string;
+    chips: string;
+    net: string;
+    amount: string;
+    /** Above 0 for a win, below 0 for a loss. */
+    outcome: number;
+  }[];
 }
 
 // The image ignores the system theme and always uses the dark table colors
@@ -16,6 +25,8 @@ const COLOR = {
   text: "#e7ede9",
   muted: "#93a59d",
   gold: "#d6b04c",
+  win: "#5cc79f",
+  loss: "#ef8a7f",
 };
 
 const WIDTH = 1080;
@@ -23,7 +34,10 @@ const PADDING = 64;
 const ROW_HEIGHT = 104;
 const ROW_GAP = 16;
 const TRANSFER_NAME_MAX_WIDTH = 270;
-const NET_NAME_MAX_WIDTH = 560;
+const RESULT_NAME_MAX_WIDTH = 230;
+const RESULT_HEADER_HEIGHT = 56;
+/** Right edge of each result column. */
+const COLUMN = { hands: 390, chips: 535, net: 700, amount: WIDTH - PADDING - 36 };
 
 function truncate(ctx: CanvasRenderingContext2D, text: string, maxWidth: number) {
   if (ctx.measureText(text).width <= maxWidth) return text;
@@ -43,8 +57,9 @@ export async function renderSettlementImage(data: SettlementImageData): Promise<
   await document.fonts.ready;
 
   const sections = (data.transfers.length > 0 ? 1 : 0) + 1;
-  const rows = data.transfers.length + data.nets.length;
-  const height = 240 + sections * 84 + rows * (ROW_HEIGHT + ROW_GAP) + PADDING - ROW_GAP;
+  const rows = data.transfers.length + data.results.length;
+  const height =
+    240 + sections * 84 + RESULT_HEADER_HEIGHT + rows * (ROW_HEIGHT + ROW_GAP) + PADDING - ROW_GAP;
 
   const canvas = document.createElement("canvas");
   canvas.width = WIDTH;
@@ -87,8 +102,44 @@ export async function renderSettlementImage(data: SettlementImageData): Promise<
     ctx.textAlign = "left";
   }
 
+  function cellAtRight(text: string, right: number, center: number, color: string, style: string) {
+    ctx.textAlign = "right";
+    ctx.fillStyle = color;
+    ctx.font = style;
+    ctx.fillText(text, right, center);
+    ctx.textAlign = "left";
+  }
+
+  heading("结果");
+  ctx.font = font(30);
+  ctx.fillStyle = COLOR.muted;
+  ctx.fillText("玩家", PADDING + 36, y + 12);
+  for (const [label, right] of [
+    ["手", COLUMN.hands],
+    ["筹码", COLUMN.chips],
+    ["水上/下", COLUMN.net],
+    ["金额", COLUMN.amount],
+  ] as const) {
+    cellAtRight(label, right, y + 12, COLOR.muted, font(30));
+  }
+  y += RESULT_HEADER_HEIGHT;
+
+  for (const { name, hands, chips, net, amount, outcome } of data.results) {
+    roundedRow(ctx, y);
+    const center = y + ROW_HEIGHT / 2;
+    const color = outcome > 0 ? COLOR.win : outcome < 0 ? COLOR.loss : COLOR.text;
+    ctx.font = font(36);
+    ctx.fillStyle = COLOR.text;
+    ctx.fillText(truncate(ctx, name, RESULT_NAME_MAX_WIDTH), PADDING + 36, center);
+    cellAtRight(hands, COLUMN.hands, center, COLOR.text, font(36));
+    cellAtRight(chips, COLUMN.chips, center, COLOR.text, font(36));
+    cellAtRight(net, COLUMN.net, center, color, font(36));
+    cellAtRight(amount, COLUMN.amount, center, color, font(38, 700));
+    y += ROW_HEIGHT + ROW_GAP;
+  }
+
   if (data.transfers.length > 0) {
-    heading("转账方案");
+    heading(data.transferTitle);
     for (const { from, to, amount } of data.transfers) {
       roundedRow(ctx, y);
       const center = y + ROW_HEIGHT / 2;
@@ -107,17 +158,6 @@ export async function renderSettlementImage(data: SettlementImageData): Promise<
       amountAtRight(amount, center, COLOR.gold);
       y += ROW_HEIGHT + ROW_GAP;
     }
-  }
-
-  heading("输赢");
-  for (const { name, amount } of data.nets) {
-    roundedRow(ctx, y);
-    const center = y + ROW_HEIGHT / 2;
-    ctx.font = font(40);
-    ctx.fillStyle = COLOR.text;
-    ctx.fillText(truncate(ctx, name, NET_NAME_MAX_WIDTH), PADDING + 36, center);
-    amountAtRight(amount, center, COLOR.text);
-    y += ROW_HEIGHT + ROW_GAP;
   }
 
   return new Promise((resolve, reject) => {

@@ -3,7 +3,15 @@ import { describe, expect, it } from "vitest";
 
 import type { PlayerLedger } from "../ledger";
 import { cents, sum } from "../money";
-import { chipDifference, netCents, type PlayerNet, settleTransfers } from "./settlement";
+import {
+  chipDifference,
+  collectorTransfers,
+  isValidCollector,
+  netCents,
+  ORGANIZER_COLLECTOR,
+  type PlayerNet,
+  settleTransfers,
+} from "./settlement";
 
 const ledger = (playerId: string, boughtChips: number, cashedOutChips: number): PlayerLedger => ({
   playerId,
@@ -118,5 +126,50 @@ describe("settleTransfers", () => {
         expect(transfers.length).toBeLessThanOrEqual(Math.max(active - 1, 0));
       }),
     );
+  });
+});
+
+describe("collectorTransfers", () => {
+  const nets = [net("a", 700), net("b", 300), net("c", -1000), net("d", 0)];
+
+  it("has losers pay a player collector, who pays the winners", () => {
+    expect(collectorTransfers(nets, "b")).toEqual([
+      { from: "c", to: "b", amount: 1000 },
+      { from: "b", to: "a", amount: 700 },
+    ]);
+  });
+
+  it("runs everyone through an organizer who is not playing", () => {
+    expect(collectorTransfers(nets, ORGANIZER_COLLECTOR)).toEqual([
+      { from: "c", to: ORGANIZER_COLLECTOR, amount: 1000 },
+      { from: ORGANIZER_COLLECTOR, to: "b", amount: 300 },
+      { from: ORGANIZER_COLLECTOR, to: "a", amount: 700 },
+    ]);
+  });
+
+  it("clears every player and leaves the collector level", () => {
+    fc.assert(
+      fc.property(balancedLedgers, ratios, fc.boolean(), (players, ratio, outsider) => {
+        const results = netCents(players, ratio);
+        const collector = outsider ? ORGANIZER_COLLECTOR : (results[0]?.playerId ?? "");
+        const balances = new Map<string, number>(results.map((p) => [p.playerId, p.net]));
+        for (const { from, to, amount } of collectorTransfers(results, collector)) {
+          expect(amount).toBeGreaterThan(0);
+          balances.set(from, (balances.get(from) ?? 0) + amount);
+          balances.set(to, (balances.get(to) ?? 0) - amount);
+        }
+        expect([...balances.values()].every((b) => b === 0)).toBe(true);
+      }),
+    );
+  });
+});
+
+describe("isValidCollector", () => {
+  it("accepts the organizer and players in the game only", () => {
+    const nets = [net("a", 0)];
+    expect(isValidCollector(nets, "a")).toBe(true);
+    expect(isValidCollector(nets, ORGANIZER_COLLECTOR)).toBe(true);
+    expect(isValidCollector(nets, "gone")).toBe(false);
+    expect(isValidCollector(nets, undefined)).toBe(false);
   });
 });
