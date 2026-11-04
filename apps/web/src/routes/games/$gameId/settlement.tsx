@@ -10,13 +10,14 @@ import {
   summarizeByPlayer,
 } from "@holdem/core";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight } from "lucide-react";
-import type { ReactNode } from "react";
+import { ArrowRight, Share2 } from "lucide-react";
+import { type ReactNode, useState } from "react";
 import { Page } from "@/components/Page";
 import { useGame, useSaveGame } from "@/data/games";
 import { useLedger } from "@/data/ledger";
 import { usePlayers } from "@/data/players";
 import { formatGameMoney } from "@/lib/currency";
+import { renderSettlementImage, shareImage } from "@/lib/settlement-image";
 
 export const Route = createFileRoute("/games/$gameId/settlement")({
   component: SettlementPage,
@@ -78,10 +79,40 @@ interface SettlementResultProps {
 }
 
 function SettlementResult({ game, nets, nameOf }: SettlementResultProps) {
-  const { currency, status } = game;
+  const { currency, status, smallBlind, bigBlind, createdAt } = game;
   const saveGame = useSaveGame();
+  const [sharing, setSharing] = useState(false);
+  const [shareFailed, setShareFailed] = useState(false);
   const transfers = settleTransfers(nets);
   const ranked = nets.toSorted((a, b) => b.net - a.net);
+
+  async function handleShare() {
+    setSharing(true);
+    setShareFailed(false);
+    try {
+      const date = new Date(createdAt);
+      const blinds = `${formatGameMoney(smallBlind, currency)} / ${formatGameMoney(bigBlind, currency)}`;
+      const image = await renderSettlementImage({
+        title: "德州之王 · 结算",
+        subtitle: `${date.toLocaleDateString("zh-CN")} · ${blinds}`,
+        transfers: transfers.map(({ from, to, amount }) => ({
+          from: nameOf(from),
+          to: nameOf(to),
+          amount: formatGameMoney(amount, currency),
+        })),
+        nets: ranked.map(({ playerId, net }) => ({
+          name: nameOf(playerId),
+          amount: formatGameMoney(net, currency, "exceptZero"),
+        })),
+      });
+      const day = [date.getFullYear(), date.getMonth() + 1, date.getDate()].join("-");
+      await shareImage(image, `结算-${day}.png`);
+    } catch {
+      setShareFailed(true);
+    } finally {
+      setSharing(false);
+    }
+  }
 
   function handleReopen() {
     if (window.confirm("重新打开这局？可以继续记账，之后要再次结算。")) {
@@ -130,7 +161,22 @@ function SettlementResult({ game, nets, nameOf }: SettlementResultProps) {
         </p>
       )}
 
-      <div className="pt-6 pb-8">
+      {shareFailed && (
+        <p role="alert" className="mt-2 text-sm text-highlight">
+          图片生成失败，请重试。
+        </p>
+      )}
+
+      <div className="flex flex-col gap-2 pt-6 pb-8">
+        <button
+          type="button"
+          disabled={sharing}
+          onClick={handleShare}
+          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-line px-6 font-medium disabled:opacity-60"
+        >
+          <Share2 className="size-5" strokeWidth={1.75} aria-hidden />
+          生成图片
+        </button>
         {status === "open" ? (
           <button
             type="button"
