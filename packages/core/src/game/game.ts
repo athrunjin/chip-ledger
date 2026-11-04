@@ -11,10 +11,10 @@ export const CURRENCIES: readonly Currency[] = ["AUD", "CNY"];
 export type GameSettings = Pick<Game, "currency" | "smallBlind" | "bigBlind" | "chipRatio">;
 
 export const DEFAULT_GAME_SETTINGS: GameSettings = {
-  currency: "AUD",
+  currency: "CNY",
   smallBlind: cents(100),
   bigBlind: cents(200),
-  chipRatio: { chips: 100, amount: cents(100) },
+  chipRatio: { chips: 1, amount: cents(100) },
 };
 
 export interface GameSettingsForm {
