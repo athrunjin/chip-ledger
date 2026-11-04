@@ -13,6 +13,9 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as MeRouteImport } from './routes/me'
 import { Route as PlayersRouteImport } from './routes/players'
 import { Route as ToolsRouteImport } from './routes/tools'
+import { Route as GamesNewRouteImport } from './routes/games/new'
+import { Route as GamesGameIdIndexRouteImport } from './routes/games/$gameId/index'
+import { Route as GamesGameIdSettingsRouteImport } from './routes/games/$gameId/settings'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,18 +37,39 @@ const ToolsRoute = ToolsRouteImport.update({
   path: '/tools',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GamesNewRoute = GamesNewRouteImport.update({
+  id: '/games/new',
+  path: '/games/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GamesGameIdIndexRoute = GamesGameIdIndexRouteImport.update({
+  id: '/games/$gameId/',
+  path: '/games/$gameId/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GamesGameIdSettingsRoute = GamesGameIdSettingsRouteImport.update({
+  id: '/games/$gameId/settings',
+  path: '/games/$gameId/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/me': typeof MeRoute
   '/players': typeof PlayersRoute
   '/tools': typeof ToolsRoute
+  '/games/new': typeof GamesNewRoute
+  '/games/$gameId/settings': typeof GamesGameIdSettingsRoute
+  '/games/$gameId/': typeof GamesGameIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/me': typeof MeRoute
   '/players': typeof PlayersRoute
   '/tools': typeof ToolsRoute
+  '/games/new': typeof GamesNewRoute
+  '/games/$gameId/settings': typeof GamesGameIdSettingsRoute
+  '/games/$gameId': typeof GamesGameIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +77,38 @@ export interface FileRoutesById {
   '/me': typeof MeRoute
   '/players': typeof PlayersRoute
   '/tools': typeof ToolsRoute
+  '/games/new': typeof GamesNewRoute
+  '/games/$gameId/settings': typeof GamesGameIdSettingsRoute
+  '/games/$gameId/': typeof GamesGameIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/me' | '/players' | '/tools'
+  fullPaths:
+    | '/'
+    | '/me'
+    | '/players'
+    | '/tools'
+    | '/games/new'
+    | '/games/$gameId/settings'
+    | '/games/$gameId/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/me' | '/players' | '/tools'
-  id: '__root__' | '/' | '/me' | '/players' | '/tools'
+  to:
+    | '/'
+    | '/me'
+    | '/players'
+    | '/tools'
+    | '/games/new'
+    | '/games/$gameId/settings'
+    | '/games/$gameId'
+  id:
+    | '__root__'
+    | '/'
+    | '/me'
+    | '/players'
+    | '/tools'
+    | '/games/new'
+    | '/games/$gameId/settings'
+    | '/games/$gameId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +116,9 @@ export interface RootRouteChildren {
   MeRoute: typeof MeRoute
   PlayersRoute: typeof PlayersRoute
   ToolsRoute: typeof ToolsRoute
+  GamesNewRoute: typeof GamesNewRoute
+  GamesGameIdSettingsRoute: typeof GamesGameIdSettingsRoute
+  GamesGameIdIndexRoute: typeof GamesGameIdIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,6 +151,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/games/new': {
+      id: '/games/new'
+      path: '/games/new'
+      fullPath: '/games/new'
+      preLoaderRoute: typeof GamesNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/games/$gameId/': {
+      id: '/games/$gameId/'
+      path: '/games/$gameId'
+      fullPath: '/games/$gameId/'
+      preLoaderRoute: typeof GamesGameIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/games/$gameId/settings': {
+      id: '/games/$gameId/settings'
+      path: '/games/$gameId/settings'
+      fullPath: '/games/$gameId/settings'
+      preLoaderRoute: typeof GamesGameIdSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -107,6 +180,9 @@ const rootRouteChildren: RootRouteChildren = {
   MeRoute: MeRoute,
   PlayersRoute: PlayersRoute,
   ToolsRoute: ToolsRoute,
+  GamesNewRoute: GamesNewRoute,
+  GamesGameIdSettingsRoute: GamesGameIdSettingsRoute,
+  GamesGameIdIndexRoute: GamesGameIdIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

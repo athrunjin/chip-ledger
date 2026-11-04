@@ -10,6 +10,9 @@ export type Timestamp = number;
 
 export type OrganizerId = string;
 
+/** ISO 4217 货币代码。 */
+export type Currency = "AUD" | "CNY";
+
 /** 筹码与现金的比例：`chips` 个筹码值 `amount`。用一对整数表示，避免小数。 */
 export interface ChipRatio {
   readonly chips: number;
@@ -21,8 +24,7 @@ export type GameStatus = "open" | "settled";
 export interface Game {
   readonly id: string;
   readonly organizerId: OrganizerId;
-  /** ISO 4217 货币代码，例如 AUD、CNY。 */
-  readonly currency: string;
+  readonly currency: Currency;
   readonly smallBlind: Cents;
   readonly bigBlind: Cents;
   readonly chipRatio: ChipRatio;

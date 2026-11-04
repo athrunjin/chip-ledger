@@ -9,7 +9,9 @@ import { routeTree } from "./routeTree.gen";
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { staleTime: 30_000, retry: 2 },
+    // 游客模式的数据在本机，断网时也要能读写，不能按默认行为暂停
+    queries: { staleTime: 30_000, retry: 2, networkMode: "always" },
+    mutations: { networkMode: "always" },
   },
 });
 

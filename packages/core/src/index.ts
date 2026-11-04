@@ -5,4 +5,5 @@
  * 这样 Web、以后的原生 App、服务端、玩家端都能复用同一套算法，并且容易测试。
  */
 export * from "./domain";
+export * from "./game";
 export * from "./money";
