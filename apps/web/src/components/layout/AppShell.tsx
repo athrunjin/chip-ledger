@@ -1,4 +1,4 @@
-import { Link, Outlet } from "@tanstack/react-router";
+import { Link, Outlet, useLocation } from "@tanstack/react-router";
 import { cn } from "@/lib/cn";
 import { NAV_ITEMS } from "./nav-items";
 import { UpdatePrompt } from "./UpdatePrompt";
@@ -8,6 +8,9 @@ const linkBase =
 const linkActive = "text-text [&_svg]:text-highlight";
 
 export function AppShell() {
+  // 牌局详情在 /games 下，导航上仍然归到「牌局」
+  const inGame = useLocation({ select: (location) => location.pathname.startsWith("/games") });
+
   return (
     <div className="min-h-dvh md:grid md:grid-cols-[96px_1fr]">
       {/* 平板及以上：左侧导航栏 */}
@@ -20,7 +23,7 @@ export function AppShell() {
           <Link
             key={to}
             to={to}
-            className={cn(linkBase, "size-18 hover:bg-bg")}
+            className={cn(linkBase, "size-18 hover:bg-bg", to === "/" && inGame && linkActive)}
             activeProps={{ className: linkActive, "aria-current": "page" }}
             activeOptions={{ exact: to === "/" }}
           >
@@ -43,7 +46,7 @@ export function AppShell() {
           <Link
             key={to}
             to={to}
-            className={cn(linkBase, "h-16")}
+            className={cn(linkBase, "h-16", to === "/" && inGame && linkActive)}
             activeProps={{ className: linkActive, "aria-current": "page" }}
             activeOptions={{ exact: to === "/" }}
           >

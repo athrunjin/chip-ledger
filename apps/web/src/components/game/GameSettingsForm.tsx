@@ -1,0 +1,185 @@
+import {
+  CURRENCIES,
+  type GameSettingsForm as FormValues,
+  type GameSettings,
+  type GameSettingsField,
+  type GameSettingsIssue,
+  type GameSettingsIssues,
+  parseGameSettings,
+} from "@holdem/core";
+import { type FormEvent, useState } from "react";
+import { cn } from "@/lib/cn";
+import { CURRENCY_INFO } from "@/lib/currency";
+
+const ISSUE_TEXT: Record<GameSettingsIssue, string> = {
+  invalid: "请输入有效的数字",
+  "not-positive": "必须大于 0",
+  "below-small-blind": "大盲不能小于小盲",
+};
+
+interface GameSettingsFormProps {
+  initial: FormValues;
+  submitLabel: string;
+  /** 货币和筹码比例是否已锁定 */
+  ratioLocked?: boolean;
+  saving: boolean;
+  saveFailed: boolean;
+  onSubmit: (settings: GameSettings) => void;
+}
+
+export function GameSettingsForm({
+  initial,
+  submitLabel,
+  ratioLocked = false,
+  saving,
+  saveFailed,
+  onSubmit,
+}: GameSettingsFormProps) {
+  const [values, setValues] = useState(initial);
+  const [issues, setIssues] = useState<GameSettingsIssues>({});
+  const symbol = CURRENCY_INFO[values.currency].symbol;
+
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    const result = parseGameSettings(values);
+    if (result.ok) {
+      setIssues({});
+      onSubmit(result.settings);
+    } else {
+      setIssues(result.issues);
+    }
+  }
+
+  function field(name: GameSettingsField) {
+    const issue = issues[name];
+    return {
+      id: name,
+      value: values[name],
+      issue: issue && ISSUE_TEXT[issue],
+      onChange: (value: string) => setValues({ ...values, [name]: value }),
+    };
+  }
+
+  return (
+    <form onSubmit={handleSubmit} noValidate className="flex max-w-md flex-col gap-6 pb-8">
+      <fieldset disabled={ratioLocked} className="flex flex-col gap-6 disabled:opacity-60">
+        <div>
+          <span className="mb-2 block font-medium">货币</span>
+          <div className="grid grid-cols-2 gap-2">
+            {CURRENCIES.map((currency) => (
+              <label key={currency} className="block">
+                <input
+                  type="radio"
+                  name="currency"
+                  value={currency}
+                  checked={values.currency === currency}
+                  onChange={() => setValues({ ...values, currency })}
+                  className="peer sr-only"
+                />
+                <span className="grid min-h-12 cursor-pointer place-items-center rounded-xl border border-line bg-surface font-medium peer-checked:border-accent peer-checked:bg-accent peer-checked:text-accent-text peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-highlight">
+                  {CURRENCY_INFO[currency].label}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <span className="mb-2 block font-medium">筹码比例</span>
+          <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-2">
+            <TextField {...field("ratioChips")} label="筹码数" suffix="筹码" inputMode="numeric" />
+            <span className="mt-6 grid min-h-12 place-items-center text-muted">=</span>
+            <TextField
+              {...field("ratioAmount")}
+              label="对应金额"
+              prefix={symbol}
+              inputMode="decimal"
+            />
+          </div>
+        </div>
+      </fieldset>
+
+      {ratioLocked && (
+        <p className="text-sm text-muted">已有账本记录，货币和筹码比例不能再修改。</p>
+      )}
+
+      <div>
+        <span className="mb-2 block font-medium">盲注</span>
+        <div className="grid grid-cols-2 items-start gap-2">
+          <TextField {...field("smallBlind")} label="小盲" prefix={symbol} inputMode="decimal" />
+          <TextField {...field("bigBlind")} label="大盲" prefix={symbol} inputMode="decimal" />
+        </div>
+      </div>
+
+      {saveFailed && (
+        <p role="alert" className="text-sm text-highlight">
+          保存失败，请重试。
+        </p>
+      )}
+
+      <button
+        type="submit"
+        disabled={saving}
+        className="min-h-12 rounded-xl bg-accent px-6 font-semibold text-accent-text disabled:opacity-60"
+      >
+        {submitLabel}
+      </button>
+    </form>
+  );
+}
+
+interface TextFieldProps {
+  id: string;
+  label: string;
+  value: string;
+  issue: string | undefined;
+  prefix?: string;
+  suffix?: string;
+  inputMode: "numeric" | "decimal";
+  onChange: (value: string) => void;
+}
+
+function TextField({
+  id,
+  label,
+  value,
+  issue,
+  prefix,
+  suffix,
+  inputMode,
+  onChange,
+}: TextFieldProps) {
+  const issueId = `${id}-issue`;
+  return (
+    <div className="min-w-0">
+      <label htmlFor={id} className="mb-1 block text-sm text-muted">
+        {label}
+      </label>
+      <div
+        className={cn(
+          "flex min-h-12 items-center gap-1 rounded-xl border bg-surface px-3 focus-within:border-highlight",
+          issue ? "border-highlight" : "border-line",
+        )}
+      >
+        {prefix && <span className="text-muted">{prefix}</span>}
+        <input
+          id={id}
+          type="text"
+          inputMode={inputMode}
+          autoComplete="off"
+          value={value}
+          aria-invalid={issue ? true : undefined}
+          aria-describedby={issue ? issueId : undefined}
+          onChange={(event) => onChange(event.target.value)}
+          className="min-h-11 w-full min-w-0 bg-transparent text-lg outline-none"
+        />
+        {suffix && <span className="shrink-0 text-sm text-muted">{suffix}</span>}
+      </div>
+      {issue && (
+        <p id={issueId} className="mt-1 text-sm text-highlight">
+          {issue}
+        </p>
+      )}
+    </div>
+  );
+}
