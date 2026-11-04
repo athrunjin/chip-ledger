@@ -26,7 +26,84 @@ Records discussions of feature and process improvements: what was proposed, how 
 
 ## Decided, waiting for development
 
-(none)
+### #I-005 Collapsible game record
+
+- Type: feature
+- Date: proposed and decided 2026-11-04
+- Source: discussion
+- Problem: the ledger history takes up space below the player list during a game.
+- Proposal:
+  - Rename 流水 to 牌局记录 (game record), collapsed by default, with a record count in the header.
+  - Tap the header to expand or collapse it. A long list also gets a collapse button at the bottom, so nobody has to scroll back up.
+  - Collapsing and expanding is view state only and doesn't touch the ledger.
+- Decision: do.
+- Tracking: no issue yet
+
+### #I-006 Set blinds in chips
+
+- Type: feature
+- Date: proposed and decided 2026-11-04
+- Source: discussion
+- Problem: blinds are entered as money, but players at the table think in chips.
+- Proposal:
+  - Enter small and big blinds in chips, with the cash equivalent shown under the fields.
+  - Store blinds as chips on `Game`. Chips per hand become multiple × big blind chips, so the "not a whole number of chips" error goes away.
+  - Show blinds without a currency, for example `1 / 2`, on the game list, game page and settlement image.
+- Impact: changes the data model, so it needs an ADR, a local database upgrade and a new backup version that still reads version 1 files.
+  Older games are converted with their chip ratio.
+- Settled details: blinds are whole chips, matching the ledger. At 1:1 a ¥0.5 small blind needs a different chip ratio.
+- Decision: do.
+- Tracking: no issue yet
+
+### #I-007 Live stack and win/loss on each player row
+
+- Type: feature
+- Date: proposed and decided 2026-11-04
+- Source: discussion
+- Problem: the organizer can see what each player bought but not where they stand now.
+- Proposal:
+  - Add a chip cell to each seated player's row. It starts at the amount bought, and tapping it lets you type a new value.
+  - Show win/loss as chips − bought, with a sign and a color: + in one color, − in another, and 0 neutral. It replaces the bought amount under the name.
+  - Once a stack has been typed, changing hands adds or subtracts directly, with a minimum of 0.
+    Example with 500 chips per hand: King is at 700, one more hand makes 1200, and one hand fewer from 700 makes 200.
+- Ledger rules: a new append-only `stack_set` event records each typed value, so it can be undone like other records.
+  Replaying events has to apply a reversed buy as a change to the stack at that point, or the example above would stay at 700.
+- Layout: at 375px there's about 57px left for the name (about 3 Chinese characters) after the stack cell, hand controls and leave button. Longer names are truncated. To be checked on a real device.
+- Impact: new event type in the backup format; needs an ADR.
+- Settled details:
+  - Win/loss and the table balance are in chips, matching the stack next to them.
+  - Typed stacks appear in the game record, so they can be audited and undone. Tapping the chip cell opens a small dialog, like tapping the hand count.
+  - Each player keeps one row with short names, because two rows would fit only about 6–7 players on a screen.
+- Decision: do.
+- Tracking: no issue yet
+
+### #I-008 Rename cash out to leave table, with a confirmation dialog
+
+- Type: feature
+- Date: proposed and decided 2026-11-04
+- Source: discussion
+- Problem: leaving the table needs a final check of hands and chips, and today the dialog only asks for chips.
+- Proposal:
+  - Rename 兑出 to 离桌 (leave table) across the game page, game record and settlement notice.
+  - The dialog shows the player's current hands and chips, both adjustable. Chips start at the current stack, and changing hands follows the #I-007 rule.
+  - Confirming records the cash-out and moves the player to the left section. Cancelling changes nothing.
+- Depends on: #I-007
+- Decision: do.
+- Tracking: no issue yet
+
+### #I-009 Live table balance
+
+- Type: feature
+- Date: proposed and decided 2026-11-04
+- Source: discussion
+- Problem: mistakes in stacks only show up at settlement, after everyone has left.
+- Proposal:
+  - Replace the 场上 (in play) tile with a live balance: chips cashed out + seated stacks − chips bought.
+  - 0 means the table balances. Any other value shows its sign in a warning color.
+  - The balance stays at 0 until a stack is typed. After a win is entered, it stays off until the matching losses are entered too.
+- Depends on: #I-007
+- Decision: do.
+- Tracking: no issue yet
 
 ## Done
 

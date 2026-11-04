@@ -47,6 +47,9 @@ These are the product defaults. Rules are configurable by design, so organizers 
 | Currency      | Chosen when starting a game, carried over from the last game. Defaults to CNY if none    |
 | Chip ratio    | Set per game, carried over from the last game. Defaults to 1 chip = 1 yuan if none       |
 | Buy-in        | One buy-in defaults to 100 big blinds. Buy-ins and rebuys are recorded in whole hands    |
+| Blinds        | Set in whole chips, with the cash equivalent shown                                       |
+| Live stacks   | Each seated player has a stack and win/loss in chips, plus a table balance in chips      |
+| Leaving       | 离桌 (leave table) confirms hands and chips. Settlement still needs everyone to leave    |
 | Rake          | A percentage of the pot with a cap                                                       |
 | Dealer fee    | Calculated exactly by the minute                                                         |
 | Insurance     | Built-in table of common outs odds, each entry editable by the organizer                 |
