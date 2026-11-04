@@ -1,38 +1,40 @@
 import {
   CURRENCIES,
+  chipsToCents,
   type GameSettingsForm as FormValues,
   type GameSettings,
   type GameSettingsField,
   type GameSettingsIssue,
   type GameSettingsIssues,
-  handChipsFor,
   parseChips,
   parseGameSettings,
   tryParseMoney,
 } from "@holdem/core";
 import { type FormEvent, useState } from "react";
 import { TextField } from "@/components/TextField";
-import { CURRENCY_INFO } from "@/lib/currency";
+import { CURRENCY_INFO, formatGameMoney } from "@/lib/currency";
 
 const ISSUE_TEXT: Record<GameSettingsIssue, string> = {
   invalid: "请输入有效的数字",
   "not-positive": "必须大于 0",
   "below-small-blind": "大盲不能小于小盲",
-  "not-whole-chips": "1 手换算后不是整数筹码，请调整",
 };
 
-/** Chips per hand for the current input, or null while the input is incomplete. */
-function previewHandChips({ bigBlind, ratioChips, ratioAmount, buyInBigBlinds }: FormValues) {
-  const amount = tryParseMoney(bigBlind);
+/** The blinds in cash for the current input, or null while the input is incomplete. */
+function previewBlindCash({
+  currency,
+  smallBlindChips,
+  bigBlindChips,
+  ratioChips,
+  ratioAmount,
+}: FormValues) {
+  const small = parseChips(smallBlindChips);
+  const big = parseChips(bigBlindChips);
   const chips = parseChips(ratioChips);
-  const ratioValue = tryParseMoney(ratioAmount);
-  const multiple = parseChips(buyInBigBlinds);
-  if (!amount || !chips || !ratioValue || !multiple) return null;
-  return handChipsFor({
-    bigBlind: amount,
-    chipRatio: { chips, amount: ratioValue },
-    buyInBigBlinds: multiple,
-  });
+  const amount = tryParseMoney(ratioAmount);
+  if (!small || !big || !chips || !amount) return null;
+  const cash = (blind: number) => formatGameMoney(chipsToCents(blind, { chips, amount }), currency);
+  return `${cash(small)} / ${cash(big)}`;
 }
 
 interface GameSettingsFormProps {
@@ -59,11 +61,14 @@ export function GameSettingsForm({
   const [values, setValues] = useState(initial);
   const [issues, setIssues] = useState<GameSettingsIssues>({});
   const symbol = CURRENCY_INFO[values.currency].symbol;
-  const handChips = previewHandChips(values);
+  const blindCash = previewBlindCash(values);
+  const big = parseChips(values.bigBlindChips);
+  const multiple = parseChips(values.buyInBigBlinds);
+  const handChips = big && multiple ? big * multiple : null;
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    const result = parseGameSettings(values, { buyInLocked: ratioLocked });
+    const result = parseGameSettings(values);
     if (result.ok) {
       setIssues({});
       onSubmit(result.settings);
@@ -126,11 +131,12 @@ export function GameSettingsForm({
       )}
 
       <div>
-        <span className="mb-2 block font-medium">盲注</span>
+        <span className="mb-2 block font-medium">盲注（筹码）</span>
         <div className="grid grid-cols-2 items-start gap-2">
-          <TextField {...field("smallBlind")} label="小盲" prefix={symbol} inputMode="decimal" />
-          <TextField {...field("bigBlind")} label="大盲" prefix={symbol} inputMode="decimal" />
+          <TextField {...field("smallBlindChips")} label="小盲" inputMode="numeric" />
+          <TextField {...field("bigBlindChips")} label="大盲" inputMode="numeric" />
         </div>
+        {blindCash && <p className="mt-1 text-sm text-muted">对应金额 {blindCash}</p>}
       </div>
 
       {showBuyIn && (

@@ -31,6 +31,8 @@
   --accent: var(--color-felt-700);
   --accent-text: var(--color-bone);
   --highlight: var(--color-chip-gold-deep);
+  --win: #1d7a57;
+  --loss: #b3392f;
   color-scheme: light;
 }
 
@@ -44,6 +46,8 @@
     --accent: var(--color-felt-500);
     --accent-text: var(--color-felt-950);
     --highlight: var(--color-chip-gold);
+    --win: #5cc79f;
+    --loss: #ef8a7f;
     color-scheme: dark;
   }
 }
@@ -57,6 +61,8 @@
   --color-accent: var(--accent);
   --color-accent-text: var(--accent-text);
   --color-highlight: var(--highlight);
+  --color-win: var(--win);
+  --color-loss: var(--loss);
 }
 
 @layer base {

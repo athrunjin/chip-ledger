@@ -15,6 +15,7 @@ Once recorded, a decision isn't edited. If it changes later, write a new record 
 | [0008](0008-pinyin-initials.md)         | Generate pinyin initials in the app layer with pinyin-pro                               | Accepted |
 | [0009](0009-backup-format.md)           | Versioned JSON backups, and restore only adds records                                   | Accepted |
 | [0010](0010-buy-in-hands.md)            | Buying in by hands: games fix chips per hand, and the ledger keeps recording chips      | Accepted |
+| [0011](0011-chip-blinds-and-live-stacks.md) | Blinds in chips, and live stacks as ledger events | Accepted |
 
 ## Template
 

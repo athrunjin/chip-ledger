@@ -1,8 +1,15 @@
-import { type BackupData, type Cents, CURRENCIES, cents } from "@holdem/core";
+import {
+  type BackupData,
+  type Cents,
+  CURRENCIES,
+  cents,
+  type LegacyGame,
+  upgradeLegacyGame,
+} from "@holdem/core";
 import { z } from "zod";
 
 const FORMAT = "holdem-backup";
-const VERSION = 1;
+const VERSION = 2;
 
 const id = z.string().min(1);
 const money = z
@@ -14,18 +21,25 @@ const timestamp = z.number().int();
 
 const owned = { id, organizerId: id };
 
-const gameSchema = z.object({
+const gameFields = {
   ...owned,
   currency: z.enum(CURRENCIES as ["AUD", "CNY"]),
-  smallBlind: money,
-  bigBlind: money,
   chipRatio: z.object({ chips: chips.positive(), amount: money }),
   buyInBigBlinds: chips.positive().optional(),
   handChips: chips.positive().optional(),
   status: z.enum(["open", "settled"]),
   createdAt: timestamp,
   settledAt: timestamp.optional(),
+};
+
+const gameSchema = z.object({
+  ...gameFields,
+  smallBlindChips: chips.positive(),
+  bigBlindChips: chips.positive(),
 });
+
+/** Version 1 stored blinds as money. */
+const legacyGameSchema = z.object({ ...gameFields, smallBlind: money, bigBlind: money });
 
 const playerSchema = z.object({
   ...owned,
@@ -43,14 +57,14 @@ const eventSchema = z.discriminatedUnion("type", [
     playerId: id,
     chips,
   }),
+  z.object({ ...eventBase, type: z.literal("stack_set"), playerId: id, chips }),
   z.object({ ...eventBase, type: z.literal("reversal"), reversedEventId: id }),
 ]);
 
-const backupSchema = z.object({
-  games: z.array(gameSchema),
-  players: z.array(playerSchema),
-  ledgerEvents: z.array(eventSchema),
-});
+const collections = { players: z.array(playerSchema), ledgerEvents: z.array(eventSchema) };
+
+const backupSchema = z.object({ games: z.array(gameSchema), ...collections });
+const legacyBackupSchema = z.object({ games: z.array(legacyGameSchema), ...collections });
 
 const envelopeSchema = z.looseObject({ format: z.literal(FORMAT), version: z.number() });
 
@@ -76,6 +90,20 @@ function linksAreValid({ games, players, ledgerEvents }: BackupData): boolean {
   );
 }
 
+function parseCurrent(json: unknown): BackupData | null {
+  const parsed = backupSchema.safeParse(json);
+  return parsed.success ? (parsed.data as BackupData) : null;
+}
+
+function parseLegacy(json: unknown): BackupData | null {
+  const parsed = legacyBackupSchema.safeParse(json);
+  if (!parsed.success) return null;
+  const { games, ...rest } = parsed.data as Omit<BackupData, "games"> & {
+    games: readonly LegacyGame[];
+  };
+  return { ...rest, games: games.map(upgradeLegacyGame) };
+}
+
 export function parseBackup(text: string): ParsedBackup {
   let json: unknown;
   try {
@@ -87,8 +115,7 @@ export function parseBackup(text: string): ParsedBackup {
   if (!envelope.success) return { ok: false, issue: "invalid" };
   if (envelope.data.version > VERSION) return { ok: false, issue: "newer-version" };
 
-  const parsed = backupSchema.safeParse(json);
-  if (!parsed.success) return { ok: false, issue: "invalid" };
-  const data = parsed.data as BackupData;
+  const data = envelope.data.version < VERSION ? parseLegacy(json) : parseCurrent(json);
+  if (!data) return { ok: false, issue: "invalid" };
   return linksAreValid(data) ? { ok: true, data } : { ok: false, issue: "invalid" };
 }

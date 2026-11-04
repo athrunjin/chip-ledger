@@ -10,6 +10,8 @@ const ledger = (playerId: string, boughtChips: number, cashedOutChips: number): 
   boughtChips,
   cashedOutChips,
   seated: false,
+  stackChips: 0,
+  netChips: cashedOutChips - boughtChips,
 });
 
 const net = (playerId: string, value: number): PlayerNet => ({ playerId, net: cents(value) });

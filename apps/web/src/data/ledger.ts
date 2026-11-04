@@ -3,12 +3,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { GUEST_ORGANIZER_ID, repository } from ".";
 
-export function newEventMeta(gameId: string) {
+export function newEventMeta(gameId: string, occurredAt = Date.now()) {
   return {
     id: crypto.randomUUID(),
     organizerId: GUEST_ORGANIZER_ID,
     gameId,
-    occurredAt: Date.now(),
+    occurredAt,
   };
 }
 
@@ -33,6 +33,23 @@ export function useAppendEvent(gameId: string) {
   });
 }
 
+/** Events that bring a player to the new hand count. They share a timestamp so they count as one change. */
+function handEvents(gameId: string, events: readonly LedgerEvent[], input: HandsInput) {
+  const { playerId, handChips, change } = input;
+  const { reversedEventIds, buy } = adjustHands(events, playerId, handChips, change);
+  const occurredAt = Date.now();
+  return [
+    ...reversedEventIds.map(
+      (reversedEventId): LedgerEvent => ({
+        ...newEventMeta(gameId, occurredAt),
+        type: "reversal",
+        reversedEventId,
+      }),
+    ),
+    ...(buy ? [{ ...newEventMeta(gameId, occurredAt), ...buy, playerId }] : []),
+  ];
+}
+
 interface HandsInput {
   readonly playerId: string;
   readonly handChips: number;
@@ -43,18 +60,39 @@ export function useAdjustHands(gameId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     scope: ledgerScope(gameId),
-    mutationFn: async ({ playerId, handChips, change }: HandsInput) => {
+    mutationFn: async (input: HandsInput) => {
       const events = await repository.ledger.listByGame(gameId);
-      const { reversedEventIds, buy } = adjustHands(events, playerId, handChips, change);
+      await repository.ledger.appendAll(handEvents(gameId, events, input));
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ledger", gameId] }),
+  });
+}
+
+interface LeaveInput {
+  readonly playerId: string;
+  readonly chips: number;
+  /** Final hands, for games that record them. */
+  readonly hands?: { readonly handChips: number; readonly count: number };
+}
+
+export function useLeaveTable(gameId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    scope: ledgerScope(gameId),
+    mutationFn: async ({ playerId, chips, hands }: LeaveInput) => {
+      const events = await repository.ledger.listByGame(gameId);
+      const adjustment = hands
+        ? handEvents(gameId, events, {
+            playerId,
+            handChips: hands.handChips,
+            change: { to: hands.count },
+          })
+        : [];
+      // One millisecond later, so the cash-out always sorts after the hand change
+      const leftAt = Date.now() + 1;
       await repository.ledger.appendAll([
-        ...reversedEventIds.map(
-          (reversedEventId): LedgerEvent => ({
-            ...newEventMeta(gameId),
-            type: "reversal",
-            reversedEventId,
-          }),
-        ),
-        ...(buy ? [{ ...newEventMeta(gameId), ...buy, playerId }] : []),
+        ...adjustment,
+        { ...newEventMeta(gameId, leftAt), type: "cash_out", playerId, chips },
       ]);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ledger", gameId] }),

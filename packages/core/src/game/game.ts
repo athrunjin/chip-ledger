@@ -4,26 +4,26 @@
  * Form values are strings typed by the user, converted here to integers (cents, chips).
  */
 import type { Currency, Game, OrganizerId, Timestamp } from "../domain";
-import { cents, toDecimalString, tryParseMoney } from "../money";
+import { type Cents, cents, toDecimalString, tryParseMoney } from "../money";
 
 export const CURRENCIES: readonly Currency[] = ["AUD", "CNY"];
 
-type BaseSettings = Pick<Game, "currency" | "smallBlind" | "bigBlind" | "chipRatio">;
+type BaseSettings = Pick<Game, "currency" | "smallBlindChips" | "bigBlindChips" | "chipRatio">;
 
 export type GameSettings = BaseSettings & { readonly buyInBigBlinds: number };
 
 export const DEFAULT_GAME_SETTINGS: GameSettings = {
   currency: "CNY",
-  smallBlind: cents(100),
-  bigBlind: cents(200),
+  smallBlindChips: 1,
+  bigBlindChips: 2,
   chipRatio: { chips: 1, amount: cents(100) },
   buyInBigBlinds: 100,
 };
 
 export interface GameSettingsForm {
   readonly currency: Currency;
-  readonly smallBlind: string;
-  readonly bigBlind: string;
+  readonly smallBlindChips: string;
+  readonly bigBlindChips: string;
   readonly ratioChips: string;
   readonly ratioAmount: string;
   readonly buyInBigBlinds: string;
@@ -32,11 +32,7 @@ export interface GameSettingsForm {
 export type GameSettingsField = Exclude<keyof GameSettingsForm, "currency">;
 
 /** Issue codes. The UI decides the wording. */
-export type GameSettingsIssue =
-  | "invalid"
-  | "not-positive"
-  | "below-small-blind"
-  | "not-whole-chips";
+export type GameSettingsIssue = "invalid" | "not-positive" | "below-small-blind";
 
 export type GameSettingsIssues = Partial<Record<GameSettingsField, GameSettingsIssue>>;
 
@@ -50,8 +46,8 @@ export function toGameSettingsForm(
 ): GameSettingsForm {
   return {
     currency: settings.currency,
-    smallBlind: toDecimalString(settings.smallBlind),
-    bigBlind: toDecimalString(settings.bigBlind),
+    smallBlindChips: String(settings.smallBlindChips),
+    bigBlindChips: String(settings.bigBlindChips),
     ratioChips: String(settings.chipRatio.chips),
     ratioAmount: toDecimalString(settings.chipRatio.amount),
     buyInBigBlinds: String(settings.buyInBigBlinds ?? DEFAULT_GAME_SETTINGS.buyInBigBlinds),
@@ -71,46 +67,36 @@ function positiveIssue(value: number | null): GameSettingsIssue | undefined {
   return value > 0 ? undefined : "not-positive";
 }
 
-/** Chips per hand, or null if that is not a whole number of chips. */
+/** Chips per hand. */
 export function handChipsFor({
-  bigBlind,
-  chipRatio,
+  bigBlindChips,
   buyInBigBlinds,
-}: Pick<GameSettings, "bigBlind" | "chipRatio" | "buyInBigBlinds">): number | null {
-  const numerator = bigBlind * buyInBigBlinds * chipRatio.chips;
-  if (!Number.isSafeInteger(numerator) || numerator % chipRatio.amount !== 0) return null;
-  return numerator / chipRatio.amount;
+}: Pick<GameSettings, "bigBlindChips" | "buyInBigBlinds">): number {
+  return bigBlindChips * buyInBigBlinds;
 }
 
-/**
- * `buyInLocked`: once the ledger has events the hand size is fixed and the buy-in setting has no effect,
- * so changing blinds does not need the conversion checked again.
- */
-export function parseGameSettings(
-  form: GameSettingsForm,
-  { buyInLocked = false }: { readonly buyInLocked?: boolean } = {},
-): ParsedGameSettings {
-  const smallBlind = tryParseMoney(form.smallBlind);
-  const bigBlind = tryParseMoney(form.bigBlind);
+export function parseGameSettings(form: GameSettingsForm): ParsedGameSettings {
+  const smallBlindChips = parseChips(form.smallBlindChips);
+  const bigBlindChips = parseChips(form.bigBlindChips);
   const ratioChips = parseChips(form.ratioChips);
   const ratioAmount = tryParseMoney(form.ratioAmount);
   const buyInBigBlinds = parseChips(form.buyInBigBlinds);
 
   const issues: GameSettingsIssues = {};
-  const smallBlindIssue = positiveIssue(smallBlind);
-  const bigBlindIssue = positiveIssue(bigBlind);
+  const smallBlindIssue = positiveIssue(smallBlindChips);
+  const bigBlindIssue = positiveIssue(bigBlindChips);
   const ratioChipsIssue = positiveIssue(ratioChips);
   const ratioAmountIssue = positiveIssue(ratioAmount);
   const buyInIssue = positiveIssue(buyInBigBlinds);
-  if (smallBlindIssue) issues.smallBlind = smallBlindIssue;
-  if (bigBlindIssue) issues.bigBlind = bigBlindIssue;
+  if (smallBlindIssue) issues.smallBlindChips = smallBlindIssue;
+  if (bigBlindIssue) issues.bigBlindChips = bigBlindIssue;
   if (ratioChipsIssue) issues.ratioChips = ratioChipsIssue;
   if (ratioAmountIssue) issues.ratioAmount = ratioAmountIssue;
   if (buyInIssue) issues.buyInBigBlinds = buyInIssue;
 
   if (
-    smallBlind === null ||
-    bigBlind === null ||
+    smallBlindChips === null ||
+    bigBlindChips === null ||
     ratioChips === null ||
     ratioAmount === null ||
     buyInBigBlinds === null ||
@@ -118,18 +104,18 @@ export function parseGameSettings(
   ) {
     return { ok: false, issues };
   }
-  if (bigBlind < smallBlind) {
-    return { ok: false, issues: { bigBlind: "below-small-blind" } };
+  if (bigBlindChips < smallBlindChips) {
+    return { ok: false, issues: { bigBlindChips: "below-small-blind" } };
   }
   const settings: GameSettings = {
     currency: form.currency,
-    smallBlind,
-    bigBlind,
+    smallBlindChips,
+    bigBlindChips,
     chipRatio: { chips: ratioChips, amount: ratioAmount },
     buyInBigBlinds,
   };
-  if (!buyInLocked && handChipsFor(settings) === null) {
-    return { ok: false, issues: { buyInBigBlinds: "not-whole-chips" } };
+  if (!Number.isSafeInteger(handChipsFor(settings))) {
+    return { ok: false, issues: { buyInBigBlinds: "invalid" } };
   }
   return { ok: true, settings };
 }
@@ -140,10 +126,8 @@ export interface NewGameMeta {
   readonly createdAt: Timestamp;
 }
 
-/** Settings plus the converted hand size. Without a whole number the field is left out and the game records chips. */
 function withHandChips(settings: GameSettings) {
-  const handChips = handChipsFor(settings);
-  return handChips === null ? settings : { ...settings, handChips };
+  return { ...settings, handChips: handChipsFor(settings) };
 }
 
 export function createGame(meta: NewGameMeta, settings: GameSettings): Game {
@@ -171,8 +155,21 @@ export function updateGameSettings(
   settings: GameSettings,
   { hasLedgerEvents }: { readonly hasLedgerEvents: boolean },
 ): Game {
-  const { smallBlind, bigBlind } = settings;
+  const { smallBlindChips, bigBlindChips } = settings;
   return hasLedgerEvents
-    ? { ...game, smallBlind, bigBlind }
+    ? { ...game, smallBlindChips, bigBlindChips }
     : { ...game, ...withHandChips(settings) };
+}
+
+/** A game saved before blinds moved to chips (ADR 0011). */
+export type LegacyGame = Omit<Game, "smallBlindChips" | "bigBlindChips"> & {
+  readonly smallBlind: Cents;
+  readonly bigBlind: Cents;
+};
+
+/** Converts blinds to chips at the game's ratio. Blinds are display only, so rounding is safe. */
+export function upgradeLegacyGame({ smallBlind, bigBlind, ...game }: LegacyGame): Game {
+  const toChips = (blind: Cents) =>
+    Math.max(1, Math.round((blind * game.chipRatio.chips) / game.chipRatio.amount));
+  return { ...game, smallBlindChips: toChips(smallBlind), bigBlindChips: toChips(bigBlind) };
 }

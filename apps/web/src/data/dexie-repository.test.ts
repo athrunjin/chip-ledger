@@ -17,8 +17,8 @@ const game = (id: string, organizerId: string, createdAt: number): Game => ({
   id,
   organizerId,
   currency: "AUD",
-  smallBlind: cents(100),
-  bigBlind: cents(200),
+  smallBlindChips: 100,
+  bigBlindChips: 200,
   chipRatio: { chips: 100, amount: cents(100) },
   status: "open",
   createdAt,
@@ -48,6 +48,34 @@ const buyIn = (
 });
 
 describe("Dexie repository", () => {
+  it("upgrades saved games from money blinds to chip blinds", async () => {
+    const name = `test-${crypto.randomUUID()}`;
+    const legacy = new Dexie(name);
+    legacy.version(1).stores({
+      games: "id, [organizerId+createdAt]",
+      players: "id, [organizerId+name]",
+      ledgerEvents: "id, [gameId+occurredAt]",
+    });
+    await legacy.table("games").put({
+      id: "old",
+      organizerId: "me",
+      currency: "AUD",
+      smallBlind: cents(100),
+      bigBlind: cents(200),
+      chipRatio: { chips: 100, amount: cents(100) },
+      status: "open",
+      createdAt: 1,
+    });
+    legacy.close();
+
+    const upgraded = createGuestDatabase(name);
+    const saved = await createDexieRepository(upgraded, "me").games.get("old");
+    expect(saved).toMatchObject({ smallBlindChips: 100, bigBlindChips: 200 });
+    expect(saved).not.toHaveProperty("smallBlind");
+    upgraded.close();
+    await Dexie.delete(name);
+  });
+
   let db: GuestDatabase;
   let repository: Repository;
   let other: Repository;

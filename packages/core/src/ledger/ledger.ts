@@ -5,6 +5,10 @@
 import type { ChipEvent, ChipRatio, LedgerEvent } from "../domain";
 import { type Cents, multiply } from "../money";
 
+function isChipEvent(event: LedgerEvent): event is ChipEvent {
+  return event.type !== "reversal" && event.type !== "stack_set";
+}
+
 function reversedEventIds(events: readonly LedgerEvent[]): Set<string> {
   return new Set(events.flatMap((e) => (e.type === "reversal" ? [e.reversedEventId] : [])));
 }
@@ -12,12 +16,61 @@ function reversedEventIds(events: readonly LedgerEvent[]): Set<string> {
 /** Buy-ins, rebuys and cash-outs that have not been reversed, in their original order. */
 export function activeChipEvents(events: readonly LedgerEvent[]): ChipEvent[] {
   const reversed = reversedEventIds(events);
-  return events.filter((e): e is ChipEvent => e.type !== "reversal" && !reversed.has(e.id));
+  return events.filter((e): e is ChipEvent => isChipEvent(e) && !reversed.has(e.id));
 }
 
-/** Only chip events not yet reversed can be undone. A reversal cannot be undone; record the event again instead. */
+/** Only events not yet reversed can be undone. A reversal cannot be undone; record the event again instead. */
 export function canReverse(events: readonly LedgerEvent[], eventId: string): boolean {
-  return activeChipEvents(events).some((e) => e.id === eventId);
+  const reversed = reversedEventIds(events);
+  return events.some((e) => e.id === eventId && e.type !== "reversal" && !reversed.has(e.id));
+}
+
+/**
+ * Each player's current chips, replaying events in order. Every event changes the stack by some
+ * amount, and reversing it takes that amount back, so a typed stack survives later hand changes:
+ * at 700 chips, removing a 500-chip hand leaves 200.
+ *
+ * Events with the same timestamp were written together and count as one change, because a
+ * reversal plus its replacement buy must not stop at 0 halfway. The stack never goes below 0.
+ */
+function liveStacks(events: readonly LedgerEvent[]): Map<string, number> {
+  const byId = new Map(events.map((e) => [e.id, e]));
+  const stacks = new Map<string, number>();
+  const applied = new Map<string, number>();
+  const stackOf = (playerId: string) => stacks.get(playerId) ?? 0;
+
+  let index = 0;
+  while (index < events.length) {
+    const occurredAt = events[index]?.occurredAt;
+    const changes = new Map<string, number>();
+    const addChange = (playerId: string, change: number) =>
+      changes.set(playerId, (changes.get(playerId) ?? 0) + change);
+
+    for (; events[index]?.occurredAt === occurredAt; index++) {
+      const event = events[index];
+      if (!event) break;
+      if (event.type === "reversal") {
+        const target = byId.get(event.reversedEventId);
+        if (target && target.type !== "reversal") {
+          addChange(target.playerId, -(applied.get(target.id) ?? 0));
+        }
+        continue;
+      }
+      const current = stackOf(event.playerId);
+      const change =
+        event.type === "stack_set"
+          ? event.chips - current
+          : event.type === "cash_out"
+            ? -current
+            : event.chips;
+      applied.set(event.id, change);
+      addChange(event.playerId, change);
+    }
+    for (const [playerId, change] of changes) {
+      stacks.set(playerId, Math.max(0, stackOf(playerId) + change));
+    }
+  }
+  return stacks;
 }
 
 export interface PlayerLedger {
@@ -28,11 +81,15 @@ export interface PlayerLedger {
   readonly cashedOutChips: number;
   /** Whether the player is still seated: their last event is not a cash-out. */
   readonly seated: boolean;
+  /** Chips in front of the player now. 0 once they have left. */
+  readonly stackChips: number;
+  /** Win or loss so far: stack + cashed out - bought. */
+  readonly netChips: number;
 }
 
 /** Each player's totals, in order of first buy-in. */
 export function summarizeByPlayer(events: readonly LedgerEvent[]): PlayerLedger[] {
-  const byPlayer = new Map<string, PlayerLedger>();
+  const byPlayer = new Map<string, Omit<PlayerLedger, "stackChips" | "netChips">>();
   for (const event of activeChipEvents(events)) {
     const { playerId, type, chips } = event;
     const current = byPlayer.get(playerId) ?? {
@@ -48,20 +105,26 @@ export function summarizeByPlayer(events: readonly LedgerEvent[]): PlayerLedger[
         : { ...current, boughtChips: current.boughtChips + chips, seated: true },
     );
   }
-  return [...byPlayer.values()];
+  const stacks = liveStacks(events);
+  return [...byPlayer.values()].map((player) => {
+    const stackChips = player.seated ? (stacks.get(player.playerId) ?? 0) : 0;
+    const netChips = stackChips + player.cashedOutChips - player.boughtChips;
+    return { ...player, stackChips, netChips };
+  });
 }
 
 export interface LedgerTotals {
   readonly boughtChips: number;
   readonly cashedOutChips: number;
-  /** Chips still on the table: bought − cashed out. */
-  readonly inPlayChips: number;
+  /** Table balance: all stacks + cashed out - bought. 0 means every chip is accounted for. */
+  readonly balanceChips: number;
 }
 
 export function ledgerTotals(players: readonly PlayerLedger[]): LedgerTotals {
   const boughtChips = players.reduce((total, p) => total + p.boughtChips, 0);
   const cashedOutChips = players.reduce((total, p) => total + p.cashedOutChips, 0);
-  return { boughtChips, cashedOutChips, inPlayChips: boughtChips - cashedOutChips };
+  const balanceChips = players.reduce((total, p) => total + p.netChips, 0);
+  return { boughtChips, cashedOutChips, balanceChips };
 }
 
 /** Whether this player's next buy is a first buy-in or a rebuy. */

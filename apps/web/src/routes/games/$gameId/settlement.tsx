@@ -42,11 +42,11 @@ function SettlementPage() {
     <Page title="结算">
       {seated.length > 0 ? (
         <Notice gameId={gameId}>
-          还有 {seated.length} 人在桌：{seated.join("、")}。全部兑出后才能结算。
+          还有 {seated.length} 人在桌：{seated.join("、")}。全部离桌后才能结算。
         </Notice>
       ) : difference !== 0 ? (
         <Notice gameId={gameId}>
-          账目不平衡：兑出比买入{difference > 0 ? "多" : "少"}{" "}
+          账目不平衡：离桌筹码比买入{difference > 0 ? "多" : "少"}{" "}
           {Math.abs(difference).toLocaleString("zh-CN")} 筹码（
           {formatGameMoney(chipsToCents(Math.abs(difference), game.chipRatio), game.currency)}
           ）。请核对后修正记录。
@@ -80,7 +80,7 @@ interface SettlementResultProps {
 }
 
 function SettlementResult({ game, nets, nameOf }: SettlementResultProps) {
-  const { currency, status, smallBlind, bigBlind, createdAt } = game;
+  const { currency, status, smallBlindChips, bigBlindChips, createdAt } = game;
   const saveGame = useSaveGame();
   const [sharing, setSharing] = useState(false);
   const [shareFailed, setShareFailed] = useState(false);
@@ -92,10 +92,9 @@ function SettlementResult({ game, nets, nameOf }: SettlementResultProps) {
     setShareFailed(false);
     try {
       const date = new Date(createdAt);
-      const blinds = `${formatGameMoney(smallBlind, currency)} / ${formatGameMoney(bigBlind, currency)}`;
       const image = await renderSettlementImage({
         title: "德州之王 · 结算",
-        subtitle: `${date.toLocaleDateString("zh-CN")} · ${blinds}`,
+        subtitle: `${date.toLocaleDateString("zh-CN")} · 盲注 ${smallBlindChips} / ${bigBlindChips}`,
         transfers: transfers.map(({ from, to, amount }) => ({
           from: nameOf(from),
           to: nameOf(to),

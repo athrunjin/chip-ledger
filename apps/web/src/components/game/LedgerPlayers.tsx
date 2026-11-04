@@ -1,10 +1,11 @@
 import { type ChipRatio, type Currency, chipsToCents, type PlayerLedger } from "@holdem/core";
+import { formatSignedChips, netColor } from "@/lib/chips";
 import { formatGameMoney } from "@/lib/currency";
 
-const actionClass = "min-h-11 shrink-0 rounded-lg border border-line px-2.5 text-sm font-medium";
+const actionClass = "min-h-11 shrink-0 rounded-lg border border-line px-2 text-sm font-medium";
 const stepClass = "size-11 shrink-0 rounded-lg border border-line text-lg font-semibold";
-const listClass = "divide-y divide-line rounded-xl border border-line bg-surface px-3";
-const rowClass = "flex min-h-13 items-center gap-2 py-1";
+const listClass = "divide-y divide-line rounded-xl border border-line bg-surface px-2";
+const rowClass = "flex min-h-13 items-center gap-1.5 py-1";
 
 interface LedgerPlayersProps {
   players: readonly PlayerLedger[];
@@ -17,8 +18,9 @@ interface LedgerPlayersProps {
   editable: boolean;
   onStepHands: (playerId: string, by: number) => void;
   onEditHands: (playerId: string) => void;
+  onEditStack: (playerId: string) => void;
   onRebuy: (playerId: string) => void;
-  onCashOut: (playerId: string) => void;
+  onLeave: (playerId: string) => void;
 }
 
 export function LedgerPlayers({
@@ -30,8 +32,9 @@ export function LedgerPlayers({
   editable,
   onStepHands,
   onEditHands,
+  onEditStack,
   onRebuy,
-  onCashOut,
+  onLeave,
 }: LedgerPlayersProps) {
   const seated = players.filter((p) => p.seated);
   const left = players.filter((p) => !p.seated);
@@ -89,20 +92,33 @@ export function LedgerPlayers({
             <li key={player.playerId} className={rowClass}>
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{nameOf(player.playerId)}</p>
-                <p className="truncate text-xs text-muted">
-                  买入 {money(player.boughtChips)}
-                  {player.cashedOutChips > 0 && ` · 兑出 ${money(player.cashedOutChips)}`}
+                <p className={`truncate text-xs tabular-nums ${netColor(player.netChips)}`}>
+                  {formatSignedChips(player.netChips)}
                 </p>
               </div>
+              {editable ? (
+                <button
+                  type="button"
+                  aria-label={`输入${nameOf(player.playerId)}的筹码，现在 ${player.stackChips}`}
+                  onClick={() => onEditStack(player.playerId)}
+                  className="min-h-11 min-w-13 shrink-0 rounded-lg border border-line px-1 text-sm font-semibold tabular-nums"
+                >
+                  {player.stackChips.toLocaleString("zh-CN")}
+                </button>
+              ) : (
+                <span className="shrink-0 text-sm font-semibold tabular-nums">
+                  {player.stackChips.toLocaleString("zh-CN")}
+                </span>
+              )}
               {hands(player)}
               {editable && (
                 <button
                   type="button"
-                  aria-label={`${nameOf(player.playerId)}兑出`}
-                  onClick={() => onCashOut(player.playerId)}
+                  aria-label={`${nameOf(player.playerId)}离桌`}
+                  onClick={() => onLeave(player.playerId)}
                   className={actionClass}
                 >
-                  兑出
+                  离桌
                 </button>
               )}
             </li>
@@ -114,14 +130,19 @@ export function LedgerPlayers({
         <section className="mt-4">
           <h2 className="mb-1 text-sm font-medium text-muted">已离桌（{left.length}）</h2>
           <ul className={`${listClass} border-dashed bg-transparent`}>
-            {left.map(({ playerId, boughtChips, cashedOutChips }) => (
+            {left.map(({ playerId, boughtChips, cashedOutChips, netChips }) => (
               <li key={playerId} className={`${rowClass} text-muted`}>
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{nameOf(playerId)}</p>
                   <p className="truncate text-xs">
-                    买入 {money(boughtChips)} · 兑出 {money(cashedOutChips)}
+                    买入 {money(boughtChips)} · 离桌 {money(cashedOutChips)}
                   </p>
                 </div>
+                <span
+                  className={`shrink-0 text-sm font-semibold tabular-nums ${netColor(netChips)}`}
+                >
+                  {formatSignedChips(netChips)}
+                </span>
                 {editable && (
                   <button
                     type="button"
