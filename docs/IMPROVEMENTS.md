@@ -26,48 +26,7 @@ Records discussions of feature and process improvements: what was proposed, how 
 
 ## Decided, waiting for development
 
-### #I-010 Back button on the settlement page
-
-- Type: feature
-- Date: proposed and decided 2026-11-04
-- Source: discussion
-- Problem: once the books balance, the settlement page has no way back to the game except the bottom navigation.
-- Proposal: add a back button to the page header that returns to the game, in every settlement state.
-- Decision: do.
-- Tracking: issue #31
-
-### #I-011 Results first on the settlement page
-
-- Type: feature
-- Date: proposed and decided 2026-11-04
-- Source: discussion
-- Problem: the organizer wants each player's outcome before anything else, and today it's below the transfers and shows only cash.
-- Proposal:
-  - Rename 输赢 to 结果 (results) and put it at the top.
-  - Each row shows the player's name, hands bought, chips remaining, total win/loss in chips and the amount in currency.
-  - Chips remaining means the total the player left with, across every time they sat down.
-  - Older games without hands show a dash in that column.
-  - The shared image uses the same content and order.
-- Decision: do.
-- Tracking: issue #32
-
-### #I-012 Collapsible transfers with a collector option
-
-- Type: feature
-- Date: proposed and decided 2026-11-04
-- Source: discussion
-- Problem: the fewest-transfers plan is the only option, but games often run through one person who collects and pays everyone.
-- Proposal:
-  - Collapse the transfer plan by default, with the transfer count in the header.
-  - Offer two plans: the optimal plan (today's fewest transfers), and a collector plan.
-  - In the collector plan, every loser pays the collector and the collector pays every winner, so nobody else settles with each other.
-  - Add the calculation to `core` with a property test that every player ends at 0.
-- Settled details:
-  - The collector can be any player in the game, or an organizer who isn't playing.
-  - The chosen plan is saved with the game, so it survives reopening and matches the shared image.
-  - The shared image always shows the chosen plan in full, without collapsing.
-- Decision: do.
-- Tracking: issue #33, [ADR 0012](adr/0012-settlement-collector.md)
+(none)
 
 ## Done
 
@@ -203,6 +162,49 @@ Records discussions of feature and process improvements: what was proposed, how 
 - Depends on: #I-007
 - Decision: do. Released in PR #30.
 - Tracking: issue #29, PR #30
+
+### #I-010 Back button on the settlement page
+
+- Type: feature
+- Date: proposed, decided and completed 2026-11-04
+- Source: discussion
+- Problem: once the books balance, the settlement page has no way back to the game except the bottom navigation.
+- Proposal: add a back button to the page header that returns to the game, in every settlement state.
+- Decision: do. Released after passing a trial with the preview build.
+- Tracking: issue #31, PR #34
+
+### #I-011 Results first on the settlement page
+
+- Type: feature
+- Date: proposed, decided and completed 2026-11-04
+- Source: discussion
+- Problem: the organizer wants each player's outcome before anything else, and today it's below the transfers and shows only cash.
+- Proposal:
+  - Rename 输赢 to 结果 (results) and put it at the top.
+  - Each row shows the player's name, hands bought, chips remaining, total win/loss in chips and the amount in currency.
+  - Chips remaining means the total the player left with, across every time they sat down.
+  - Older games without hands show a dash in that column.
+  - The shared image uses the same content and order.
+- Decision: do. Released after passing a trial with the preview build.
+- Tracking: issue #32, PR #34
+
+### #I-012 Collapsible transfers with a collector option
+
+- Type: feature
+- Date: proposed, decided and completed 2026-11-04
+- Source: discussion
+- Problem: the fewest-transfers plan is the only option, but games often run through one person who collects and pays everyone.
+- Proposal:
+  - Collapse the transfer plan by default, with the transfer count in the header.
+  - Offer two plans: the optimal plan (today's fewest transfers), and a collector plan.
+  - In the collector plan, every loser pays the collector and the collector pays every winner, so nobody else settles with each other.
+  - Add the calculation to `core` with a property test that every player ends at 0.
+- Settled details:
+  - The collector can be any player in the game, or an organizer who isn't playing.
+  - The chosen plan is saved with the game, so it survives reopening and matches the shared image.
+  - The shared image always shows the chosen plan in full, without collapsing.
+- Decision: do. Released after passing a trial with the preview build.
+- Tracking: issue #33, PR #34, [ADR 0012](adr/0012-settlement-collector.md)
 
 ## Not doing or deferred
 
