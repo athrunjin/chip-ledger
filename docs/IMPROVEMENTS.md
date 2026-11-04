@@ -1,102 +1,102 @@
-# 改进记录
+# Improvement log
 
-记录功能和流程上的改进讨论：提了什么、怎么决定的、为什么。
+Records discussions of feature and process improvements: what was proposed, how it was decided and why.
 
-- 进入开发后建 GitHub Issue，并在条目里写上编号；排期仍以 [ROADMAP](ROADMAP.md) 为准。
-- 已确认的规则写进 [CONTEXT](CONTEXT.md)，影响长期结构的决定写 [ADR](adr/)，这里只留链接。
-- 条目编号递增，不重复使用。状态变化时把条目移到对应小节，保留原有内容。
+- When work starts, create a GitHub issue and add its number to the entry. Scheduling still follows the [roadmap](ROADMAP.md).
+- Confirmed rules go in [CONTEXT](CONTEXT.md), and decisions that affect the long-term structure go in an [ADR](adr/). This file only links to them.
+- Entry numbers increase and are never reused. When an entry's status changes, move it to the matching section and keep its content.
 
-## 条目格式
+## Entry format
 
 ```markdown
-### #I-001 标题
+### #I-001 Title
 
-- 类型：功能 / 流程
-- 日期：提出日期，后面可追加决定日期
-- 来源：真实牌局试用 / 日常使用 / 讨论
-- 问题：现在哪里不好，发生在什么场景
-- 方案：打算怎么改；未定时写候选方案
-- 决定：做 / 不做 / 暂缓，以及原因
-- 跟踪：Issue、PR、ADR 链接
+- Type: feature / process
+- Date: date proposed, followed by the decision date
+- Source: live game trial / everyday use / discussion
+- Problem: what's wrong today and in what situation
+- Proposal: what to change; list candidates if undecided
+- Decision: do / don't do / defer, and why
+- Tracking: issue, PR and ADR links
 ```
 
-## 讨论中
+## Under discussion
 
-（暂无）
+(none)
 
-## 已决定，待开发
+## Decided, waiting for development
 
-（暂无）
+(none)
 
-## 已完成
+## Done
 
-### #I-001 开局默认值改为人民币、筹码 1:1
+### #I-001 Default game settings: CNY and a 1:1 chip ratio
 
-- 类型：功能
-- 日期：2026-11-04 提出并决定，同日完成
-- 来源：讨论
-- 问题：默认是澳元、100 筹码 = 1 元，和实际组局习惯不符。
-- 方案：
-  - 开新局沿用上一局的设置，这部分代码已有，不用改。
-  - 没有上一局时，默认人民币、1 筹码 = 1 元。规则已写入 CONTEXT。
-- 注意：`DEFAULT_GAME_SETTINGS` 只在一局都没有时生效。手机上已有牌局时，
-  新局仍会沿用旧设置，需要手动选一次人民币和 1:1。
-- 决定：做。预览版真机试用通过后上线。
-- 跟踪：Issue #20，PR #23
+- Type: feature
+- Date: proposed, decided and completed 2026-11-04
+- Source: discussion
+- Problem: the defaults were AUD and 100 chips = 1 unit of currency, which didn't match how games are actually run.
+- Proposal:
+  - A new game carries over the last game's settings. This already worked and needed no change.
+  - With no previous game, default to CNY and 1 chip = 1 yuan. The rule is recorded in CONTEXT.
+- Note: `DEFAULT_GAME_SETTINGS` only applies when there are no games at all. On a phone with existing games,
+  new games still carry over the old settings, so CNY and 1:1 have to be selected once by hand.
+- Decision: do. Released after passing a trial on a real device with the preview build.
+- Tracking: issue #20, PR #23
 
-### #I-002 按「手」买入
+### #I-002 Buying in by hands
 
-- 类型：功能
-- 日期：2026-11-04 提出并决定，同日完成
-- 来源：讨论
-- 问题：买入和补码现在都要输入筹码数，现场录入慢。
-- 方案：
-  - 开局设置增加「一个买入 = xx 个大盲」，默认 100 个大盲，并沿用上一局的值。
-  - 1 手的筹码数 = 倍数 × 大盲金额，再按筹码比例换算。换算不是整数时，设置页报错。
-  - 加入玩家后先选买入手数：整数，默认 1 手，可加减也可输入，同时显示对应筹码和金额。
-  - 账本事件仍然记录筹码数，手数只用于录入和显示，结算逻辑不变。
-  - 兑出仍输入筹码数，因为离桌时的筹码通常不是整手。
-  - 中途改盲注的处理先按 #I-004 的临时做法：第一笔记录后 1 手的筹码数不再变化。
-- 影响：`Game` 新增可选字段，备份格式要同步增加；数据模型变化按规范补一篇 ADR。
-  没有这个字段的旧牌局继续按筹码数记录。
-- 决定：做。预览版真机试用通过后上线。
-- 跟踪：Issue #21，PR #23，[ADR 0010](adr/0010-buy-in-hands.md)
+- Type: feature
+- Date: proposed, decided and completed 2026-11-04
+- Source: discussion
+- Problem: buy-ins and rebuys both needed a typed chip count, which is slow at the table.
+- Proposal:
+  - Add "one buy-in = xx big blinds" to game settings. It defaults to 100 big blinds and carries over from the last game.
+  - Chips per hand = multiple × big blind amount, converted with the chip ratio. If the result isn't a whole number of chips, the settings page shows an error.
+  - After adding a player, choose how many hands they buy: a whole number, default 1, using +/− or by typing. The matching chips and amount are shown.
+  - Ledger events still record chips. Hands are only for entry and display, so settlement doesn't change.
+  - Cash-outs are still entered in chips, because a stack at the end usually isn't a whole number of hands.
+  - Changing blinds mid-game follows the temporary approach in #I-004: chips per hand stop changing after the first record.
+- Impact: `Game` gains optional fields and the backup format adds them too. The data model change gets an ADR, as the standards require.
+  Older games without these fields keep recording chips.
+- Decision: do. Released after passing a trial on a real device with the preview build.
+- Tracking: issue #21, PR #23, [ADR 0010](adr/0010-buy-in-hands.md)
 
-### #I-003 在局玩家单行显示与快速补码
+### #I-003 One row per seated player and quick rebuys
 
-- 类型：功能
-- 日期：2026-11-04 提出并决定，同日完成
-- 来源：讨论
-- 问题：每位玩家现在占三行的卡片，一屏放不下一桌人；补码要打开对话框再输入。
-- 方案：
-  - 每位玩家一行，一屏至少显示 8–9 位在局玩家。
-  - 一行内容：名字、当前手数和两侧的 −/+、兑出。名字下方用小字显示累计买入金额。
-  - 点 + 或 − 调整 1 手；点手数可以直接输入目标手数。都立即入账，不弹确认。
-  - 已离桌玩家放到列表最下方，单独分区显示，和在局玩家区分开；仍可重新补码入座。
-  - 按 375px 宽的手机估算，名字约有 150px；行高约 52px，满足 44px 触控目标。实测 375×812 一屏显示 9 位。
-  - 「加入玩家」移到列表上方，候选默认收起、点输入框时展开；「结算」移到页面右上角。
-- 账本规则：账本只追加，不能直接改数字。
-  - 增加：记一笔补码，筹码数为增加的手数。
-  - 减少：冲正最近的补码。如果那笔超过要减的手数，就冲正后再记一笔差额，
-    这两笔要放在同一事务里写入。
-  - 最少保留 1 手，要完全取消买入时到记录里撤销。
-- 决定：做。预览版真机试用通过后上线。
-- 依赖：#I-002
-- 跟踪：Issue #22，PR #23，[ADR 0010](adr/0010-buy-in-hands.md)
+- Type: feature
+- Date: proposed, decided and completed 2026-11-04
+- Source: discussion
+- Problem: each player took a three-line card, so a full table didn't fit on one screen, and a rebuy meant opening a dialog and typing.
+- Proposal:
+  - One row per player, with at least 8–9 seated players on one screen.
+  - Each row has the name, the hand count with − and + on either side, and cash out. Total bought in appears in small text under the name.
+  - Tapping + or − changes the count by 1 hand. Tapping the count lets you type a target. Both take effect immediately with no confirmation.
+  - Players who have left go at the bottom of the list in a separate section, set apart from seated players. They can still rebuy to sit back down.
+  - Estimated for a 375px wide phone: about 150px for the name and a row height of about 52px, meeting the 44px touch target. Measured at 375×812: 9 players fit on one screen.
+  - "Add player" moves above the list, with suggestions collapsed until the field is tapped. "Settle" moves to the top right of the page.
+- Ledger rules: the ledger is append-only, so numbers can't be edited directly.
+  - Increase: record a rebuy for the added hands.
+  - Decrease: reverse the latest buys. If that takes off too much, record the difference again,
+    and write both in the same transaction.
+  - At least 1 hand always remains. To cancel a buy-in completely, undo it from the log.
+- Decision: do. Released after passing a trial on a real device with the preview build.
+- Depends on: #I-002
+- Tracking: issue #22, PR #23, [ADR 0010](adr/0010-buy-in-hands.md)
 
-## 不做或暂缓
+## Not doing or deferred
 
-### #I-004 中途改盲注时的手数规则
+### #I-004 Hand size when blinds change mid-game
 
-- 类型：功能
-- 日期：2026-11-04 提出并暂缓
-- 来源：讨论
-- 问题：牌局中途改盲注后，「一个买入 = xx 个大盲」对应的筹码数是否跟着变。
-- 方案：
-  - 临时做法：第一笔记录后 1 手的筹码数固定，改盲注不影响手数，改动最小，
-    也能保证同一局里「3 手」含义一致。
-  - 以后如果需要，再加「调整 1 手的筹码数」：只影响之后的买入，已有记录按筹码数保留。
-  - 这个思路和比赛的做法接近：盲注逐级上涨，重买筹码量是开赛前定好的。
-    这里按一般了解整理，还没有实际查证其他 App 的做法。
-- 决定：暂缓。很少改盲注，先不作为重点。
-- 跟踪：未建 Issue
+- Type: feature
+- Date: proposed and deferred 2026-11-04
+- Source: discussion
+- Problem: after blinds change mid-game, should the chips behind "one buy-in = xx big blinds" change too?
+- Proposal:
+  - Temporary approach: chips per hand are fixed after the first record, and changing blinds doesn't affect hands.
+    This is the smallest change and keeps "3 hands" meaning the same thing throughout a game.
+  - If needed later, add "adjust chips per hand", affecting only later buy-ins and leaving existing records in chips.
+  - This is close to how tournaments work: blinds rise by level, while the rebuy stack is set before the start.
+    That comes from general knowledge; how other apps handle it hasn't been checked.
+- Decision: defer. Blinds rarely change, so this isn't a priority for now.
+- Tracking: no issue yet

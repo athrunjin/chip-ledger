@@ -2,12 +2,12 @@ import type { ReactNode } from "react";
 
 interface PageProps {
   title: string;
-  /** 标题右侧的操作区 */
+  /** Actions to the right of the title */
   actions?: ReactNode;
   children: ReactNode;
 }
 
-/** 页面骨架：统一的标题、边距和最大宽度。 */
+/** Page skeleton: shared title, margins and maximum width. */
 export function Page({ title, actions, children }: PageProps) {
   return (
     <div className="mx-auto w-full max-w-3xl px-4 md:px-8">

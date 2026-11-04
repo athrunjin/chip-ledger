@@ -25,11 +25,13 @@ export function createGuestDatabase(name = "holdem-guest"): GuestDatabase {
   return db;
 }
 
-/** 游客模式的数据仓库：数据只存在本机 IndexedDB。 */
+/** Guest mode repository: data lives only in local IndexedDB. */
 export function createDexieRepository(db: GuestDatabase, organizerId: OrganizerId): Repository {
   function assertOwned(entity: { readonly organizerId: OrganizerId }) {
     if (entity.organizerId !== organizerId) {
-      throw new ForeignOrganizerError(`不能写入其他组织者的数据：${entity.organizerId}`);
+      throw new ForeignOrganizerError(
+        `Cannot write data belonging to another organizer: ${entity.organizerId}`,
+      );
     }
   }
 
@@ -37,7 +39,7 @@ export function createDexieRepository(db: GuestDatabase, organizerId: OrganizerI
     return entity?.organizerId === organizerId ? entity : undefined;
   }
 
-  /** 只写入表里还没有的记录，返回新增条数。 */
+  /** Writes only records missing from the table and returns how many were added. */
   async function addMissing<T extends { readonly id: string }>(
     table: Table<T, string>,
     rows: readonly T[],

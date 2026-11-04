@@ -21,7 +21,7 @@ const ISSUE_TEXT: Record<GameSettingsIssue, string> = {
   "not-whole-chips": "1 手换算后不是整数筹码，请调整",
 };
 
-/** 按当前输入算出 1 手的筹码数，输入还不完整时返回 null。 */
+/** Chips per hand for the current input, or null while the input is incomplete. */
 function previewHandChips({ bigBlind, ratioChips, ratioAmount, buyInBigBlinds }: FormValues) {
   const amount = tryParseMoney(bigBlind);
   const chips = parseChips(ratioChips);
@@ -38,9 +38,9 @@ function previewHandChips({ bigBlind, ratioChips, ratioAmount, buyInBigBlinds }:
 interface GameSettingsFormProps {
   initial: FormValues;
   submitLabel: string;
-  /** 货币和筹码比例是否已锁定 */
+  /** Whether the currency and chip ratio are locked */
   ratioLocked?: boolean;
-  /** 旧牌局已按筹码记录时隐藏买入设置 */
+  /** Hides the buy-in setting for older games that already record chips */
   showBuyIn?: boolean;
   saving: boolean;
   saveFailed: boolean;

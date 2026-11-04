@@ -1,6 +1,6 @@
 /**
- * 把结算结果画成 PNG。用 Canvas 直接绘制，内容只有文字和线条，
- * 不需要引入 DOM 截图库；那类库在 iOS Safari 上容易丢字体。
+ * Draws the settlement result as a PNG. It uses Canvas directly because the content is only text and lines,
+ * so no DOM screenshot library is needed; those tend to lose fonts on iOS Safari.
  */
 export interface SettlementImageData {
   title: string;
@@ -9,7 +9,7 @@ export interface SettlementImageData {
   nets: readonly { name: string; amount: string }[];
 }
 
-// 图片不跟随系统深浅色，固定用深色牌桌配色
+// The image ignores the system theme and always uses the dark table colors
 const COLOR = {
   bg: "#13241e",
   row: "#1a3129",
@@ -50,7 +50,7 @@ export async function renderSettlementImage(data: SettlementImageData): Promise<
   canvas.width = WIDTH;
   canvas.height = height;
   const context = canvas.getContext("2d");
-  if (!context) throw new Error("无法创建画布");
+  if (!context) throw new Error("Could not create canvas");
   const ctx = context;
   const family = getComputedStyle(document.body).fontFamily;
   const font = (size: number, weight = 500) => `${weight} ${size}px ${family}`;
@@ -121,6 +121,6 @@ export async function renderSettlementImage(data: SettlementImageData): Promise<
   }
 
   return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("图片生成失败"))));
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Could not generate image"))));
   });
 }

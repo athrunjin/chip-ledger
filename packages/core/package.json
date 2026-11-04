@@ -2,7 +2,7 @@
   "name": "@holdem/core",
   "version": "0.0.0",
   "private": true,
-  "description": "纯业务逻辑：金额、结算、保险、抽水、计时。不依赖任何界面或数据库。",
+  "description": "Pure business logic: money, settlement, insurance, rake and timing. No UI or database dependencies.",
   "license": "UNLICENSED",
   "type": "module",
   "exports": {

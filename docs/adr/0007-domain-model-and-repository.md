@@ -1,27 +1,27 @@
-# 0007. 领域模型和数据仓库接口放在 core，Dexie 实现放在 apps/web
+# 0007. Domain model and repository interface in core, Dexie implementation in apps/web
 
-- 状态：已采纳
-- 日期：2026-11-04
+- Status: Accepted
+- Date: 2026-11-04
 
-## 背景
+## Context
 
-ADR 0005 决定通过数据仓库接口隔离存储，但没有规定接口放在哪里，也没有规定一个仓库实例和组织者的关系。
+ADR 0005 chose to isolate storage behind a repository interface, but didn't say where the interface lives or how a repository instance relates to an organizer.
 
-## 考虑过的选项
+## Options considered
 
-- 新建 `packages/data` 放接口和实现：边界清楚，但现在只有一个应用，多一个包没有收益。
-- 接口放 `apps/web`：以后的服务端和玩家端无法复用。
-- **接口和领域类型放 `packages/core`，实现放应用里**：`core` 仍然只有纯函数和类型。
+- A new `packages/data` for the interface and implementations: clear boundaries, but with one app an extra package adds nothing.
+- Interface in `apps/web`: a future server or player app couldn't reuse it.
+- **Interface and domain types in `packages/core`, implementations in the app**: `core` still holds only pure functions and types.
 
-## 决定
+## Decision
 
-- 领域类型和 `Repository` 接口放在 `packages/core/src/domain`。
-- Dexie 实现放在 `apps/web/src/data`，新增运行依赖 `dexie`（ADR 0005 已选定）和测试依赖 `fake-indexeddb`。
-- 一个仓库实例绑定一位组织者：读取自动限定范围，写入其他组织者的数据时抛错。
-- `LedgerRepository` 只提供读取和追加，从接口层面保证账本只追加。
-- 筹码与现金的比例用一对整数表示；账本事件记录筹码数，金额由比例推导。
+- Domain types and the `Repository` interface live in `packages/core/src/domain`.
+- The Dexie implementation lives in `apps/web/src/data`, adding the runtime dependency `dexie` (already chosen in ADR 0005) and the test dependency `fake-indexeddb`.
+- One repository instance is bound to one organizer: reads are scoped automatically, and writing another organizer's data throws.
+- `LedgerRepository` offers only reads and appends, so the interface itself guarantees the ledger is append-only.
+- The chip-to-cash ratio is a pair of integers. Ledger events record chips, and amounts are derived from the ratio.
 
-## 后果
+## Consequences
 
-- Supabase 实现（M6）只需实现同一接口，组织者隔离由行级安全策略兜底。
-- 以后需要批量导入（JSON 恢复、游客数据导入账户）时，要给接口新增专门的方法。
+- The Supabase implementation (M6) only has to implement the same interface, with row-level security as the backstop for organizer isolation.
+- Bulk import later (JSON restore, importing guest data into an account) will need dedicated interface methods.

@@ -9,7 +9,7 @@ import { routeTree } from "./routeTree.gen";
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    // 游客模式的数据在本机，断网时也要能读写，不能按默认行为暂停
+    // Guest data is local and must stay readable and writable offline, so skip the default pausing
     queries: { staleTime: 30_000, retry: 2, networkMode: "always" },
     mutations: { networkMode: "always" },
   },
@@ -28,7 +28,7 @@ declare module "@tanstack/react-router" {
 }
 
 const rootElement = document.getElementById("root");
-if (!rootElement) throw new Error("找不到 #root 节点");
+if (!rootElement) throw new Error("Could not find the #root element");
 
 createRoot(rootElement).render(
   <StrictMode>

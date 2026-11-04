@@ -1,29 +1,29 @@
-# 0010. 按手买入：牌局固定 1 手的筹码数，账本继续记录筹码
+# 0010. Buying in by hands: games fix chips per hand, and the ledger keeps recording chips
 
-- 状态：已采纳
-- 日期：2026-11-04
+- Status: Accepted
+- Date: 2026-11-04
 
-## 背景
+## Context
 
-组织者希望用整数手数记录买入和补码，并在现场快速加减。账本只追加（ADR 0005），
-不能直接修改已有记录。盲注在牌局中途可以修改。
+Organizers want to record buy-ins and rebuys in whole hands and adjust them quickly at the table. The ledger is append-only (ADR 0005),
+so existing records can't be edited. Blinds can change mid-game. A "hand" (手) here means one buy-in unit, not a hand of cards.
 
-## 考虑过的选项
+## Options considered
 
-- 账本事件改记手数：显示简单，但旧数据要迁移，而且兑出通常不是整手。
-- 只保存「几个大盲」，每次按当前大盲计算 1 手：改盲注后，同一局的手数含义会变化。
-- **牌局保存 1 手的筹码数，账本继续记录筹码**：账本和结算不用改，手数只是录入和显示方式。
+- Record hands in ledger events: simpler display, but old data would need migrating and cash-outs usually aren't whole hands.
+- Save only the big blind multiple and compute a hand from the current big blind: changing blinds would change what hands mean within a game.
+- **Save chips per hand on the game and keep recording chips in the ledger**: the ledger and settlement don't change, and hands are only an entry and display format.
 
-## 决定
+## Decision
 
-- `Game` 新增可选字段 `buyInBigBlinds` 和 `handChips`。`handChips` 在开局时换算，换算不出整数时报错。
-- 有账本事件后 `handChips` 不再变化，和货币、筹码比例一样，改盲注不影响手数。
-- 调整手数由 `adjustHands` 算出要追加的事件：增加记一笔差额，减少冲正最近的买入，多冲正的部分再补回。
-- `LedgerRepository` 新增 `appendAll`，冲正和补回的记录一起写入，全部成功或全部不写入。
-- 同一局的写入用 TanStack Query 的 `scope` 排队，每次调整都读取最新账本，连点时不会基于旧数据计算。
-- 没有 `handChips` 的旧牌局继续按筹码数记录。备份格式保持版本 1，新增字段是可选的。
+- `Game` gains optional fields `buyInBigBlinds` and `handChips`. `handChips` is converted when the game starts, and a result that isn't a whole number of chips is an error.
+- Once the ledger has events, `handChips` stops changing, like the currency and chip ratio. Changing blinds doesn't affect hands.
+- `adjustHands` works out which events to append: an increase records the difference, and a decrease reverses the latest buys and records any excess again.
+- `LedgerRepository` gains `appendAll`, so reversals and the replacement record are written together: all of them or none.
+- Writes for one game are queued with TanStack Query's `scope`, and each adjustment reads the latest ledger, so rapid taps never calculate from stale data.
+- Older games without `handChips` keep recording chips. The backup format stays at version 1 because the new fields are optional.
 
-## 后果
+## Consequences
 
-- Supabase 实现（M6）的 `appendAll` 也要保证原子写入。
-- 中途调整 1 手的筹码数暂时不支持，见 docs/IMPROVEMENTS.md #I-004。
+- The Supabase implementation (M6) must also make `appendAll` atomic.
+- Adjusting chips per hand mid-game isn't supported for now. See #I-004 in docs/IMPROVEMENTS.md.

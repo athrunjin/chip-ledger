@@ -27,7 +27,7 @@ const form: GameSettingsForm = {
 const meta = { id: "g1", organizerId: "me", createdAt: 1 };
 
 describe("parseGameSettings", () => {
-  it("把表单字符串转成整数", () => {
+  it("converts form strings to integers", () => {
     expect(parseGameSettings(form)).toEqual({
       ok: true,
       settings: {
@@ -40,7 +40,7 @@ describe("parseGameSettings", () => {
     });
   });
 
-  it("报告所有无法解析或不是正数的字段", () => {
+  it("reports every field that is unparseable or not positive", () => {
     const result = parseGameSettings({
       ...form,
       smallBlind: "abc",
@@ -61,7 +61,7 @@ describe("parseGameSettings", () => {
     });
   });
 
-  it("大盲不能小于小盲，可以相等", () => {
+  it("requires the big blind to be at least the small blind", () => {
     expect(parseGameSettings({ ...form, smallBlind: "11", bigBlind: "10" })).toEqual({
       ok: false,
       issues: { bigBlind: "below-small-blind" },
@@ -69,14 +69,14 @@ describe("parseGameSettings", () => {
     expect(parseGameSettings({ ...form, smallBlind: "10", bigBlind: "10" }).ok).toBe(true);
   });
 
-  it("筹码数超出安全整数范围时视为无效", () => {
+  it("treats chip counts beyond the safe integer range as invalid", () => {
     expect(parseGameSettings({ ...form, ratioChips: "99999999999999999" })).toEqual({
       ok: false,
       issues: { ratioChips: "invalid" },
     });
   });
 
-  it("1 手换算不出整数筹码时报错", () => {
+  it("reports a hand that is not a whole number of chips", () => {
     const whole = { ...form, ratioChips: "1", ratioAmount: "5", bigBlind: "10.50" };
     expect(parseGameSettings({ ...whole, buyInBigBlinds: "3" })).toEqual({
       ok: false,
@@ -85,13 +85,13 @@ describe("parseGameSettings", () => {
     expect(parseGameSettings({ ...whole, buyInBigBlinds: "10" }).ok).toBe(true);
   });
 
-  it("买入已固定时不再检查换算结果，改盲注不受影响", () => {
+  it("skips the conversion check once the buy-in is locked, so blinds can change", () => {
     const locked = { ...form, ratioChips: "1", ratioAmount: "5", buyInBigBlinds: "3" };
     expect(parseGameSettings(locked).ok).toBe(false);
     expect(parseGameSettings(locked, { buyInLocked: true }).ok).toBe(true);
   });
 
-  it("任意合法设置经过表单往返后不变", () => {
+  it("keeps any valid settings unchanged through a form round trip", () => {
     const positiveCents = fc.integer({ min: 1, max: 100_000 }).map(cents);
     const settings = fc
       .record({
@@ -107,7 +107,7 @@ describe("parseGameSettings", () => {
           currency,
           smallBlind,
           bigBlind: cents(smallBlind + extra),
-          // 筹码数是金额的整数倍，保证 1 手能换算成整数筹码
+          // Chips are a whole multiple of the amount, so a hand is always a whole number of chips
           chipRatio: { chips: amount * multiple, amount },
           buyInBigBlinds,
         }),
@@ -121,7 +121,7 @@ describe("parseGameSettings", () => {
 });
 
 describe("DEFAULT_GAME_SETTINGS", () => {
-  it("默认人民币，1 筹码 = 1 元，一个买入 100 个大盲", () => {
+  it("defaults to CNY, 1 chip = 1 yuan and 100 big blinds per buy-in", () => {
     expect(DEFAULT_GAME_SETTINGS).toMatchObject({
       currency: "CNY",
       chipRatio: { chips: 1, amount: cents(100) },
@@ -131,14 +131,14 @@ describe("DEFAULT_GAME_SETTINGS", () => {
 });
 
 describe("toGameSettingsForm", () => {
-  it("旧牌局没有买入设置时用默认值", () => {
+  it("uses the default for older games with no buy-in setting", () => {
     const { buyInBigBlinds: _, ...old } = DEFAULT_GAME_SETTINGS;
     expect(toGameSettingsForm(old).buyInBigBlinds).toBe("100");
   });
 });
 
 describe("handChipsFor", () => {
-  it("大盲 × 倍数，再按比例换算成筹码", () => {
+  it("multiplies the big blind and converts to chips at the ratio", () => {
     const ratio = { chips: 100, amount: cents(100) };
     expect(handChipsFor({ bigBlind: cents(200), chipRatio: ratio, buyInBigBlinds: 100 })).toBe(
       20_000,
@@ -147,7 +147,7 @@ describe("handChipsFor", () => {
 });
 
 describe("createGame", () => {
-  it("新牌局是进行中状态，并固定 1 手的筹码数", () => {
+  it("starts open with chips per hand fixed", () => {
     expect(createGame(meta, DEFAULT_GAME_SETTINGS)).toEqual({
       ...meta,
       ...DEFAULT_GAME_SETTINGS,
@@ -160,7 +160,7 @@ describe("createGame", () => {
 describe("settleGame / reopenGame", () => {
   const game = createGame(meta, DEFAULT_GAME_SETTINGS);
 
-  it("结算后记录时间，重新打开后恢复原样", () => {
+  it("records the time on settling and restores the game on reopening", () => {
     const settled = settleGame(game, 2);
     expect(settled).toEqual({ ...game, status: "settled", settledAt: 2 });
     expect(reopenGame(settled)).toEqual(game);
@@ -177,7 +177,7 @@ describe("updateGameSettings", () => {
     buyInBigBlinds: 50,
   };
 
-  it("没有账本事件时可以改全部设置", () => {
+  it("can change every setting when the ledger has no events", () => {
     expect(updateGameSettings(game, next, { hasLedgerEvents: false })).toEqual({
       ...game,
       ...next,
@@ -185,7 +185,7 @@ describe("updateGameSettings", () => {
     });
   });
 
-  it("有账本事件后只改盲注，货币、筹码比例和 1 手不变", () => {
+  it("changes only blinds once the ledger has events", () => {
     expect(updateGameSettings(game, next, { hasLedgerEvents: true })).toEqual({
       ...game,
       smallBlind: next.smallBlind,

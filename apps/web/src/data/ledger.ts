@@ -12,7 +12,7 @@ export function newEventMeta(gameId: string) {
   };
 }
 
-/** 同一局的写入排队执行，连点时每次都基于上一次的结果。 */
+/** Writes for one game run in a queue, so each rapid tap builds on the previous result. */
 function ledgerScope(gameId: string) {
   return { id: `ledger-${gameId}` };
 }

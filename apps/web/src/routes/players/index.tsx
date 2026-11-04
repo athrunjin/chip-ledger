@@ -20,7 +20,7 @@ function PlayersPage() {
     query,
     players.map((player) => player.name),
   );
-  // 搜不到时可以直接把搜索词加成新玩家，不用再填一次
+  // When the search finds nothing, the query can be added as a new player without retyping
   const newName = parsed.ok && matches.length === 0 ? parsed.name : undefined;
   const tooLong = !parsed.ok && parsed.issue === "too-long";
 

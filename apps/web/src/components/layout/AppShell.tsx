@@ -8,12 +8,12 @@ const linkBase =
 const linkActive = "text-text [&_svg]:text-highlight";
 
 export function AppShell() {
-  // 牌局详情在 /games 下，导航上仍然归到「牌局」
+  // Game details live under /games but still count as the Games tab
   const inGame = useLocation({ select: (location) => location.pathname.startsWith("/games") });
 
   return (
     <div className="min-h-dvh md:grid md:grid-cols-[96px_1fr]">
-      {/* 平板及以上：左侧导航栏 */}
+      {/* Tablet and up: side navigation */}
       <nav
         aria-label="主导航"
         className="sticky top-0 hidden h-dvh flex-col items-center gap-2 border-r border-line bg-surface pt-[max(1rem,env(safe-area-inset-top))] md:flex"
@@ -37,7 +37,7 @@ export function AppShell() {
         <Outlet />
       </main>
 
-      {/* 手机：底部导航栏 */}
+      {/* Phone: bottom navigation */}
       <nav
         aria-label="主导航"
         className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-4 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"

@@ -1,22 +1,22 @@
-# 0004. 金额一律用整数分表示
+# 0004. All money is integer cents
 
-- 状态：已采纳
-- 日期：2026-10-28
+- Status: Accepted
+- Date: 2026-10-28
 
-## 背景
+## Context
 
-结算必须分毫不差。JavaScript 的数字是浮点数，`0.1 + 0.2 === 0.30000000000000004`，
-直接用小数做金额运算会产生对不上的账。
+Settlement has to be exact. JavaScript numbers are floating point, so `0.1 + 0.2 === 0.30000000000000004`,
+and doing money math with decimals produces books that don't balance.
 
-## 决定
+## Decision
 
-- 所有金额在系统内用**整数分**表示，类型为 `@holdem/core` 的 `Cents`（品牌类型，防止和普通数字混用）。
-- 只在显示（`formatMoney`）和解析用户输入（`tryParseMoney`）时与小数互转。
-- 乘以比例（抽水、赔率）时必须显式指定取整方式（`half-up` / `floor` / `ceil`）。
-- 拆分金额（平分底池、分摊费用）用 `allocate`，保证各份之和严格等于总额。
-- 数据库中金额列使用 `bigint`（分）。
+- All money inside the system is **integer cents**, using the `Cents` type from `@holdem/core` (a branded type, so it can't be mixed up with plain numbers).
+- Convert to and from decimals only for display (`formatMoney`) and when parsing user input (`tryParseMoney`).
+- Multiplying by a rate (rake, odds) must name a rounding mode explicitly (`half-up` / `floor` / `ceil`).
+- Splitting money (dividing a pot, sharing a fee) uses `allocate`, which guarantees the parts add up to exactly the total.
+- Money columns in the database use `bigint` (cents).
 
-## 后果
+## Consequences
 
-- 金额守恒类的逻辑都用 fast-check 做性质测试（随机生成大量数据验证总和不变）。
-- 筹码与现金的换算比例作为牌局设置保存，筹码数同样用整数。
+- Logic that conserves money gets fast-check property tests (large amounts of random data verifying that totals don't change).
+- The chip-to-cash ratio is saved as a game setting, and chip counts are integers too.

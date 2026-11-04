@@ -1,27 +1,27 @@
 /**
- * 金额工具。
+ * Money utilities.
  *
- * 规则：系统内所有金额一律用「整数分」表示（例如 $12.50 存为 1250），
- * 避免浮点误差（0.1 + 0.2 !== 0.3）。只有在显示或解析用户输入时才和小数互相转换。
+ * Rule: all money in the system is integer cents (for example $12.50 is stored as 1250),
+ * which avoids floating-point errors (0.1 + 0.2 !== 0.3). Convert to decimals only to display or parse user input.
  *
- * 详见 docs/adr/0004-money-as-integer-cents.md
+ * See docs/adr/0004-money-as-integer-cents.md
  */
 
 declare const CentsBrand: unique symbol;
 
-/** 以「分」为单位的整数金额。用品牌类型防止把普通数字误当金额使用。 */
+/** An integer amount in cents. A branded type stops plain numbers being used as money by mistake. */
 export type Cents = number & { readonly [CentsBrand]: true };
 
 export class InvalidMoneyError extends Error {
   override readonly name = "InvalidMoneyError";
 }
 
-/** 把一个整数（分）标记为金额。不是安全整数时抛错。 */
+/** Marks an integer as cents. Throws if it is not a safe integer. */
 export function cents(value: number): Cents {
   if (!Number.isSafeInteger(value)) {
-    throw new InvalidMoneyError(`金额必须是整数分，收到：${value}`);
+    throw new InvalidMoneyError(`Money must be integer cents, got: ${value}`);
   }
-  // -0 统一为 0，避免显示 "-$0.00"
+  // Normalize -0 to 0 to avoid showing "-$0.00"
   return (value === 0 ? 0 : value) as Cents;
 }
 
@@ -54,14 +54,14 @@ export function compare(a: Cents, b: Cents): -1 | 0 | 1 {
 }
 
 /**
- * 取整方式：
- * - `half-up`：四舍五入（.5 远离 0）
- * - `floor`：向下取整（例如抽水通常向下取整，对玩家有利）
- * - `ceil`：向上取整
+ * Rounding modes:
+ * - `half-up`: round to nearest (.5 away from 0)
+ * - `floor`: round down (rake usually does, in the players' favor)
+ * - `ceil`: round up
  */
 export type RoundingMode = "half-up" | "floor" | "ceil";
 
-/** 浮点运算的容差，用来消除 0.1 * 3 = 0.30000000000000004 这类误差。 */
+/** Tolerance for floating-point math, removing errors like 0.1 * 3 = 0.30000000000000004. */
 const EPSILON = 1e-9;
 
 function roundNumber(raw: number, mode: RoundingMode): number {
@@ -80,31 +80,31 @@ function roundNumber(raw: number, mode: RoundingMode): number {
 }
 
 /**
- * 金额乘以系数（如抽水比例 0.05、保险赔率 3.5），按指定方式取整到分。
+ * Multiplies money by a factor (such as a 0.05 rake or 3.5 insurance odds), rounding to the cent as specified.
  */
 export function multiply(a: Cents, factor: number, mode: RoundingMode = "half-up"): Cents {
   if (!Number.isFinite(factor)) {
-    throw new InvalidMoneyError(`系数必须是有限数字，收到：${factor}`);
+    throw new InvalidMoneyError(`Factor must be a finite number, got: ${factor}`);
   }
   return cents(roundNumber(a * factor, mode));
 }
 
 /**
- * 按比例拆分金额，保证各份之和严格等于原金额（最大余数法）。
- * 用途：平分底池、分摊荷官费等。
+ * Splits money by ratio so the parts add up to exactly the original amount (largest remainder method).
+ * Used for dividing pots, sharing dealer fees and so on.
  *
  * @example allocate(cents(100), [1, 1, 1]) // => [34, 33, 33]
  */
 export function allocate(total: Cents, ratios: readonly number[]): Cents[] {
   if (ratios.length === 0) {
-    throw new InvalidMoneyError("拆分比例不能为空");
+    throw new InvalidMoneyError("Split ratios cannot be empty");
   }
   if (ratios.some((r) => !Number.isFinite(r) || r < 0)) {
-    throw new InvalidMoneyError("拆分比例必须是非负有限数字");
+    throw new InvalidMoneyError("Split ratios must be non-negative finite numbers");
   }
   const ratioSum = ratios.reduce((acc, r) => acc + r, 0);
   if (ratioSum === 0) {
-    throw new InvalidMoneyError("拆分比例之和不能为 0");
+    throw new InvalidMoneyError("Split ratios cannot add up to 0");
   }
 
   const sign = total < 0 ? -1 : 1;
@@ -113,7 +113,7 @@ export function allocate(total: Cents, ratios: readonly number[]): Cents[] {
   const shares = exact.map((x) => Math.floor(x));
   let remainder = abs - shares.reduce((acc, s) => acc + s, 0);
 
-  // 余下的分按小数部分从大到小分配；小数部分相同时，排在前面的优先
+  // Give the remaining cents out by largest fraction; on a tie, earlier entries go first
   const order = exact
     .map((x, i) => ({ i, frac: x - Math.floor(x) }))
     .sort((a, b) => b.frac - a.frac || a.i - b.i);
@@ -129,9 +129,9 @@ export function allocate(total: Cents, ratios: readonly number[]): Cents[] {
 const MONEY_PATTERN = /^([+-])?(\d+)(?:\.(\d{1,2}))?$/;
 
 /**
- * 解析用户输入的金额字符串（元），返回分。无法解析时返回 null。
- * 支持："12"、"12.5"、"12.50"、"-3.2"、"1,234.56"、" $20 "。
- * 不接受超过两位小数。
+ * Parses a money string typed by the user (in whole currency units) into cents. Returns null if it cannot be parsed.
+ * Accepts "12", "12.5", "12.50", "-3.2", "1,234.56" and " $20 ".
+ * Rejects more than two decimal places.
  */
 export function tryParseMoney(input: string): Cents | null {
   const normalized = input
@@ -146,16 +146,16 @@ export function tryParseMoney(input: string): Cents | null {
   return cents(sign === "-" ? -value : value);
 }
 
-/** 同 tryParseMoney，但无法解析时抛错。 */
+/** Same as tryParseMoney, but throws if the input cannot be parsed. */
 export function parseMoney(input: string): Cents {
   const result = tryParseMoney(input);
   if (result === null) {
-    throw new InvalidMoneyError(`无法解析金额："${input}"`);
+    throw new InvalidMoneyError(`Could not parse amount: "${input}"`);
   }
   return result;
 }
 
-/** 转成不带货币符号的小数字符串，例如 -1250 => "-12.50"。 */
+/** Converts to a decimal string with no currency symbol, e.g. -1250 => "-12.50". */
 export function toDecimalString(value: Cents): string {
   const sign = value < 0 ? "-" : "";
   const abs = Math.abs(value);
@@ -165,17 +165,17 @@ export function toDecimalString(value: Cents): string {
 }
 
 export interface FormatMoneyOptions {
-  /** ISO 4217 货币代码，默认 AUD */
+  /** ISO 4217 currency code, default AUD */
   currency?: string;
-  /** 区域设置，默认 en-AU */
+  /** Locale, default en-AU */
   locale?: string;
-  /** 正数是否显示 "+"（用于展示水上/水下） */
+  /** Whether positive amounts show "+" (for showing wins and losses) */
   signDisplay?: "auto" | "always" | "exceptZero";
-  /** 金额是整数时是否省略 ".00" */
+  /** Whether to drop ".00" for whole amounts */
   trimZeroCents?: boolean;
 }
 
-/** 按货币格式化显示，例如 1250 => "$12.50"。 */
+/** Formats for display in a currency, e.g. 1250 => "$12.50". */
 export function formatMoney(value: Cents, options: FormatMoneyOptions = {}): string {
   const {
     currency = "AUD",

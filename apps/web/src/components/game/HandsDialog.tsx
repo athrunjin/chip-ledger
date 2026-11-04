@@ -9,7 +9,7 @@ const stepClass = "size-12 shrink-0 rounded-xl border border-line text-xl font-s
 interface HandsDialogProps {
   title: string;
   initialHands: number;
-  /** 打开时选中输入框，直接输入数字 */
+  /** Select the input on open so a number can be typed right away */
   selectInput: boolean;
   handChips: number;
   ratio: ChipRatio;

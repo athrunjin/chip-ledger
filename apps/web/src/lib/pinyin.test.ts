@@ -3,16 +3,16 @@ import { describe, expect, it } from "vitest";
 import { toInitials } from "./pinyin";
 
 describe("toInitials", () => {
-  it("中文名取拼音首字母", () => {
+  it("takes pinyin initials of Chinese names", () => {
     expect(toInitials("张三")).toBe("zs");
   });
 
-  it("多音字姓氏按姓氏读音", () => {
+  it("reads surnames with several readings as surnames", () => {
     expect(toInitials("单小明")).toBe("sxm");
     expect(toInitials("曾小贤")).toBe("zxx");
   });
 
-  it("英文转小写，空格去掉", () => {
+  it("lowercases English and removes spaces", () => {
     expect(toInitials("Alice")).toBe("alice");
     expect(toInitials("王 Bob")).toBe("wbob");
   });

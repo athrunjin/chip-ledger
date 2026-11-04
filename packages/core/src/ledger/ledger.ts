@@ -1,6 +1,6 @@
 /**
- * 账本推导。账本只追加事件（ADR 0005），余额全部从事件算出来。
- * 结果都以筹码为单位；显示现金时用 `chipsToCents` 换算。
+ * Ledger derivations. The ledger only appends events (ADR 0005), and all balances are computed from them.
+ * Results are in chips; use `chipsToCents` to display cash.
  */
 import type { ChipEvent, ChipRatio, LedgerEvent } from "../domain";
 import { type Cents, multiply } from "../money";
@@ -9,28 +9,28 @@ function reversedEventIds(events: readonly LedgerEvent[]): Set<string> {
   return new Set(events.flatMap((e) => (e.type === "reversal" ? [e.reversedEventId] : [])));
 }
 
-/** 没有被冲正的买入、补码、兑出，保持原有顺序。 */
+/** Buy-ins, rebuys and cash-outs that have not been reversed, in their original order. */
 export function activeChipEvents(events: readonly LedgerEvent[]): ChipEvent[] {
   const reversed = reversedEventIds(events);
   return events.filter((e): e is ChipEvent => e.type !== "reversal" && !reversed.has(e.id));
 }
 
-/** 只有还没被冲正的筹码事件可以撤销；冲正本身不能再撤销，重新记一笔即可。 */
+/** Only chip events not yet reversed can be undone. A reversal cannot be undone; record the event again instead. */
 export function canReverse(events: readonly LedgerEvent[], eventId: string): boolean {
   return activeChipEvents(events).some((e) => e.id === eventId);
 }
 
 export interface PlayerLedger {
   readonly playerId: string;
-  /** 买入和补码的总筹码。 */
+  /** Total chips from buy-ins and rebuys. */
   readonly boughtChips: number;
-  /** 兑出的总筹码。 */
+  /** Total chips cashed out. */
   readonly cashedOutChips: number;
-  /** 是否还在桌上：最后一笔不是兑出。 */
+  /** Whether the player is still seated: their last event is not a cash-out. */
   readonly seated: boolean;
 }
 
-/** 每位玩家的账目，按首次买入的顺序排列。 */
+/** Each player's totals, in order of first buy-in. */
 export function summarizeByPlayer(events: readonly LedgerEvent[]): PlayerLedger[] {
   const byPlayer = new Map<string, PlayerLedger>();
   for (const event of activeChipEvents(events)) {
@@ -54,7 +54,7 @@ export function summarizeByPlayer(events: readonly LedgerEvent[]): PlayerLedger[
 export interface LedgerTotals {
   readonly boughtChips: number;
   readonly cashedOutChips: number;
-  /** 还在桌上的筹码：买入 − 兑出。 */
+  /** Chips still on the table: bought − cashed out. */
   readonly inPlayChips: number;
 }
 
@@ -64,29 +64,29 @@ export function ledgerTotals(players: readonly PlayerLedger[]): LedgerTotals {
   return { boughtChips, cashedOutChips, inPlayChips: boughtChips - cashedOutChips };
 }
 
-/** 这位玩家的下一笔买入是首次买入还是补码。 */
+/** Whether this player's next buy is a first buy-in or a rebuy. */
 export function nextBuyType(events: readonly LedgerEvent[], playerId: string): "buy_in" | "rebuy" {
   return activeChipEvents(events).some((e) => e.playerId === playerId) ? "rebuy" : "buy_in";
 }
 
-/** 最近一笔买入或补码的筹码数，用来预填下一笔。没有时返回 undefined。 */
+/** Chips in the latest buy-in or rebuy, to prefill the next one. Returns undefined if there is none. */
 export function lastBuyChips(events: readonly LedgerEvent[]): number | undefined {
   return activeChipEvents(events).findLast((e) => e.type !== "cash_out")?.chips;
 }
 
-/** 手数变化：`by` 在现有基础上加减，`to` 直接改成目标手数。 */
+/** A change in hands: `by` adds to the current count and `to` sets a target. */
 export type HandChange = { readonly by: number } | { readonly to: number };
 
-/** 账本只追加，调整手数要拆成冲正和一笔新的买入。 */
+/** The ledger is append-only, so adjusting hands becomes reversals plus one new buy. */
 export interface HandAdjustment {
   readonly reversedEventIds: readonly string[];
   readonly buy?: { readonly type: "buy_in" | "rebuy"; readonly chips: number };
 }
 
 /**
- * 算出把玩家调整到目标手数要追加哪些事件。最少保留 1 手。
+ * Works out which events to append to bring a player to the target hands. At least 1 hand remains.
  *
- * 增加时记一笔差额。减少时从最近的买入往回冲正，冲过头的部分再记一笔补回来。
+ * An increase records the difference. A decrease reverses the latest buys and records any excess again.
  */
 export function adjustHands(
   events: readonly LedgerEvent[],
@@ -119,7 +119,7 @@ export function adjustHands(
   return { reversedEventIds, buy: { type, chips: -remaining } };
 }
 
-/** 按牌局比例把筹码换算成现金，四舍五入到分。 */
+/** Converts chips to cash at the game's ratio, rounded half up to the cent. */
 export function chipsToCents(chips: number, ratio: ChipRatio): Cents {
   return multiply(ratio.amount, chips / ratio.chips, "half-up");
 }

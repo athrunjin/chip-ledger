@@ -1,29 +1,29 @@
-# 0001. 应用形态：先做 PWA，以后用 Capacitor 打包
+# 0001. App form: PWA first, packaged with Capacitor later
 
-- 状态：已采纳
-- 日期：2026-10-28
+- Status: Accepted
+- Date: 2026-10-28
 
-## 背景
+## Context
 
-组织者在牌局现场用手机或平板操作，也可能在电脑上看报告。需要一套代码覆盖所有设备，
-由一个人维护，并且能快速打开使用。
+Organizers work on a phone or tablet at the table and may read reports on a computer. One codebase has to cover every device,
+be maintained by one person, and open quickly.
 
-## 考虑过的选项
+## Options considered
 
-| 方案                       | 优点                                                                                               | 缺点                                                        |
-| -------------------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| PWA（以后 Capacitor 打包） | 一套代码；打开网址即用，可添加到主屏幕；无需商店审核，修复即时生效；Capacitor 可复用同一套代码上架 | iOS 无后台同步、无自动安装提示；动画手感略逊原生            |
-| React Native + Expo        | 原生手感                                                                                           | 网页版写法受限（不能用 HTML/CSS），包更大，网页是「附带」的 |
-| Flutter                    | 界面一致、动画流畅                                                                                 | Web 首屏约 1MB，文字画在 canvas 上；需学 Dart               |
-| 原生 + 独立网页            | 体验最好                                                                                           | 三套代码，一个人无法维护                                    |
+| Option                            | Pros                                                                                                                                       | Cons                                                                     |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| PWA (Capacitor packaging later)   | One codebase; opens from a URL and can be added to the home screen; no store review, fixes ship instantly; Capacitor can reuse the same code | No background sync or automatic install prompt on iOS; animation feel slightly behind native |
+| React Native + Expo               | Native feel                                                                                                                                | Web version is constrained (no HTML/CSS), larger bundles, web is an afterthought |
+| Flutter                           | Consistent UI, smooth animation                                                                                                            | About 1MB first load on web, text drawn on canvas; requires learning Dart |
+| Native plus a separate website    | Best experience                                                                                                                            | Three codebases, impossible for one person                               |
 
-## 决定
+## Decision
 
-采用 PWA。以表单、列表、数字计算为主的工具不需要原生图形性能。
-需要上架应用商店时，用 Capacitor 打包同一套 Web 代码。
+Use a PWA. A tool built around forms, lists and number crunching doesn't need native graphics performance.
+When app store distribution is needed, package the same web code with Capacitor.
 
-## 后果
+## Consequences
 
-- 计时不能依赖持续运行的定时器（iOS 会在后台挂起页面），一律记录时间戳、用差值计算。
-- iOS 用户需手动「添加到主屏幕」，应用内要提供引导。
-- 新版本通过 Service Worker 更新，采用「提示刷新」而不是自动刷新，避免打断进行中的牌局。
+- Timing can't rely on a running timer (iOS suspends background pages). Always record timestamps and compute differences.
+- iOS users must "Add to Home Screen" by hand, so the app has to guide them.
+- New versions arrive through the service worker with a refresh prompt rather than an automatic refresh, to avoid interrupting a game in progress.

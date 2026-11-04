@@ -1,31 +1,31 @@
-# 0009. JSON 备份用版本化格式，恢复时只新增不覆盖
+# 0009. Versioned JSON backups, and restore only adds records
 
-- 状态：已采纳
-- 日期：2026-11-04
+- Status: Accepted
+- Date: 2026-11-04
 
-## 背景
+## Context
 
-游客模式的数据只在本机，换设备或清理浏览器后就会丢失，需要 JSON 备份。账本只追加（ADR 0005），
-恢复不能改写已有事件。备份文件也可能被手动修改，读入时要校验。
+Guest data exists only on the device and is lost when changing devices or clearing the browser, so JSON backups are needed. The ledger is append-only (ADR 0005),
+so a restore must not rewrite existing events. Backup files can also be edited by hand, so they have to be validated on load.
 
-## 考虑过的选项
+## Options considered
 
-- 恢复时清空本机再写入：简单，但选错文件会丢掉本机较新的数据。
-- 恢复时用备份覆盖同 ID 的记录：会改写账本事件，违反只追加。
-- **按 ID 合并，只新增**：不会丢数据，也不会改写已有记录。
+- Clear local data and write the backup: simple, but choosing the wrong file loses newer local data.
+- Overwrite records with the same ID: rewrites ledger events, breaking append-only.
+- **Merge by ID, adding only**: loses no data and rewrites no existing records.
 
-校验方面，手写判断容易漏，Zod 是项目选定的校验库，这里第一次用到。
+For validation, hand-written checks are easy to get wrong. Zod is the project's chosen validation library, and this is its first use.
 
-## 决定
+## Decision
 
-- 文件结构：`format`、`version`、`exportedAt`，以及 `games`、`players`、`ledgerEvents`。
-- `Repository` 增加 `backup.exportAll` 和 `backup.restore`。恢复在一个事务内完成，全部成功或全部不写入。
-- 恢复时 ID 已存在的记录保持原样并计入跳过数。
-- `apps/web` 依赖 `zod` 校验文件，比当前版本新的备份直接拒绝，账本引用不到牌局、玩家或事件的文件也拒绝。
+- File structure: `format`, `version`, `exportedAt`, plus `games`, `players` and `ledgerEvents`.
+- `Repository` gains `backup.exportAll` and `backup.restore`. A restore runs in one transaction: everything is written or nothing is.
+- Records whose ID already exists stay as they are and count as skipped.
+- `apps/web` depends on `zod` to validate files. Backups newer than the current version are rejected, as are files whose ledger refers to a missing game, player or event.
 
-## 后果
+## Consequences
 
-- 同一局在两台设备上分别修改后，恢复不会合并牌局设置和状态，以本机为准；账本事件 ID 不同，会合并。
-- 不同设备上分别新建的同名玩家 ID 不同，恢复后会出现重名。
-- 以后改数据结构时要提高 `version`，并在解析时写升级逻辑。
-- Zod 目前只放在 `apps/web`，`core` 仍然没有依赖。
+- If one game is edited separately on two devices, a restore doesn't merge game settings or status and the local copy wins. Ledger events have different IDs and do merge.
+- Players created separately on different devices have different IDs, so a restore can produce duplicate names.
+- Future data structure changes must raise `version` and add upgrade logic to parsing.
+- Zod is only in `apps/web` for now, so `core` still has no dependencies.

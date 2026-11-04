@@ -8,7 +8,7 @@ interface ChipAmountDialogProps {
   title: string;
   submitLabel: string;
   initialChips: number | undefined;
-  /** 兑出可以是 0（输光了），买入和补码必须大于 0 */
+  /** A cash-out can be 0 (busted); buy-ins and rebuys must be above 0 */
   allowZero: boolean;
   ratio: ChipRatio;
   currency: Currency;

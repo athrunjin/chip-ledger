@@ -1,26 +1,26 @@
-# 0008. 用 pinyin-pro 在应用层生成拼音首字母
+# 0008. Generate pinyin initials in the app layer with pinyin-pro
 
-- 状态：已采纳
-- 日期：2026-11-04
+- Status: Accepted
+- Date: 2026-11-04
 
-## 背景
+## Context
 
-玩家库要支持按拼音首字母搜索，开局时才能快速选人。中文转拼音需要字典，多音字姓氏（单、曾）要按姓氏读音。
+The player list has to be searchable by pinyin initials so players can be picked quickly when a game starts. Converting Chinese to pinyin needs a dictionary, and surnames with several readings (单, 曾) must use their surname reading.
 
-## 考虑过的选项
+## Options considered
 
-- 手写常用字映射：省体积，但生僻字和多音字处理不好。
-- 浏览器的 `Intl.Collator` 按拼音排序：只能排序，拿不到首字母。
-- 服务端生成：游客模式没有服务端。
-- **pinyin-pro**：支持姓氏模式和按字取首字母，维护活跃。
+- A hand-written map of common characters: small, but poor on rare characters and multiple readings.
+- The browser's `Intl.Collator` pinyin ordering: sorts only, and can't produce initials.
+- Server-side generation: guest mode has no server.
+- **pinyin-pro**: has a surname mode and per-character initials, and is actively maintained.
 
-## 决定
+## Decision
 
-- `apps/web` 依赖 `pinyin-pro`，保存玩家时生成首字母，写入 `Player.initials`。搜索时只比较字符串，不再需要字典。
-- `core` 不依赖拼音库：首字母作为字段传入，搜索逻辑留在 `core`。
+- `apps/web` depends on `pinyin-pro`, generates initials when a player is saved, and writes them to `Player.initials`. Search compares strings only, with no dictionary needed.
+- `core` doesn't depend on a pinyin library: initials are passed in as a field, and search logic stays in `core`.
 
-## 后果
+## Consequences
 
-- 拼音字典打包后约 288 KB（gzip 约 143 KB），路由按需加载，不进入首屏，但会被 PWA 预缓存。
-- 算法或字典更新后，已保存的首字母不会自动刷新，修改名字时才重新生成。
-- 其他端写入玩家时要自己生成首字母。
+- The pinyin dictionary is about 288 KB bundled (about 143 KB gzipped). Routes load it on demand so it stays out of the first screen, but the PWA still precaches it.
+- After an algorithm or dictionary update, saved initials don't refresh on their own. They're regenerated when a name is edited.
+- Other clients that write players must generate initials themselves.

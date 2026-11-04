@@ -9,11 +9,11 @@ const rowClass = "flex min-h-13 items-center gap-2 py-1";
 interface LedgerPlayersProps {
   players: readonly PlayerLedger[];
   nameOf: (playerId: string) => string;
-  /** 1 手的筹码数。没有时是旧牌局，按筹码记录。 */
+  /** Chips per hand. Missing on older games, which record chips. */
   handChips: number | undefined;
   ratio: ChipRatio;
   currency: Currency;
-  /** 牌局已结算时不再显示操作 */
+  /** Actions are hidden once the game is settled */
   editable: boolean;
   onStepHands: (playerId: string, by: number) => void;
   onEditHands: (playerId: string) => void;
