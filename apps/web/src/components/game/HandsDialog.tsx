@@ -1,10 +1,8 @@
 import { type ChipRatio, type Currency, chipsToCents, parseChips } from "@holdem/core";
 import { type FormEvent, useEffect, useRef, useState } from "react";
-import { TextField } from "@/components/TextField";
 import { formatGameMoney } from "@/lib/currency";
 import { FormDialog } from "./FormDialog";
-
-const stepClass = "size-12 shrink-0 rounded-xl border border-line text-xl font-semibold";
+import { HandsStepper } from "./HandsStepper";
 
 interface HandsDialogProps {
   title: string;
@@ -51,11 +49,6 @@ export function HandsDialog({
     }
   }
 
-  function step(by: number) {
-    setIssue(undefined);
-    setValue(String(Math.max(1, (hands ?? 0) + by)));
-  }
-
   return (
     <FormDialog
       title={title}
@@ -66,26 +59,14 @@ export function HandsDialog({
       onClose={onClose}
     >
       <div>
-        <div className="flex items-end gap-2">
-          <button type="button" aria-label="减 1 手" onClick={() => step(-1)} className={stepClass}>
-            −
-          </button>
-          <div className="min-w-0 flex-1">
-            <TextField
-              id="hands"
-              label="手数"
-              value={value}
-              issue={undefined}
-              suffix="手"
-              inputMode="numeric"
-              inputRef={inputRef}
-              onChange={setValue}
-            />
-          </div>
-          <button type="button" aria-label="加 1 手" onClick={() => step(1)} className={stepClass}>
-            +
-          </button>
-        </div>
+        <HandsStepper
+          value={value}
+          inputRef={inputRef}
+          onChange={(next) => {
+            setIssue(undefined);
+            setValue(next);
+          }}
+        />
         {issue && <p className="mt-1 text-sm text-highlight">{issue}</p>}
         {valid && (
           <p className="mt-1 text-sm text-muted">

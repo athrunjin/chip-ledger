@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Page } from "@/components/Page";
 import { useGames } from "@/data/games";
-import { formatGameMoney } from "@/lib/currency";
 
 export const Route = createFileRoute("/")({
   component: SessionsPage,
@@ -35,7 +34,7 @@ function SessionsPage() {
           <div className="max-w-sm space-y-3">
             <p className="text-lg font-medium">还没有进行中的牌局</p>
             <p className="text-muted">
-              开局后可以记录每位玩家的买入、补码和兑出，散局时自动算出谁该转给谁多少。
+              开局后可以记录每位玩家的买入、补码和离桌，散局时自动算出谁该转给谁多少。
             </p>
           </div>
         )}
@@ -43,7 +42,7 @@ function SessionsPage() {
 
       {games.length > 0 && (
         <ul className="flex flex-col gap-2 pb-6">
-          {games.map(({ id, currency, smallBlind, bigBlind, status, createdAt }) => (
+          {games.map(({ id, smallBlindChips, bigBlindChips, status, createdAt }) => (
             <li key={id}>
               <Link
                 to="/games/$gameId"
@@ -51,7 +50,7 @@ function SessionsPage() {
                 className="flex min-h-16 items-center justify-between gap-4 rounded-xl border border-line bg-surface px-4"
               >
                 <span className="font-medium">
-                  {formatGameMoney(smallBlind, currency)} / {formatGameMoney(bigBlind, currency)}
+                  {smallBlindChips} / {bigBlindChips}
                 </span>
                 <span className="text-sm text-muted">
                   {status === "open" ? "进行中" : "已结算"} · {STARTED_AT.format(createdAt)}

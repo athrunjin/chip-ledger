@@ -25,8 +25,10 @@ export interface Game {
   readonly id: string;
   readonly organizerId: OrganizerId;
   readonly currency: Currency;
-  readonly smallBlind: Cents;
-  readonly bigBlind: Cents;
+  /** Small blind in chips. */
+  readonly smallBlindChips: number;
+  /** Big blind in chips. */
+  readonly bigBlindChips: number;
   readonly chipRatio: ChipRatio;
   /** Big blinds in one buy-in. Games from before this feature lack it and keep recording chips. */
   readonly buyInBigBlinds?: number;
@@ -62,6 +64,14 @@ export interface ChipEvent extends LedgerEventBase {
   readonly chips: number;
 }
 
+/** A stack typed in by the organizer, replacing the player's current chips. */
+export interface StackSetEvent extends LedgerEventBase {
+  readonly type: "stack_set";
+  readonly playerId: string;
+  /** Whole number of chips. */
+  readonly chips: number;
+}
+
 /** Reversal: undoes the event `reversedEventId` points to, leaving the old record unchanged. */
 export interface ReversalEvent extends LedgerEventBase {
   readonly type: "reversal";
@@ -69,4 +79,4 @@ export interface ReversalEvent extends LedgerEventBase {
 }
 
 /** Ledger event. Append-only, never changed (ADR 0005). */
-export type LedgerEvent = ChipEvent | ReversalEvent;
+export type LedgerEvent = ChipEvent | StackSetEvent | ReversalEvent;

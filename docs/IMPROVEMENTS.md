@@ -37,7 +37,7 @@ Records discussions of feature and process improvements: what was proposed, how 
   - Tap the header to expand or collapse it. A long list also gets a collapse button at the bottom, so nobody has to scroll back up.
   - Collapsing and expanding is view state only and doesn't touch the ledger.
 - Decision: do.
-- Tracking: no issue yet
+- Tracking: issue 25
 
 ### #I-006 Set blinds in chips
 
@@ -53,7 +53,7 @@ Records discussions of feature and process improvements: what was proposed, how 
   Older games are converted with their chip ratio.
 - Settled details: blinds are whole chips, matching the ledger. At 1:1 a ¥0.5 small blind needs a different chip ratio.
 - Decision: do.
-- Tracking: no issue yet
+- Tracking: issue 26, [ADR 0011](adr/0011-chip-blinds-and-live-stacks.md)
 
 ### #I-007 Live stack and win/loss on each player row
 
@@ -68,14 +68,14 @@ Records discussions of feature and process improvements: what was proposed, how 
     Example with 500 chips per hand: King is at 700, one more hand makes 1200, and one hand fewer from 700 makes 200.
 - Ledger rules: a new append-only `stack_set` event records each typed value, so it can be undone like other records.
   Replaying events has to apply a reversed buy as a change to the stack at that point, or the example above would stay at 700.
-- Layout: at 375px there's about 57px left for the name (about 3 Chinese characters) after the stack cell, hand controls and leave button. Longer names are truncated. To be checked on a real device.
+- Layout: at 375px the name gets 77px (about 4–5 Chinese characters) after the stack cell, hand controls and leave button, and 9 players fit on one screen. Longer names are truncated.
 - Impact: new event type in the backup format; needs an ADR.
 - Settled details:
   - Win/loss and the table balance are in chips, matching the stack next to them.
   - Typed stacks appear in the game record, so they can be audited and undone. Tapping the chip cell opens a small dialog, like tapping the hand count.
   - Each player keeps one row with short names, because two rows would fit only about 6–7 players on a screen.
 - Decision: do.
-- Tracking: no issue yet
+- Tracking: issue 27, [ADR 0011](adr/0011-chip-blinds-and-live-stacks.md)
 
 ### #I-008 Rename cash out to leave table, with a confirmation dialog
 
@@ -89,7 +89,7 @@ Records discussions of feature and process improvements: what was proposed, how 
   - Confirming records the cash-out and moves the player to the left section. Cancelling changes nothing.
 - Depends on: #I-007
 - Decision: do.
-- Tracking: no issue yet
+- Tracking: issue 28
 
 ### #I-009 Live table balance
 
@@ -103,7 +103,7 @@ Records discussions of feature and process improvements: what was proposed, how 
   - The balance stays at 0 until a stack is typed. After a win is entered, it stays off until the matching losses are entered too.
 - Depends on: #I-007
 - Decision: do.
-- Tracking: no issue yet
+- Tracking: issue 29
 
 ## Done
 

@@ -13,12 +13,13 @@ import {
   settleGame,
   toGameSettingsForm,
   updateGameSettings,
+  upgradeLegacyGame,
 } from "./game";
 
 const form: GameSettingsForm = {
   currency: "CNY",
-  smallBlind: "5",
-  bigBlind: "10.50",
+  smallBlindChips: "5",
+  bigBlindChips: "10",
   ratioChips: "1,000",
   ratioAmount: "10",
   buyInBigBlinds: "100",
@@ -32,8 +33,8 @@ describe("parseGameSettings", () => {
       ok: true,
       settings: {
         currency: "CNY",
-        smallBlind: cents(500),
-        bigBlind: cents(1050),
+        smallBlindChips: 5,
+        bigBlindChips: 10,
         chipRatio: { chips: 1000, amount: cents(1000) },
         buyInBigBlinds: 100,
       },
@@ -43,8 +44,8 @@ describe("parseGameSettings", () => {
   it("reports every field that is unparseable or not positive", () => {
     const result = parseGameSettings({
       ...form,
-      smallBlind: "abc",
-      bigBlind: "0",
+      smallBlindChips: "abc",
+      bigBlindChips: "0",
       ratioChips: "1.5",
       ratioAmount: "-1",
       buyInBigBlinds: "0",
@@ -52,8 +53,8 @@ describe("parseGameSettings", () => {
     expect(result).toEqual({
       ok: false,
       issues: {
-        smallBlind: "invalid",
-        bigBlind: "not-positive",
+        smallBlindChips: "invalid",
+        bigBlindChips: "not-positive",
         ratioChips: "invalid",
         ratioAmount: "not-positive",
         buyInBigBlinds: "not-positive",
@@ -62,11 +63,13 @@ describe("parseGameSettings", () => {
   });
 
   it("requires the big blind to be at least the small blind", () => {
-    expect(parseGameSettings({ ...form, smallBlind: "11", bigBlind: "10" })).toEqual({
+    expect(parseGameSettings({ ...form, smallBlindChips: "11", bigBlindChips: "10" })).toEqual({
       ok: false,
-      issues: { bigBlind: "below-small-blind" },
+      issues: { bigBlindChips: "below-small-blind" },
     });
-    expect(parseGameSettings({ ...form, smallBlind: "10", bigBlind: "10" }).ok).toBe(true);
+    expect(parseGameSettings({ ...form, smallBlindChips: "10", bigBlindChips: "10" }).ok).toBe(
+      true,
+    );
   });
 
   it("treats chip counts beyond the safe integer range as invalid", () => {
@@ -76,39 +79,34 @@ describe("parseGameSettings", () => {
     });
   });
 
-  it("reports a hand that is not a whole number of chips", () => {
-    const whole = { ...form, ratioChips: "1", ratioAmount: "5", bigBlind: "10.50" };
-    expect(parseGameSettings({ ...whole, buyInBigBlinds: "3" })).toEqual({
+  it("requires whole chip blinds", () => {
+    expect(parseGameSettings({ ...form, smallBlindChips: "0.5" })).toEqual({
       ok: false,
-      issues: { buyInBigBlinds: "not-whole-chips" },
+      issues: { smallBlindChips: "invalid" },
     });
-    expect(parseGameSettings({ ...whole, buyInBigBlinds: "10" }).ok).toBe(true);
   });
 
-  it("skips the conversion check once the buy-in is locked, so blinds can change", () => {
-    const locked = { ...form, ratioChips: "1", ratioAmount: "5", buyInBigBlinds: "3" };
-    expect(parseGameSettings(locked).ok).toBe(false);
-    expect(parseGameSettings(locked, { buyInLocked: true }).ok).toBe(true);
+  it("rejects a hand too large to count exactly", () => {
+    const huge = { ...form, bigBlindChips: "9007199254740991", buyInBigBlinds: "2" };
+    expect(parseGameSettings(huge)).toEqual({ ok: false, issues: { buyInBigBlinds: "invalid" } });
   });
 
   it("keeps any valid settings unchanged through a form round trip", () => {
-    const positiveCents = fc.integer({ min: 1, max: 100_000 }).map(cents);
     const settings = fc
       .record({
         currency: fc.constantFrom("AUD" as const, "CNY" as const),
-        smallBlind: positiveCents,
+        smallBlindChips: fc.integer({ min: 1, max: 100_000 }),
         extra: fc.integer({ min: 0, max: 100_000 }),
-        multiple: fc.integer({ min: 1, max: 100 }),
-        amount: positiveCents,
+        chips: fc.integer({ min: 1, max: 1_000_000 }),
+        amount: fc.integer({ min: 1, max: 100_000 }).map(cents),
         buyInBigBlinds: fc.integer({ min: 1, max: 1_000 }),
       })
       .map(
-        ({ currency, smallBlind, extra, multiple, amount, buyInBigBlinds }): GameSettings => ({
+        ({ currency, smallBlindChips, extra, chips, amount, buyInBigBlinds }): GameSettings => ({
           currency,
-          smallBlind,
-          bigBlind: cents(smallBlind + extra),
-          // Chips are a whole multiple of the amount, so a hand is always a whole number of chips
-          chipRatio: { chips: amount * multiple, amount },
+          smallBlindChips,
+          bigBlindChips: smallBlindChips + extra,
+          chipRatio: { chips, amount },
           buyInBigBlinds,
         }),
       );
@@ -138,11 +136,8 @@ describe("toGameSettingsForm", () => {
 });
 
 describe("handChipsFor", () => {
-  it("multiplies the big blind and converts to chips at the ratio", () => {
-    const ratio = { chips: 100, amount: cents(100) };
-    expect(handChipsFor({ bigBlind: cents(200), chipRatio: ratio, buyInBigBlinds: 100 })).toBe(
-      20_000,
-    );
+  it("multiplies the big blind", () => {
+    expect(handChipsFor({ bigBlindChips: 200, buyInBigBlinds: 100 })).toBe(20_000);
   });
 });
 
@@ -154,6 +149,33 @@ describe("createGame", () => {
       handChips: 200,
       status: "open",
     });
+  });
+});
+
+describe("upgradeLegacyGame", () => {
+  const legacy = {
+    ...meta,
+    currency: "AUD" as const,
+    smallBlind: cents(150),
+    bigBlind: cents(300),
+    chipRatio: { chips: 100, amount: cents(100) },
+    status: "open" as const,
+  };
+
+  it("converts money blinds to chips at the game's ratio", () => {
+    expect(upgradeLegacyGame(legacy)).toEqual({
+      ...meta,
+      currency: "AUD",
+      smallBlindChips: 150,
+      bigBlindChips: 300,
+      chipRatio: legacy.chipRatio,
+      status: "open",
+    });
+  });
+
+  it("rounds to whole chips and keeps blinds at 1 or more", () => {
+    const coarse = { ...legacy, chipRatio: { chips: 1, amount: cents(1000) } };
+    expect(upgradeLegacyGame(coarse)).toMatchObject({ smallBlindChips: 1, bigBlindChips: 1 });
   });
 });
 
@@ -171,8 +193,8 @@ describe("updateGameSettings", () => {
   const game = createGame(meta, DEFAULT_GAME_SETTINGS);
   const next: GameSettings = {
     currency: "CNY",
-    smallBlind: cents(500),
-    bigBlind: cents(1000),
+    smallBlindChips: 500,
+    bigBlindChips: 1000,
     chipRatio: { chips: 10, amount: cents(100) },
     buyInBigBlinds: 50,
   };
@@ -181,15 +203,15 @@ describe("updateGameSettings", () => {
     expect(updateGameSettings(game, next, { hasLedgerEvents: false })).toEqual({
       ...game,
       ...next,
-      handChips: 5000,
+      handChips: 50_000,
     });
   });
 
   it("changes only blinds once the ledger has events", () => {
     expect(updateGameSettings(game, next, { hasLedgerEvents: true })).toEqual({
       ...game,
-      smallBlind: next.smallBlind,
-      bigBlind: next.bigBlind,
+      smallBlindChips: next.smallBlindChips,
+      bigBlindChips: next.bigBlindChips,
     });
   });
 });

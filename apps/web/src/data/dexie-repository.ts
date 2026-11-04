@@ -2,10 +2,12 @@ import {
   ForeignOrganizerError,
   type Game,
   type LedgerEvent,
+  type LegacyGame,
   type OrganizerId,
   type Player,
   type Repository,
   type RestoreResult,
+  upgradeLegacyGame,
 } from "@holdem/core";
 import Dexie, { type Table } from "dexie";
 
@@ -15,13 +17,26 @@ export type GuestDatabase = Dexie & {
   ledgerEvents: Table<LedgerEvent, string>;
 };
 
+const STORES = {
+  games: "id, [organizerId+createdAt]",
+  players: "id, [organizerId+name]",
+  ledgerEvents: "id, [gameId+occurredAt]",
+};
+
 export function createGuestDatabase(name = "holdem-guest"): GuestDatabase {
   const db = new Dexie(name) as GuestDatabase;
-  db.version(1).stores({
-    games: "id, [organizerId+createdAt]",
-    players: "id, [organizerId+name]",
-    ledgerEvents: "id, [gameId+occurredAt]",
-  });
+  db.version(1).stores(STORES);
+  // Blinds moved from money to chips (ADR 0011)
+  db.version(2)
+    .stores(STORES)
+    .upgrade((tx) =>
+      tx
+        .table<LegacyGame | Game>("games")
+        .toCollection()
+        .modify((game, ref) => {
+          if ("smallBlind" in game) ref.value = upgradeLegacyGame(game);
+        }),
+    );
   return db;
 }
 
