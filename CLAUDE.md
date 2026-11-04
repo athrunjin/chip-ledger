@@ -6,7 +6,8 @@
 
 线下德州扑克组局助手（PWA）：买入记账、结算、保险、抽水、计时、玩家报告。
 产品名：德州之王（King in Texas）。面向组织者，手机 / 平板优先。界面文案用简体中文。
-路线图见 docs/ROADMAP.md，已确认的规则和背景见 docs/CONTEXT.md。
+路线图见 docs/ROADMAP.md，已确认的规则和背景见 docs/CONTEXT.md，
+功能和流程的改进讨论记录在 docs/IMPROVEMENTS.md。
 
 ## 常用命令
 
