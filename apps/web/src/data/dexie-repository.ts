@@ -90,6 +90,10 @@ export function createDexieRepository(db: GuestDatabase, organizerId: OrganizerI
         assertOwned(event);
         await db.ledgerEvents.add(event);
       },
+      appendAll: async (events) => {
+        events.forEach(assertOwned);
+        await db.transaction("rw", db.ledgerEvents, () => db.ledgerEvents.bulkAdd([...events]));
+      },
     },
     backup: {
       exportAll: async () => ({

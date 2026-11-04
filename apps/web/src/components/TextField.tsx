@@ -1,3 +1,4 @@
+import type { Ref } from "react";
 import { cn } from "@/lib/cn";
 
 interface TextFieldProps {
@@ -8,7 +9,10 @@ interface TextFieldProps {
   prefix?: string;
   suffix?: string;
   inputMode: "numeric" | "decimal" | "text";
+  inputRef?: Ref<HTMLInputElement>;
   onChange: (value: string) => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
 }
 
 export function TextField({
@@ -19,7 +23,10 @@ export function TextField({
   prefix,
   suffix,
   inputMode,
+  inputRef,
   onChange,
+  onFocus,
+  onBlur,
 }: TextFieldProps) {
   const issueId = `${id}-issue`;
   return (
@@ -35,6 +42,7 @@ export function TextField({
       >
         {prefix && <span className="text-muted">{prefix}</span>}
         <input
+          ref={inputRef}
           id={id}
           type="text"
           inputMode={inputMode}
@@ -43,6 +51,8 @@ export function TextField({
           aria-invalid={issue ? true : undefined}
           aria-describedby={issue ? issueId : undefined}
           onChange={(event) => onChange(event.target.value)}
+          onFocus={onFocus}
+          onBlur={onBlur}
           className="min-h-11 w-full min-w-0 bg-transparent text-lg outline-none"
         />
         {suffix && <span className="shrink-0 text-sm text-muted">{suffix}</span>}

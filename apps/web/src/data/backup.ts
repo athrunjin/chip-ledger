@@ -20,6 +20,8 @@ const gameSchema = z.object({
   smallBlind: money,
   bigBlind: money,
   chipRatio: z.object({ chips: chips.positive(), amount: money }),
+  buyInBigBlinds: chips.positive().optional(),
+  handChips: chips.positive().optional(),
   status: z.enum(["open", "settled"]),
   createdAt: timestamp,
   settledAt: timestamp.optional(),
