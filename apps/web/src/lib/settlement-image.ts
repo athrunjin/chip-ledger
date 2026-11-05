@@ -5,8 +5,8 @@
 export interface SettlementImageData {
   title: string;
   subtitle: string;
-  /** Explains how a chip difference was handled. */
-  note: string | undefined;
+  /** One line each: how a chip difference was handled, and who took the insurance result. */
+  notes: readonly string[];
   transferTitle: string;
   transfers: readonly { from: string; to: string; amount: string }[];
   results: readonly {
@@ -66,7 +66,7 @@ export async function renderSettlementImage(data: SettlementImageData): Promise<
     sections * 84 +
     RESULT_HEADER_HEIGHT +
     rows * (ROW_HEIGHT + ROW_GAP) +
-    (data.note ? NOTE_HEIGHT : 0) +
+    data.notes.length * NOTE_HEIGHT +
     PADDING -
     ROW_GAP;
 
@@ -147,10 +147,10 @@ export async function renderSettlementImage(data: SettlementImageData): Promise<
     y += ROW_HEIGHT + ROW_GAP;
   }
 
-  if (data.note) {
+  for (const note of data.notes) {
     ctx.font = font(32);
     ctx.fillStyle = COLOR.gold;
-    ctx.fillText(data.note, PADDING, y + 16);
+    ctx.fillText(truncate(ctx, note, WIDTH - PADDING * 2), PADDING, y + 16);
     y += NOTE_HEIGHT;
   }
 

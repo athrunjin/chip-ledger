@@ -6,6 +6,8 @@ import { ImbalanceOptions } from "./ImbalanceOptions";
 
 interface SettleDialogProps {
   seatedCount: number;
+  /** Insurance sold whose card has not been recorded yet */
+  pendingInsurance: number;
   balanceChips: number;
   /** The balance in cash, without a sign */
   cash: string;
@@ -19,6 +21,7 @@ interface SettleDialogProps {
 /** Shows whether the table balances before settling, and can seat everyone out in one step. */
 export function SettleDialog({
   seatedCount,
+  pendingInsurance,
   balanceChips,
   cash,
   initialHandling,
@@ -55,6 +58,11 @@ export function SettleDialog({
       {seatedCount > 0 && (
         <p className="text-sm text-muted">
           还有 {seatedCount} 人在桌，一键离桌会按当前筹码记录，之后可以点「返回」回到牌桌。
+        </p>
+      )}
+      {pendingInsurance > 0 && (
+        <p role="alert" className="text-sm text-highlight">
+          还有 {pendingInsurance} 笔保险没有记录开奖结果。
         </p>
       )}
       {!balanced && (

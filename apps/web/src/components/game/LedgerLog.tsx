@@ -12,6 +12,10 @@ const RECORD_LABEL: Record<RecordKind, string> = {
   return: "返回",
   stack_set: "改筹码",
   stack_undo: "撤销改筹码",
+  insurance_buy: "买保险",
+  insurance_hit: "保险命中",
+  insurance_miss: "保险未中",
+  insurance_undo: "撤销保险",
 };
 
 /** Long lists get a second collapse button at the bottom, so nobody has to scroll back up. */

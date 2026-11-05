@@ -1,7 +1,8 @@
-import type { Game } from "@holdem/core";
+import { type Game, hasPlayerEvents } from "@holdem/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { repository } from ".";
+import { seatEvents } from "./insurance";
 
 const GAMES_KEY = ["games"] as const;
 
@@ -19,7 +20,7 @@ export function useGame(id: string) {
 export function useHasLedgerEvents(gameId: string) {
   return useQuery({
     queryKey: ["ledger", gameId, "has-events"],
-    queryFn: async () => (await repository.ledger.listByGame(gameId)).length > 0,
+    queryFn: async () => hasPlayerEvents(await repository.ledger.listByGame(gameId)),
   });
 }
 
@@ -28,5 +29,22 @@ export function useSaveGame() {
   return useMutation({
     mutationFn: (game: Game) => repository.games.save(game),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: GAMES_KEY }),
+  });
+}
+
+/** Saves the game and keeps its insurance seat in step with the settings. */
+export function useSaveGameSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (game: Game) => {
+      await repository.games.save(game);
+      const events = await repository.ledger.listByGame(game.id);
+      await repository.ledger.appendAll(seatEvents(game, events));
+    },
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: GAMES_KEY }),
+        queryClient.invalidateQueries({ queryKey: ["ledger"] }),
+      ]),
   });
 }

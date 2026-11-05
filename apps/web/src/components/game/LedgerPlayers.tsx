@@ -1,4 +1,11 @@
-import { type ChipRatio, type Currency, chipsToCents, type PlayerLedger } from "@holdem/core";
+import {
+  type ChipRatio,
+  type Currency,
+  chipsToCents,
+  INSURANCE_PLAYER_ID,
+  type PlayerLedger,
+} from "@holdem/core";
+import { Link } from "@tanstack/react-router";
 import { formatSignedChips, netColor } from "@/lib/chips";
 import { formatGameMoney } from "@/lib/currency";
 
@@ -8,6 +15,7 @@ const listClass = "divide-y divide-line rounded-xl border border-line bg-surface
 const rowClass = "flex min-h-13 items-center gap-1.5 py-1";
 
 interface LedgerPlayersProps {
+  gameId: string;
   players: readonly PlayerLedger[];
   nameOf: (playerId: string) => string;
   /** Chips per hand. Missing on older games, which record chips. */
@@ -28,6 +36,7 @@ interface LedgerPlayersProps {
 }
 
 export function LedgerPlayers({
+  gameId,
   players,
   nameOf,
   handChips,
@@ -43,9 +52,27 @@ export function LedgerPlayers({
   onReturn,
   onLeave,
 }: LedgerPlayersProps) {
-  const seated = players.filter((p) => p.seated);
-  const left = players.filter((p) => !p.seated);
+  const seat = players.find((p) => p.playerId === INSURANCE_PLAYER_ID);
+  const people = players.filter((p) => p.playerId !== INSURANCE_PLAYER_ID);
+  const seated = people.filter((p) => p.seated);
+  const left = people.filter((p) => !p.seated);
   const money = (chips: number) => formatGameMoney(chipsToCents(chips, ratio), currency);
+
+  function stack({ playerId, stackChips }: PlayerLedger) {
+    const chips = stackChips.toLocaleString("zh-CN");
+    return editable ? (
+      <button
+        type="button"
+        aria-label={`输入${nameOf(playerId)}的筹码，现在 ${stackChips}`}
+        onClick={() => onEditStack(playerId)}
+        className="min-h-11 min-w-13 shrink-0 rounded-lg border border-line px-1 text-sm font-semibold tabular-nums"
+      >
+        {chips}
+      </button>
+    ) : (
+      <span className="shrink-0 text-sm font-semibold tabular-nums">{chips}</span>
+    );
+  }
 
   function hands({ playerId, boughtChips }: PlayerLedger) {
     if (handChips === undefined) {
@@ -104,20 +131,7 @@ export function LedgerPlayers({
                   {formatSignedChips(player.netChips)}
                 </p>
               </div>
-              {editable ? (
-                <button
-                  type="button"
-                  aria-label={`输入${nameOf(player.playerId)}的筹码，现在 ${player.stackChips}`}
-                  onClick={() => onEditStack(player.playerId)}
-                  className="min-h-11 min-w-13 shrink-0 rounded-lg border border-line px-1 text-sm font-semibold tabular-nums"
-                >
-                  {player.stackChips.toLocaleString("zh-CN")}
-                </button>
-              ) : (
-                <span className="shrink-0 text-sm font-semibold tabular-nums">
-                  {player.stackChips.toLocaleString("zh-CN")}
-                </span>
-              )}
+              {stack(player)}
               {hands(player)}
               {editable && (
                 <button
@@ -131,6 +145,28 @@ export function LedgerPlayers({
               )}
             </li>
           ))}
+        </ul>
+      )}
+
+      {seat && (
+        <ul aria-label="保险" className={`mt-2 ${listClass} border-highlight`}>
+          <li className={rowClass}>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-medium text-highlight">{nameOf(seat.playerId)}</p>
+              <p className={`truncate text-xs tabular-nums ${netColor(seat.netChips)}`}>
+                {formatSignedChips(seat.netChips)}
+              </p>
+            </div>
+            {seat.seated && stack(seat)}
+            {seat.seated && hands(seat)}
+            <Link
+              to="/games/$gameId/insurance"
+              params={{ gameId }}
+              className={`${actionClass} inline-flex items-center`}
+            >
+              算保险
+            </Link>
+          </li>
         </ul>
       )}
 

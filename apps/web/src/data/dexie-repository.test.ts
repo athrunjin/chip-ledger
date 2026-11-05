@@ -169,6 +169,7 @@ describe("Dexie repository", () => {
       games: [game("g", "me", 1), game("new", "me", 2)],
       players: [],
       ledgerEvents: [buyIn("e", "me", "g", 99)],
+      insuranceRules: [],
     });
 
     expect(result).toEqual({ added: 1, skipped: 2 });
@@ -181,6 +182,7 @@ describe("Dexie repository", () => {
       games: [game("mine", "me", 1), game("theirs", "other", 1)],
       players: [],
       ledgerEvents: [],
+      insuranceRules: [],
     });
 
     await expect(restore).rejects.toThrow(ForeignOrganizerError);

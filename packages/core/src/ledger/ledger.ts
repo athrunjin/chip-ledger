@@ -2,11 +2,18 @@
  * Ledger derivations. The ledger only appends events (ADR 0005), and all balances are computed from them.
  * Results are in chips; use `chipsToCents` to display cash.
  */
-import type { ChipEvent, ChipRatio, LedgerEvent } from "../domain";
+import {
+  type ChipEvent,
+  type ChipRatio,
+  type Game,
+  INSURANCE_PLAYER_ID,
+  type InsuranceBuyEvent,
+  type LedgerEvent,
+} from "../domain";
 import { type Cents, multiply } from "../money";
 
 function isChipEvent(event: LedgerEvent): event is ChipEvent {
-  return event.type !== "reversal" && event.type !== "stack_set";
+  return event.type === "buy_in" || event.type === "rebuy" || event.type === "cash_out";
 }
 
 function reversedEventIds(events: readonly LedgerEvent[]): Set<string> {
@@ -34,7 +41,10 @@ export function latestCashOut(
 export function soleBuyIn(events: readonly LedgerEvent[], playerId: string): ChipEvent | undefined {
   const reversed = reversedEventIds(events);
   const typedStack = events.some(
-    (e) => e.type === "stack_set" && e.playerId === playerId && !reversed.has(e.id),
+    (e) =>
+      (e.type === "stack_set" || e.type === "insurance_buy") &&
+      e.playerId === playerId &&
+      !reversed.has(e.id),
   );
   const records = activeChipEvents(events).filter((e) => e.playerId === playerId);
   const [only] = records;
@@ -53,6 +63,11 @@ function liveStacks(events: readonly LedgerEvent[]): Map<string, number> {
   const byId = new Map(events.map((e) => [e.id, e]));
   const stacks = new Map<string, number>();
   const applied = new Map<string, number>();
+  const insuranceOf = (id: string) => {
+    const target = byId.get(id);
+    if (target?.type === "insurance_buy") return target.chips;
+    return target?.type === "insurance_settle" ? -target.chips : 0;
+  };
   const stackOf = (playerId: string) => stacks.get(playerId) ?? 0;
 
   let index = 0;
@@ -68,6 +83,7 @@ function liveStacks(events: readonly LedgerEvent[]): Map<string, number> {
       if (event.type === "reversal") {
         const target = byId.get(event.reversedEventId);
         if (target && target.type !== "reversal") {
+          addChange(INSURANCE_PLAYER_ID, -insuranceOf(target.id));
           // Returning to the table brings back the chips they left with
           const change = target.type === "cash_out" ? target.chips : -(applied.get(target.id) ?? 0);
           addChange(target.playerId, change);
@@ -75,12 +91,15 @@ function liveStacks(events: readonly LedgerEvent[]): Map<string, number> {
         continue;
       }
       const current = stackOf(event.playerId);
+      addChange(INSURANCE_PLAYER_ID, insuranceOf(event.id));
       const change =
         event.type === "stack_set"
           ? event.chips - current
           : event.type === "cash_out"
             ? -current
-            : event.chips;
+            : event.type === "insurance_buy"
+              ? -Math.min(event.chips, current) // All-in players pay from the pot they win
+              : event.chips;
       applied.set(event.id, change);
       addChange(event.playerId, change);
     }
@@ -200,6 +219,73 @@ export function adjustHands(
   return { reversedEventIds, buy: { type, chips: -remaining } };
 }
 
+/** Everything except the insurance seat's own buy-in, which is written when the game starts. */
+export function hasPlayerEvents(events: readonly LedgerEvent[]): boolean {
+  const byId = new Map(events.map((e) => [e.id, e]));
+  return events.some((event) => {
+    const target = event.type === "reversal" ? byId.get(event.reversedEventId) : event;
+    return !target || target.type === "reversal" || target.playerId !== INSURANCE_PLAYER_ID;
+  });
+}
+
+export function insuranceActive(events: readonly LedgerEvent[]): boolean {
+  return insuranceRecords(events).length > 0;
+}
+
+export interface InsuranceSeatChange {
+  readonly reversedEventIds: readonly string[];
+  readonly buyInChips?: number;
+}
+
+/**
+ * Keeps the insurance seat in step with the game's settings: one hand while insurance is on, and
+ * nothing while it is off. Once the seat has done anything beyond its buy-in, it stays as it is.
+ */
+export function insuranceSeatChange(
+  game: Pick<Game, "insurance" | "handChips">,
+  events: readonly LedgerEvent[],
+): InsuranceSeatChange {
+  const seat = activeChipEvents(events).filter((e) => e.playerId === INSURANCE_PLAYER_ID);
+  const [first] = seat;
+  const wanted = game.insurance === undefined ? undefined : game.handChips;
+  if (!first) return wanted === undefined ? { reversedEventIds: [] } : stakeSeat([], wanted);
+  if (seat.length > 1 || insuranceActive(events) || first.chips === wanted) {
+    return { reversedEventIds: [] };
+  }
+  return stakeSeat([first.id], wanted);
+}
+
+function stakeSeat(reversedEventIds: readonly string[], chips: number | undefined) {
+  return chips === undefined ? { reversedEventIds } : { reversedEventIds, buyInChips: chips };
+}
+
+export type InsuranceStatus = "pending" | "hit" | "miss";
+
+export interface InsuranceRecord {
+  readonly purchase: InsuranceBuyEvent;
+  readonly status: InsuranceStatus;
+  /** The event recording the result. Reversing both takes the purchase back. */
+  readonly settleId?: string;
+}
+
+/** Purchases still in effect, oldest first, with their results. */
+export function insuranceRecords(events: readonly LedgerEvent[]): InsuranceRecord[] {
+  const reversed = reversedEventIds(events);
+  const live = events.filter((e) => !reversed.has(e.id));
+  return live.flatMap((event): InsuranceRecord[] => {
+    if (event.type !== "insurance_buy") return [];
+    const settle = live.find((e) => e.type === "insurance_settle" && e.purchaseId === event.id);
+    if (settle?.type !== "insurance_settle") return [{ purchase: event, status: "pending" }];
+    return [{ purchase: event, status: settle.hit ? "hit" : "miss", settleId: settle.id }];
+  });
+}
+
+/** Chips to add so the insurance seat can pay `payoutChips`: enough whole hands to cover the shortfall. */
+export function insuranceTopUp(stackChips: number, payoutChips: number, handChips: number): number {
+  const short = payoutChips - stackChips;
+  return short <= 0 ? 0 : Math.ceil(short / handChips) * handChips;
+}
+
 /** Converts chips to cash at the game's ratio, rounded half up to the cent. */
 export function chipsToCents(chips: number, ratio: ChipRatio): Cents {
   return multiply(ratio.amount, chips / ratio.chips, "half-up");
@@ -213,7 +299,11 @@ export type RecordKind =
   | "stack_set"
   | "stack_undo"
   | "cash_out"
-  | "return";
+  | "return"
+  | "insurance_buy"
+  | "insurance_hit"
+  | "insurance_miss"
+  | "insurance_undo";
 
 /** One thing that happened in a game, as the organizer would describe it. */
 export interface RecordEntry {
@@ -253,7 +343,12 @@ export function gameRecord(events: readonly LedgerEvent[]): RecordEntry[] {
       const { id } = event;
       const { playerId, chips } = target;
       const undoing = event.type === "reversal";
-      if (target.type === "buy_in" || target.type === "rebuy") {
+      if (target.type === "insurance_buy" || target.type === "insurance_settle") {
+        const settled = target.type === "insurance_settle";
+        const result = settled && target.hit ? "insurance_hit" : "insurance_miss";
+        const kind = undoing ? "insurance_undo" : settled ? result : "insurance_buy";
+        entries.push({ id, kind, playerId, chips, occurredAt });
+      } else if (target.type === "buy_in" || target.type === "rebuy") {
         const buy = trackBuy(id, playerId);
         if (undoing) buy.reversed += chips;
         else buy.added = target;

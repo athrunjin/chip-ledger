@@ -8,7 +8,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { GameSettingsForm } from "@/components/game/GameSettingsForm";
 import { Page } from "@/components/Page";
 import { GUEST_ORGANIZER_ID } from "@/data";
-import { useGames, useSaveGame } from "@/data/games";
+import { useGames, useSaveGameSettings } from "@/data/games";
 
 export const Route = createFileRoute("/games/new")({
   component: NewGamePage,
@@ -17,7 +17,7 @@ export const Route = createFileRoute("/games/new")({
 function NewGamePage() {
   const navigate = Route.useNavigate();
   const games = useGames();
-  const saveGame = useSaveGame();
+  const saveGame = useSaveGameSettings();
 
   function handleSubmit(settings: GameSettings) {
     const game = createGame(
@@ -36,6 +36,8 @@ function NewGamePage() {
         <GameSettingsForm
           // Carry over the latest game's settings by default
           initial={toGameSettingsForm(games.data?.[0] ?? DEFAULT_GAME_SETTINGS)}
+          initialInsurance={games.data?.[0]?.insurance}
+          lastInsurance={games.data?.find((game) => game.insurance)?.insurance}
           submitLabel="开局"
           saving={saveGame.isPending}
           saveFailed={saveGame.isError}

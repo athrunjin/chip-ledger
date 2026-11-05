@@ -4,6 +4,9 @@ import {
   type Game,
   type HandChange,
   type ImbalanceHandling,
+  INSURANCE_PLAYER_ID,
+  INSURANCE_PLAYER_NAME,
+  insuranceRecords,
   lastBuyChips,
   latestCashOut,
   ledgerTotals,
@@ -97,8 +100,12 @@ function GameLedger({ game }: { game: Game }) {
 
   const editable = status === "open";
   const ledger = summarizeByPlayer(events);
-  const totals = ledgerTotals(ledger);
+  const seat = ledger.find((p) => p.playerId === INSURANCE_PLAYER_ID);
+  const people = ledger.filter((p) => p.playerId !== INSURANCE_PLAYER_ID);
+  const balanceChips = ledgerTotals(ledger).balanceChips;
+  const totals = ledgerTotals(people);
   const names = new Map(players.map(({ id, name }) => [id, name]));
+  names.set(INSURANCE_PLAYER_ID, INSURANCE_PLAYER_NAME);
   const nameOf = (playerId: string) => names.get(playerId) ?? "未知玩家";
 
   function playerTotals(playerId: string) {
@@ -167,15 +174,19 @@ function GameLedger({ game }: { game: Game }) {
     if (buyIn && window.confirm(`把 ${nameOf(playerId)} 移出这局？`)) appendReversal(buyIn.id);
   }
 
-  const seatedCount = ledger.filter((p) => p.seated).length;
+  const seatedCount = people.filter((p) => p.seated).length;
 
   function goToSettlement() {
     navigate({ to: "/games/$gameId/settlement", params: { gameId } });
   }
 
+  /** The insurance seat cannot leave by hand, so it always goes with the last players. */
+  const anyoneSeated = seatedCount > 0 || seat?.seated === true;
+  const pendingInsurance = insuranceRecords(events).filter((r) => r.status === "pending").length;
+
   function handleSettle() {
-    if (seatedCount === 0 && totals.balanceChips === 0) {
-      goToSettlement();
+    if (seatedCount === 0 && balanceChips === 0 && pendingInsurance === 0) {
+      confirmSettle(undefined);
     } else {
       setSettling(true);
     }
@@ -183,7 +194,7 @@ function GameLedger({ game }: { game: Game }) {
 
   async function confirmSettle(handling: ImbalanceHandling | undefined) {
     try {
-      if (seatedCount > 0) await leaveAll.mutateAsync();
+      if (anyoneSeated) await leaveAll.mutateAsync();
       if (handling) await saveGame.mutateAsync(chooseImbalanceHandling(game, handling));
       goToSettlement();
     } catch {
@@ -205,7 +216,7 @@ function GameLedger({ game }: { game: Game }) {
               设置
             </Link>
           )}
-          {ledger.length > 0 &&
+          {people.length > 0 &&
             (editable ? (
               <button type="button" onClick={handleSettle} className={settleClass}>
                 结算
@@ -237,19 +248,19 @@ function GameLedger({ game }: { game: Game }) {
         <div
           className={cn(
             "rounded-xl border bg-surface px-2 py-1.5",
-            totals.balanceChips === 0 ? "border-line" : "border-highlight",
+            balanceChips === 0 ? "border-line" : "border-highlight",
           )}
         >
           <dt className="text-xs text-muted">牌桌平衡</dt>
-          <dd className={cn("font-semibold", totals.balanceChips !== 0 && "text-highlight")}>
-            {formatSignedChips(totals.balanceChips)}
+          <dd className={cn("font-semibold", balanceChips !== 0 && "text-highlight")}>
+            {formatSignedChips(balanceChips)}
           </dd>
         </div>
       </dl>
 
       {editable && (
         <AddPlayerToGame
-          excludedIds={new Set(ledger.map(({ playerId }) => playerId))}
+          excludedIds={new Set(people.map(({ playerId }) => playerId))}
           onPick={({ id, name }: Player) =>
             setPending({ kind: handChips === undefined ? "buy" : "join", playerId: id, name })
           }
@@ -257,6 +268,7 @@ function GameLedger({ game }: { game: Game }) {
       )}
 
       <LedgerPlayers
+        gameId={gameId}
         players={ledger}
         nameOf={nameOf}
         handChips={handChips}
@@ -267,7 +279,7 @@ function GameLedger({ game }: { game: Game }) {
         onEditHands={(playerId) => setPending({ kind: "edit", playerId, name: nameOf(playerId) })}
         onEditStack={(playerId) => setPending({ kind: "stack", playerId, name: nameOf(playerId) })}
         onRebuy={(playerId) => setPending({ kind: "buy", playerId, name: nameOf(playerId) })}
-        removableIds={new Set(ledger.map((p) => p.playerId).filter((id) => soleBuyIn(events, id)))}
+        removableIds={new Set(people.map((p) => p.playerId).filter((id) => soleBuyIn(events, id)))}
         onRemove={handleRemove}
         onReturn={handleReturn}
         onLeave={(playerId) => setPending({ kind: "leave", playerId, name: nameOf(playerId) })}
@@ -284,8 +296,9 @@ function GameLedger({ game }: { game: Game }) {
       {settling && (
         <SettleDialog
           seatedCount={seatedCount}
-          balanceChips={totals.balanceChips}
-          cash={formatGameMoney(chipsToCents(Math.abs(totals.balanceChips), chipRatio), currency)}
+          pendingInsurance={pendingInsurance}
+          balanceChips={balanceChips}
+          cash={formatGameMoney(chipsToCents(Math.abs(balanceChips), chipRatio), currency)}
           initialHandling={game.imbalanceHandling}
           saving={leaveAll.isPending || saveGame.isPending}
           saveFailed={leaveAll.isError || saveGame.isError}

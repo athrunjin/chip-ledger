@@ -3,14 +3,25 @@
  *
  * Form values are strings typed by the user, converted here to integers (cents, chips).
  */
-import type { Currency, Game, ImbalanceHandling, OrganizerId, Timestamp } from "../domain";
+import type {
+  Currency,
+  Game,
+  ImbalanceHandling,
+  InsuranceRule,
+  OrganizerId,
+  Timestamp,
+} from "../domain";
 import { type Cents, cents, toDecimalString, tryParseMoney } from "../money";
 
 export const CURRENCIES: readonly Currency[] = ["AUD", "CNY"];
 
 type BaseSettings = Pick<Game, "currency" | "smallBlindChips" | "bigBlindChips" | "chipRatio">;
 
-export type GameSettings = BaseSettings & { readonly buyInBigBlinds: number };
+export type GameSettings = BaseSettings & {
+  readonly buyInBigBlinds: number;
+  /** Missing means insurance is off. Not part of the form values: it has its own editor. */
+  readonly insurance?: InsuranceRule;
+};
 
 export const DEFAULT_GAME_SETTINGS: GameSettings = {
   currency: "CNY",
@@ -126,8 +137,9 @@ export interface NewGameMeta {
   readonly createdAt: Timestamp;
 }
 
-function withHandChips(settings: GameSettings) {
-  return { ...settings, handChips: handChipsFor(settings) };
+function withHandChips({ insurance, ...settings }: GameSettings) {
+  const game = { ...settings, handChips: handChipsFor(settings) };
+  return insurance ? { ...game, insurance } : game;
 }
 
 export function createGame(meta: NewGameMeta, settings: GameSettings): Game {
@@ -143,6 +155,12 @@ export function settleGame(game: Game, settledAt: Timestamp): Game {
 export function chooseCollector(game: Game, collectorId: string | undefined): Game {
   const { collectorId: _, ...rest } = game;
   return collectorId === undefined ? rest : { ...rest, collectorId };
+}
+
+/** Saves who takes the insurance result. `undefined` goes back to the organizer. */
+export function chooseInsuranceOwner(game: Game, insuranceOwner: string | undefined): Game {
+  const { insuranceOwner: _, ...rest } = game;
+  return insuranceOwner === undefined ? rest : { ...rest, insuranceOwner };
 }
 
 export function chooseImbalanceHandling(game: Game, imbalanceHandling: ImbalanceHandling): Game {
@@ -165,10 +183,12 @@ export function updateGameSettings(
   settings: GameSettings,
   { hasLedgerEvents }: { readonly hasLedgerEvents: boolean },
 ): Game {
-  const { smallBlindChips, bigBlindChips } = settings;
-  return hasLedgerEvents
-    ? { ...game, smallBlindChips, bigBlindChips }
-    : { ...game, ...withHandChips(settings) };
+  const { insurance: _, ...rest } = game;
+  const { smallBlindChips, bigBlindChips, insurance } = settings;
+  const updated = hasLedgerEvents
+    ? { ...rest, smallBlindChips, bigBlindChips }
+    : { ...rest, ...withHandChips(settings) };
+  return insurance ? { ...updated, insurance } : updated;
 }
 
 /** A game saved before blinds moved to chips (ADR 0011). */

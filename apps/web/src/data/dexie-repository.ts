@@ -7,6 +7,7 @@ import {
   type Player,
   type Repository,
   type RestoreResult,
+  type SavedInsuranceRule,
   upgradeLegacyGame,
 } from "@holdem/core";
 import Dexie, { type Table } from "dexie";
@@ -15,6 +16,7 @@ export type GuestDatabase = Dexie & {
   games: Table<Game, string>;
   players: Table<Player, string>;
   ledgerEvents: Table<LedgerEvent, string>;
+  insuranceRules: Table<SavedInsuranceRule, string>;
 };
 
 const STORES = {
@@ -37,6 +39,7 @@ export function createGuestDatabase(name = "holdem-guest"): GuestDatabase {
           if ("smallBlind" in game) ref.value = upgradeLegacyGame(game);
         }),
     );
+  db.version(3).stores({ ...STORES, insuranceRules: "id, [organizerId+createdAt]" });
   return db;
 }
 
@@ -112,6 +115,21 @@ export function createDexieRepository(db: GuestDatabase, organizerId: OrganizerI
         await db.transaction("rw", db.ledgerEvents, () => db.ledgerEvents.bulkAdd([...events]));
       },
     },
+    insuranceRules: {
+      list: () =>
+        db.insuranceRules
+          .where("[organizerId+createdAt]")
+          .between(...ofOrganizer)
+          .toArray(),
+      save: async (rule) => {
+        assertOwned(rule);
+        await db.insuranceRules.put(rule);
+      },
+      remove: async (id) => {
+        const rule = onlyOwned(await db.insuranceRules.get(id));
+        if (rule) await db.insuranceRules.delete(id);
+      },
+    },
     backup: {
       exportAll: async () => ({
         games: await db.games
@@ -123,19 +141,25 @@ export function createDexieRepository(db: GuestDatabase, organizerId: OrganizerI
           .between(...ofOrganizer)
           .toArray(),
         ledgerEvents: await db.ledgerEvents.filter((e) => e.organizerId === organizerId).toArray(),
+        insuranceRules: await db.insuranceRules
+          .where("[organizerId+createdAt]")
+          .between(...ofOrganizer)
+          .toArray(),
       }),
-      restore: async ({ games, players, ledgerEvents }): Promise<RestoreResult> => {
-        [...games, ...players, ...ledgerEvents].forEach(assertOwned);
-        const total = games.length + players.length + ledgerEvents.length;
+      restore: async ({ games, players, ledgerEvents, insuranceRules }): Promise<RestoreResult> => {
+        [...games, ...players, ...ledgerEvents, ...insuranceRules].forEach(assertOwned);
+        const total = games.length + players.length + ledgerEvents.length + insuranceRules.length;
         const added = await db.transaction(
           "rw",
           db.games,
           db.players,
           db.ledgerEvents,
+          db.insuranceRules,
           async () =>
             (await addMissing(db.games, games)) +
             (await addMissing(db.players, players)) +
-            (await addMissing(db.ledgerEvents, ledgerEvents)),
+            (await addMissing(db.ledgerEvents, ledgerEvents)) +
+            (await addMissing(db.insuranceRules, insuranceRules)),
         );
         return { added, skipped: total - added };
       },

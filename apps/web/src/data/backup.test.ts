@@ -1,4 +1,10 @@
-import { type BackupData, cents, type LedgerEvent } from "@holdem/core";
+import {
+  type BackupData,
+  cents,
+  INSURANCE_PLAYER_ID,
+  type LedgerEvent,
+  RULE_30,
+} from "@holdem/core";
 import { describe, expect, it } from "vitest";
 
 import { parseBackup, serializeBackup } from "./backup";
@@ -37,6 +43,7 @@ const data: BackupData = {
       reversedEventId: "e1",
     },
   ],
+  insuranceRules: [],
 };
 
 const edit = (change: (backup: Record<string, unknown>) => void) => {
@@ -46,6 +53,72 @@ const edit = (change: (backup: Record<string, unknown>) => void) => {
 };
 
 describe("backup file", () => {
+  it("reads version 2 backups, which have no saved rules", () => {
+    const older = edit((backup) => {
+      backup.version = 2;
+      delete backup.insuranceRules;
+    });
+    expect(parseBackup(older)).toEqual({ ok: true, data });
+  });
+
+  it("round-trips insurance rules, purchases and the insurance seat", () => {
+    const rule = { ...RULE_30, maxPotPlayers: 3, riverCapPercent: 50 };
+    const [game] = data.games;
+    if (!game) throw new Error("Missing sample game");
+    const meta = { organizerId: "guest", gameId: "g", occurredAt: 3 };
+    const events: LedgerEvent[] = [
+      { ...meta, id: "s", type: "buy_in", playerId: INSURANCE_PLAYER_ID, chips: 1000 },
+      {
+        ...meta,
+        id: "b",
+        type: "insurance_buy",
+        playerId: "p",
+        chips: 286,
+        payoutChips: 1001,
+        outs: 8,
+        oddsHundredths: 350,
+        street: "river",
+      },
+      {
+        ...meta,
+        id: "h",
+        type: "insurance_settle",
+        purchaseId: "b",
+        playerId: "p",
+        hit: true,
+        chips: 1001,
+      },
+    ];
+    const full: BackupData = {
+      ...data,
+      games: [{ ...game, insurance: rule, insuranceOwner: "p" }],
+      ledgerEvents: [...data.ledgerEvents, ...events],
+      insuranceRules: [{ id: "r", organizerId: "guest", name: "周五局", rule, createdAt: 1 }],
+    };
+    expect(parseBackup(serializeBackup(full, 1))).toEqual({ ok: true, data: full });
+  });
+
+  it("rejects a result pointing at a purchase that is not in the backup", () => {
+    const orphan = {
+      ...data,
+      ledgerEvents: [
+        ...data.ledgerEvents,
+        {
+          organizerId: "guest",
+          gameId: "g",
+          occurredAt: 3,
+          id: "h",
+          type: "insurance_settle",
+          purchaseId: "nope",
+          playerId: "p",
+          hit: false,
+          chips: 0,
+        } satisfies LedgerEvent,
+      ],
+    };
+    expect(parseBackup(serializeBackup(orphan, 1))).toEqual({ ok: false, issue: "invalid" });
+  });
+
   it("upgrades version 1 backups with money blinds", () => {
     const legacy = edit((backup) => {
       backup.version = 1;
@@ -102,7 +175,7 @@ describe("backup file", () => {
 
   it("rejects backups from a newer version", () => {
     const text = edit((backup) => {
-      backup.version = 3;
+      backup.version = 4;
     });
     expect(parseBackup(text)).toEqual({ ok: false, issue: "newer-version" });
   });

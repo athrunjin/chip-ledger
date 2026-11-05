@@ -1,9 +1,11 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
+import { INSURANCE_PLAYER_ID } from "../domain";
 import { chipsToCents, type PlayerLedger } from "../ledger";
 import { cents, sum } from "../money";
 import {
+  attributeInsurance,
   chipDifference,
   collectorTransfers,
   isValidCollector,
@@ -58,9 +60,9 @@ describe("chipDifference", () => {
     expect(chipDifference([ledger("a", 1000, 700)])).toBe(-300);
   });
 
-  it("balances when results + rake + insurance profit = 0", () => {
+  it("balances when results + rake = 0", () => {
     const players = [ledger("a", 1000, 900)];
-    expect(chipDifference(players, { rakeChips: 60, insuranceChips: 40 })).toBe(0);
+    expect(chipDifference(players, { rakeChips: 100 })).toBe(0);
   });
 });
 
@@ -274,6 +276,59 @@ describe("settlementOutcome", () => {
           const { nets, unresolved } = settlementOutcome(players, ratio, handling);
           expect(sum(nets.map((p) => p.net))).toBe(0);
           expect(unresolved).toBe(0);
+        },
+      ),
+    );
+  });
+});
+
+describe("attributeInsurance", () => {
+  const net = (playerId: string, amount: number): PlayerNet => ({ playerId, net: cents(amount) });
+  const nets = [net("a", 500), net("b", -800), net(INSURANCE_PLAYER_ID, 300)];
+
+  it("goes to the organizer by default", () => {
+    expect(attributeInsurance(nets, undefined)).toEqual({
+      nets: [net("a", 500), net("b", -800), net(ORGANIZER_COLLECTOR, 300)],
+      insuranceNet: 300,
+      ownerId: ORGANIZER_COLLECTOR,
+    });
+  });
+
+  it("adds to an organizer row that is already covering a difference", () => {
+    const covered = [...nets, net(ORGANIZER_COLLECTOR, -100)];
+    const result = attributeInsurance(covered, undefined);
+    expect(result.nets).toContainEqual(net(ORGANIZER_COLLECTOR, 200));
+  });
+
+  it("adds to a chosen player's result", () => {
+    expect(attributeInsurance(nets, "b").nets).toEqual([net("a", 500), net("b", -500)]);
+  });
+
+  it("stays on its own row when listed separately", () => {
+    const result = attributeInsurance(nets, INSURANCE_PLAYER_ID);
+    expect(result.nets).toEqual(nets);
+    expect(result.ownerId).toBe(INSURANCE_PLAYER_ID);
+  });
+
+  it("falls back to the organizer when the chosen player has gone", () => {
+    expect(attributeInsurance(nets, "gone").ownerId).toBe(ORGANIZER_COLLECTOR);
+  });
+
+  it("adds no row when insurance broke even", () => {
+    const flat = [net("a", 100), net("b", -100), net(INSURANCE_PLAYER_ID, 0)];
+    expect(attributeInsurance(flat, undefined).nets).toEqual([net("a", 100), net("b", -100)]);
+  });
+
+  it("keeps results adding up to zero whoever takes it", () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: -5000, max: 5000 }),
+        fc.integer({ min: -5000, max: 5000 }),
+        fc.constantFrom<string | undefined>(undefined, "a", "b", INSURANCE_PLAYER_ID),
+        (a, insurance, owner) => {
+          const all = [net("a", a), net("b", -a - insurance), net(INSURANCE_PLAYER_ID, insurance)];
+          const total = attributeInsurance(all, owner).nets.reduce((sum, p) => sum + p.net, 0);
+          expect(total).toBe(0);
         },
       ),
     );

@@ -1,11 +1,15 @@
 import {
+  attributeInsurance,
   cents,
   chipDifference,
   chipsToCents,
   chooseCollector,
   chooseImbalanceHandling,
+  chooseInsuranceOwner,
   collectorTransfers,
   type Game,
+  INSURANCE_PLAYER_ID,
+  INSURANCE_PLAYER_NAME,
   isValidCollector,
   ORGANIZER_COLLECTOR,
   type PlayerLedger,
@@ -44,8 +48,11 @@ function SettlementPage() {
 
   const ledger = summarizeByPlayer(events);
   const names = new Map(players.map(({ id, name }) => [id, name]));
+  names.set(INSURANCE_PLAYER_ID, INSURANCE_PLAYER_NAME);
   const nameOf = (playerId: string) => names.get(playerId) ?? "未知玩家";
-  const seated = ledger.filter((p) => p.seated).map((p) => nameOf(p.playerId));
+  const seated = ledger
+    .filter((p) => p.seated && p.playerId !== INSURANCE_PLAYER_ID)
+    .map((p) => nameOf(p.playerId));
   const difference = chipDifference(ledger);
 
   return (
@@ -143,7 +150,9 @@ function SettlementResult({
   ledger,
   nameOf,
 }: SettlementResultProps) {
-  const { nets, difference, unresolved } = outcome;
+  const { difference, unresolved } = outcome;
+  const seat = ledger.find((p) => p.playerId === INSURANCE_PLAYER_ID);
+  const { nets, insuranceNet, ownerId } = attributeInsurance(outcome.nets, game.insuranceOwner);
   const {
     currency,
     status,
@@ -153,10 +162,15 @@ function SettlementResult({
     collectorId: savedCollector,
     createdAt,
   } = game;
+  const people = ledger.filter((p) => p.playerId !== INSURANCE_PLAYER_ID);
   const saveGame = useSaveGame();
   const [sharing, setSharing] = useState(false);
   const [shareFailed, setShareFailed] = useState(false);
   const [transfersOpen, setTransfersOpen] = useState(false);
+
+  const seatChips = seat ? seat.cashedOutChips - seat.boughtChips : 0;
+  const insuranceText = formatGameMoney(insuranceNet, currency, "exceptZero");
+  const separateInsurance = ownerId === INSURANCE_PLAYER_ID;
 
   const collectorId = isValidCollector(nets, savedCollector) ? savedCollector : undefined;
   const transfers = collectorId ? collectorTransfers(nets, collectorId) : settleTransfers(nets);
@@ -180,9 +194,14 @@ function SettlementResult({
           netText: formatSignedChips(netChips),
           amount: formatGameMoney(net, currency, "exceptZero"),
           net,
+          insured: insuranceNet !== 0 && playerId === ownerId && !separateInsurance,
         },
       ];
     });
+
+  const organizerChips =
+    (game.imbalanceHandling === "organizer" ? -differenceChips : 0) +
+    (ownerId === ORGANIZER_COLLECTOR ? seatChips : 0);
 
   const rows =
     organizerNet === undefined
@@ -194,10 +213,11 @@ function SettlementResult({
             name: "组织者",
             hands: "—",
             chips: "—",
-            netChips: -differenceChips,
-            netText: formatSignedChips(-differenceChips),
+            netChips: organizerChips,
+            netText: formatSignedChips(organizerChips),
             amount: formatGameMoney(organizerNet, currency, "exceptZero"),
             net: organizerNet,
+            insured: insuranceNet !== 0 && ownerId === ORGANIZER_COLLECTOR,
           },
         ];
 
@@ -208,13 +228,20 @@ function SettlementResult({
       const holder = collectorId ? "，差额留在代收人手上" : "";
       return `未处理差额 ${size}${holder}`;
     }
-    if (organizerNet !== undefined) return `组织者${difference > 0 ? "补齐" : "收取"} ${size}`;
+    if (game.imbalanceHandling === "organizer") {
+      return `组织者${difference > 0 ? "补齐" : "收取"} ${size}`;
+    }
     const count = results.filter((r) => r.netChips * difference > 0).length;
     return difference > 0
       ? `水上多 ${size}，由 ${count} 位赢家按水上比例扣减`
       : `水下多 ${size}，由 ${count} 位输家按水下比例少付`;
   }
-  const note = imbalanceNote();
+  function insuranceNote() {
+    if (!seat || insuranceNet === 0) return undefined;
+    if (separateInsurance) return `保险 ${insuranceText}，单独列出`;
+    return `保险 ${insuranceText}，计入${collectorName(ownerId)}`;
+  }
+  const notes = [imbalanceNote(), insuranceNote()].filter((text) => text !== undefined);
 
   async function handleShare() {
     setSharing(true);
@@ -230,7 +257,7 @@ function SettlementResult({
           to: collectorName(to),
           amount: formatGameMoney(amount, currency),
         })),
-        note,
+        notes,
         results: rows.map(({ name, hands, chips, netChips, netText, amount }) => ({
           name,
           hands,
@@ -301,25 +328,58 @@ function SettlementResult({
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ playerId, name, hands, chips, netChips, netText, amount, net }) => (
-              <tr key={playerId} className="h-12 border-t border-line tabular-nums">
-                <th scope="row" className="truncate text-left font-medium">
-                  {name}
-                </th>
-                <td className="text-right">{hands}</td>
-                <td className="text-right">{chips}</td>
-                <td className={cn("text-right", netColor(netChips))}>{netText}</td>
-                <td className={cn("text-right font-semibold", netColor(net))}>{amount}</td>
-              </tr>
-            ))}
+            {rows.map(
+              ({ playerId, name, hands, chips, netChips, netText, amount, net, insured }) => (
+                <tr key={playerId} className="h-12 border-t border-line tabular-nums">
+                  <th scope="row" className="truncate text-left font-medium">
+                    {name}
+                    {insured && (
+                      <span className="block truncate text-xs font-normal text-highlight">
+                        含保险 {insuranceText}
+                      </span>
+                    )}
+                  </th>
+                  <td className="text-right">{hands}</td>
+                  <td className="text-right">{chips}</td>
+                  <td className={cn("text-right", netColor(netChips))}>{netText}</td>
+                  <td className={cn("text-right font-semibold", netColor(net))}>{amount}</td>
+                </tr>
+              ),
+            )}
           </tbody>
         </table>
       </div>
 
-      {note && (
-        <p role="status" className="mt-2 text-sm text-highlight">
-          {note}
-        </p>
+      {notes.length > 0 && (
+        <div role="status" className="mt-2 text-sm text-highlight">
+          {notes.map((text) => (
+            <p key={text}>{text}</p>
+          ))}
+        </div>
+      )}
+
+      {seat && (
+        <label className="mt-3 block">
+          <span className="mb-1 block text-sm text-muted">保险盈亏 {insuranceText} 归属</span>
+          <select
+            value={ownerId}
+            disabled={saveGame.isPending || status === "settled"}
+            onChange={(event) => {
+              const owner = event.target.value;
+              const next = owner === ORGANIZER_COLLECTOR ? undefined : owner;
+              saveGame.mutate(chooseInsuranceOwner(game, next));
+            }}
+            className="min-h-12 w-full rounded-xl border border-line bg-surface px-3"
+          >
+            <option value={ORGANIZER_COLLECTOR}>组织者</option>
+            <option value={INSURANCE_PLAYER_ID}>单独列出</option>
+            {people.map(({ playerId }) => (
+              <option key={playerId} value={playerId}>
+                {nameOf(playerId)}
+              </option>
+            ))}
+          </select>
+        </label>
       )}
 
       <section className="mt-4">
@@ -359,11 +419,13 @@ function SettlementResult({
                   className="min-h-12 w-full rounded-xl border border-line bg-surface px-3"
                 >
                   <option value={ORGANIZER_COLLECTOR}>组织者（不在局中）</option>
-                  {results.map(({ playerId, name }) => (
-                    <option key={playerId} value={playerId}>
-                      {name}
-                    </option>
-                  ))}
+                  {results
+                    .filter(({ playerId }) => playerId !== INSURANCE_PLAYER_ID)
+                    .map(({ playerId, name }) => (
+                      <option key={playerId} value={playerId}>
+                        {name}
+                      </option>
+                    ))}
                 </select>
               </label>
             )}

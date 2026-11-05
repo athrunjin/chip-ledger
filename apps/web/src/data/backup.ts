@@ -4,13 +4,14 @@ import {
   CURRENCIES,
   cents,
   IMBALANCE_HANDLINGS,
+  INSURANCE_PLAYER_ID,
   type LegacyGame,
   upgradeLegacyGame,
 } from "@holdem/core";
 import { z } from "zod";
 
 const FORMAT = "holdem-backup";
-const VERSION = 2;
+const VERSION = 3;
 
 const id = z.string().min(1);
 const money = z
@@ -22,6 +23,18 @@ const timestamp = z.number().int();
 
 const owned = { id, organizerId: id };
 
+const percent = z.number().int().positive();
+
+const insuranceRuleSchema = z.object({
+  oddsHundredths: z.array(z.number().int().positive()).min(1),
+  tieOuts: z.enum(["exclude", "include"]),
+  refundPremium: z.boolean(),
+  coverTurn: z.boolean(),
+  maxPotPlayers: z.number().int().min(2).optional(),
+  turnCapPercent: percent.optional(),
+  riverCapPercent: percent.optional(),
+});
+
 const gameFields = {
   ...owned,
   currency: z.enum(CURRENCIES as ["AUD", "CNY"]),
@@ -30,6 +43,8 @@ const gameFields = {
   handChips: chips.positive().optional(),
   collectorId: id.optional(),
   imbalanceHandling: z.enum(IMBALANCE_HANDLINGS as ["split", "organizer", "ignore"]).optional(),
+  insurance: insuranceRuleSchema.optional(),
+  insuranceOwner: id.optional(),
   status: z.enum(["open", "settled"]),
   createdAt: timestamp,
   settledAt: timestamp.optional(),
@@ -62,9 +77,39 @@ const eventSchema = z.discriminatedUnion("type", [
   }),
   z.object({ ...eventBase, type: z.literal("stack_set"), playerId: id, chips }),
   z.object({ ...eventBase, type: z.literal("reversal"), reversedEventId: id }),
+  z.object({
+    ...eventBase,
+    type: z.literal("insurance_buy"),
+    playerId: id,
+    chips,
+    payoutChips: chips,
+    outs: chips,
+    oddsHundredths: chips.positive(),
+    street: z.enum(["turn", "river"]),
+  }),
+  z.object({
+    ...eventBase,
+    type: z.literal("insurance_settle"),
+    purchaseId: id,
+    playerId: id,
+    hit: z.boolean(),
+    chips,
+  }),
 ]);
 
-const collections = { players: z.array(playerSchema), ledgerEvents: z.array(eventSchema) };
+const savedRuleSchema = z.object({
+  ...owned,
+  name: z.string().min(1),
+  rule: insuranceRuleSchema,
+  createdAt: timestamp,
+});
+
+const collections = {
+  players: z.array(playerSchema),
+  ledgerEvents: z.array(eventSchema),
+  /** Added in version 3. */
+  insuranceRules: z.array(savedRuleSchema).default([]),
+};
 
 const backupSchema = z.object({ games: z.array(gameSchema), ...collections });
 const legacyBackupSchema = z.object({ games: z.array(legacyGameSchema), ...collections });
@@ -86,10 +131,12 @@ function linksAreValid({ games, players, ledgerEvents }: BackupData): boolean {
   const gameIds = new Set(games.map((g) => g.id));
   const playerIds = new Set(players.map((p) => p.id));
   const eventIds = new Set(ledgerEvents.map((e) => e.id));
+  const isPlayer = (id: string) => id === INSURANCE_PLAYER_ID || playerIds.has(id);
   return ledgerEvents.every(
     (e) =>
       gameIds.has(e.gameId) &&
-      (e.type === "reversal" ? eventIds.has(e.reversedEventId) : playerIds.has(e.playerId)),
+      (e.type === "reversal" ? eventIds.has(e.reversedEventId) : isPlayer(e.playerId)) &&
+      (e.type !== "insurance_settle" || eventIds.has(e.purchaseId)),
   );
 }
 
@@ -118,7 +165,7 @@ export function parseBackup(text: string): ParsedBackup {
   if (!envelope.success) return { ok: false, issue: "invalid" };
   if (envelope.data.version > VERSION) return { ok: false, issue: "newer-version" };
 
-  const data = envelope.data.version < VERSION ? parseLegacy(json) : parseCurrent(json);
+  const data = envelope.data.version < 2 ? parseLegacy(json) : parseCurrent(json);
   if (!data) return { ok: false, issue: "invalid" };
   return linksAreValid(data) ? { ok: true, data } : { ok: false, issue: "invalid" };
 }

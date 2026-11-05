@@ -29,9 +29,12 @@ Each milestone maps to a GitHub Milestone, and each feature in it maps to an iss
 
 ## M3 Insurance calculator
 
-- Configurable odds table (by number of outs)
+- Insurance chosen per game, with saved rules and last-used settings
+- Configurable odds table (by number of outs) and limits
+- Multiway pots: side pots, outs for each opponent, equity
 - Payout and break-even calculations
-- Insurance records in the game ledger
+- Insurance as a seat in the game ledger, with its result assigned at settlement
+- A standalone calculator on the tools page
 
 ## M4 Rake
 
