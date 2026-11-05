@@ -8,6 +8,7 @@ interface TextFieldProps {
   issue: string | undefined;
   prefix?: string;
   suffix?: string;
+  placeholder?: string;
   inputMode: "numeric" | "decimal" | "text";
   inputRef?: Ref<HTMLInputElement>;
   onChange: (value: string) => void;
@@ -22,6 +23,7 @@ export function TextField({
   issue,
   prefix,
   suffix,
+  placeholder,
   inputMode,
   inputRef,
   onChange,
@@ -48,6 +50,7 @@ export function TextField({
           inputMode={inputMode}
           autoComplete="off"
           value={value}
+          placeholder={placeholder}
           aria-invalid={issue ? true : undefined}
           aria-describedby={issue ? issueId : undefined}
           onChange={(event) => onChange(event.target.value)}

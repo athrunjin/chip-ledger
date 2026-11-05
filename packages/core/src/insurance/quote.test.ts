@@ -2,7 +2,15 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import type { InsuranceRule } from "../domain";
-import { payoutFor, premiumFor, type QuoteInput, quoteInsurance, soldOuts } from "./quote";
+import {
+  payoutFor,
+  premiumFor,
+  premiumForNet,
+  priceOption,
+  type QuoteInput,
+  quoteInsurance,
+  soldOuts,
+} from "./quote";
 import {
   formatOdds,
   parseInsuranceRule,
@@ -24,18 +32,19 @@ const input = (overrides: Partial<QuoteInput> = {}): QuoteInput => ({
 });
 
 describe("quoteInsurance", () => {
-  it("prices both covers, leaving a full cover level whichever way the card falls", () => {
+  it("prices both covers so a hit leaves the stake or the pot share", () => {
     const quote = quoteInsurance(input());
     if (!quote.ok) throw new Error("Expected a quote");
     expect(quote.oddsHundredths).toBe(350);
-    expect(quote.stake).toMatchObject({ premiumChips: 143, payoutChips: 500 });
+    expect(quote.stake).toMatchObject({ premiumChips: 200, payoutChips: 700, ifHitChips: 500 });
     expect(quote.fullPot).toEqual({
-      premiumChips: 286,
-      payoutChips: 1001,
-      ifHitChips: 715,
-      ifMissChips: 714,
+      premiumChips: 400,
+      payoutChips: 1400,
+      ifHitChips: 1000,
+      ifMissChips: 600,
       capped: false,
     });
+    expect(quote.maxPremiumChips).toBe(400);
   });
 
   it("hands the premium back on a hit when the rule says so", () => {
@@ -44,6 +53,8 @@ describe("quoteInsurance", () => {
     if (!quote.ok) throw new Error("Expected a quote");
     expect(quote.fullPot.payoutChips).toBe(1287);
     expect(quote.fullPot.ifHitChips).toBe(1001);
+    expect(quote.stake).toMatchObject({ premiumChips: 143, ifHitChips: 500 });
+    expect(quote.maxPremiumChips).toBe(286);
   });
 
   it("holds premiums at the rule's limit for the street", () => {
@@ -52,7 +63,7 @@ describe("quoteInsurance", () => {
     if (!quote.ok) throw new Error("Expected a quote");
     expect(quote.maxPremiumChips).toBe(200);
     expect(quote.fullPot).toMatchObject({ premiumChips: 200, capped: true });
-    expect(quote.stake).toMatchObject({ premiumChips: 143, capped: false });
+    expect(quote.stake).toMatchObject({ premiumChips: 200, capped: false });
   });
 
   it.each([
@@ -78,6 +89,22 @@ describe("quoteInsurance", () => {
       block: "too-many-players",
     });
     expect(quoteInsurance(input({ rule, potPlayers: 3 })).ok).toBe(true);
+  });
+
+  it("leaves at least the target on a hit, with or without a refund", () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1, max: 1_000_000 }),
+        fc.integer({ min: 101, max: 5000 }),
+        fc.boolean(),
+        (net, odds, refundPremium) => {
+          const premium = premiumForNet(net, odds, refundPremium);
+          const rule = { ...RULE_30, refundPremium };
+          const { ifHitChips } = priceOption({ rule, shareChips: net }, odds, premium);
+          expect(ifHitChips).toBeGreaterThanOrEqual(net);
+        },
+      ),
+    );
   });
 
   it("always covers at least the target, whatever the odds", () => {

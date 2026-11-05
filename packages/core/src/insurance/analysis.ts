@@ -44,6 +44,21 @@ export interface PotAnalysis extends Pot {
   readonly equity: Readonly<Record<string, number>>;
 }
 
+/**
+ * A tie has no lead to insure. The exception is leaders level in every way with someone behind them:
+ * that player's outs are a real risk to both.
+ */
+export function tieBlocksInsurance({
+  leaders,
+  equity,
+  playerIds,
+}: Pick<PotAnalysis, "leaders" | "equity" | "playerIds">): boolean {
+  if (leaders.length < 2) return false;
+  const chances = leaders.map(({ playerId }) => equity[playerId] ?? 0);
+  const uneven = Math.max(...chances) - Math.min(...chances) > 1e-9;
+  return uneven || leaders.length === playerIds.length;
+}
+
 function unseenCards(hands: readonly AllInHand[], board: readonly Card[]): Card[] {
   const seen = new Set<Card>([...board, ...hands.flatMap((h) => h.cards)]);
   return DECK.filter((card) => !seen.has(card));

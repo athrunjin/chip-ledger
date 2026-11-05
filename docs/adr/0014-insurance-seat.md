@@ -1,6 +1,6 @@
 # 0014. Insurance as a seat in the game
 
-- Status: Accepted
+- Status: Superseded in part by [0015](0015-insurance-moves-only-the-seat.md)
 - Date: 2026-11-05
 
 ## Context

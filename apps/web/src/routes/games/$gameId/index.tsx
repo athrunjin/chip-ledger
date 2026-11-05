@@ -26,6 +26,7 @@ import { LedgerPlayers } from "@/components/game/LedgerPlayers";
 import { SettleDialog } from "@/components/game/SettleDialog";
 import { Page } from "@/components/Page";
 import { useGame, useSaveGame } from "@/data/games";
+import { useInsuranceHands } from "@/data/insurance";
 import {
   newEventMeta,
   useAdjustHands,
@@ -88,6 +89,7 @@ function GameLedger({ game }: { game: Game }) {
     status,
   } = game;
   const { data: events = [] } = useLedger(gameId);
+  const { data: hands = [] } = useInsuranceHands(gameId);
   const { data: players = [] } = usePlayers();
   const appendEvent = useAppendEvent(gameId);
   const adjustHands = useAdjustHands(gameId);
@@ -182,7 +184,9 @@ function GameLedger({ game }: { game: Game }) {
 
   /** The insurance seat cannot leave by hand, so it always goes with the last players. */
   const anyoneSeated = seatedCount > 0 || seat?.seated === true;
-  const pendingInsurance = insuranceRecords(events).filter((r) => r.status === "pending").length;
+  const pendingInsurance =
+    insuranceRecords(events).filter((r) => r.status === "pending").length +
+    hands.filter((hand) => hand.status === "open").length;
 
   function handleSettle() {
     if (seatedCount === 0 && balanceChips === 0 && pendingInsurance === 0) {

@@ -11,7 +11,7 @@ import {
 import { z } from "zod";
 
 const FORMAT = "holdem-backup";
-const VERSION = 3;
+const VERSION = 4;
 
 const id = z.string().min(1);
 const money = z
@@ -24,6 +24,7 @@ const timestamp = z.number().int();
 const owned = { id, organizerId: id };
 
 const percent = z.number().int().positive();
+const street = z.enum(["turn", "river"]);
 
 const insuranceRuleSchema = z.object({
   oddsHundredths: z.array(z.number().int().positive()).min(1),
@@ -85,7 +86,8 @@ const eventSchema = z.discriminatedUnion("type", [
     payoutChips: chips,
     outs: chips,
     oddsHundredths: chips.positive(),
-    street: z.enum(["turn", "river"]),
+    street,
+    handId: id.optional(),
   }),
   z.object({
     ...eventBase,
@@ -94,6 +96,7 @@ const eventSchema = z.discriminatedUnion("type", [
     playerId: id,
     hit: z.boolean(),
     chips,
+    handId: id.optional(),
   }),
 ]);
 
@@ -104,11 +107,42 @@ const savedRuleSchema = z.object({
   createdAt: timestamp,
 });
 
+const card = z.number().int().min(0).max(51);
+
+const insuranceHandSchema = z.object({
+  ...owned,
+  gameId: id,
+  status: z.enum(["open", "done"]),
+  step: z.enum(["players", "start", "buy", "deal", "settle"]),
+  players: z.array(
+    z.object({ playerId: id, chips, cover: z.boolean(), cards: z.array(card).max(2) }),
+  ),
+  pools: z.array(chips),
+  board: z.array(card).max(5),
+  purchases: z.array(
+    z.object({
+      id,
+      offerKey: id,
+      playerId: id,
+      street,
+      outs: z.array(card),
+      oddsHundredths: chips.positive(),
+      premiumChips: chips,
+      payoutChips: chips,
+      hit: z.boolean().optional(),
+    }),
+  ),
+  declined: z.array(id),
+  createdAt: timestamp,
+});
+
 const collections = {
   players: z.array(playerSchema),
   ledgerEvents: z.array(eventSchema),
   /** Added in version 3. */
   insuranceRules: z.array(savedRuleSchema).default([]),
+  /** Added in version 4. */
+  insuranceHands: z.array(insuranceHandSchema).default([]),
 };
 
 const backupSchema = z.object({ games: z.array(gameSchema), ...collections });
@@ -127,11 +161,12 @@ export type ParsedBackup =
   | { readonly ok: false; readonly issue: BackupIssue };
 
 /** Ledger events must point to games and players in the backup, or the books will not balance after a restore. */
-function linksAreValid({ games, players, ledgerEvents }: BackupData): boolean {
+function linksAreValid({ games, players, ledgerEvents, insuranceHands }: BackupData): boolean {
   const gameIds = new Set(games.map((g) => g.id));
   const playerIds = new Set(players.map((p) => p.id));
   const eventIds = new Set(ledgerEvents.map((e) => e.id));
   const isPlayer = (id: string) => id === INSURANCE_PLAYER_ID || playerIds.has(id);
+  if (!insuranceHands.every((hand) => gameIds.has(hand.gameId))) return false;
   return ledgerEvents.every(
     (e) =>
       gameIds.has(e.gameId) &&
