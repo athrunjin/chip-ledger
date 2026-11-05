@@ -26,7 +26,44 @@ Records discussions of feature and process improvements: what was proposed, how 
 
 ## Decided, waiting for development
 
-(none)
+### #I-013 Balance check and leave-all when settling
+
+- Type: feature
+- Date: proposed and decided 2026-11-05
+- Source: discussion
+- Problem: tapping settle with players still seated only shows a notice, so everyone has to leave one by one and the balance is only checked at the end.
+- Proposal:
+  - Tapping settle opens a dialog that says whether wins and losses balance, and by how much if not.
+  - If players are still seated, offer "leave all and settle", which cashes out every seated player at their current stack in one transaction.
+  - Each cash-out stays in the game record and can be undone separately.
+  - If everyone has left and the books balance, go straight to the settlement page.
+- Decision: do.
+- Tracking: no issue yet
+
+### #I-014 Settling with unbalanced chips
+
+- Type: feature
+- Date: proposed and decided 2026-11-05
+- Source: discussion
+- Problem: settlement is blocked until the chips balance, but at a real game a difference sometimes can't be traced.
+- Proposal:
+  - Allow settling with a difference. Choosing that shows three options:
+    - Split evenly between players.
+    - The organizer tops up a shortfall, or collects an excess.
+    - Leave it unhandled.
+  - The difference is chips cashed out − chips bought. Above 0, players took out more than went in, so someone has to pay it. Below 0, chips are left over.
+  - Splitting uses `allocate`, so the shares add up to exactly the difference.
+- Impact: `netCents` currently refuses unbalanced books, so settlement calculations need to change, along with the results table and shared image. Saving the choice is a data model change and needs an ADR.
+- Settled details:
+  - An even split is shared by every player in the game, including those who left early.
+  - The organizer gets a 组织者 row in results and is a party in transfers under both plans.
+  - When unhandled, transfers pay as far as they can and the remaining difference shows as a warning.
+  - The choice is saved with the game, can be changed on the settlement page, and appears in the shared image.
+  - Unbalanced books always need a choice before settling. There's no default.
+  - Results show adjusted amounts with a note explaining the split. Win/loss in chips keeps the real figures.
+- Depends on: #I-013
+- Decision: do.
+- Tracking: no issue yet
 
 ## Done
 

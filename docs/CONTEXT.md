@@ -50,6 +50,7 @@ These are the product defaults. Rules are configurable by design, so organizers 
 | Blinds        | Set in whole chips, with the cash equivalent shown                                       |
 | Live stacks   | Each seated player has a stack and win/loss in chips, plus a table balance in chips      |
 | Leaving       | 离桌 (leave table) confirms hands and chips. Settlement still needs everyone to leave    |
+| Imbalance     | Settling is allowed: split evenly, organizer covers or collects, or leave it unhandled   |
 | Rake          | A percentage of the pot with a cap                                                       |
 | Dealer fee    | Calculated exactly by the minute                                                         |
 | Insurance     | Built-in table of common outs odds, each entry editable by the organizer                 |
