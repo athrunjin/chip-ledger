@@ -21,7 +21,8 @@ Once recorded, a decision isn't edited. If it changes later, write a new record 
 | [0014](0014-insurance-seat.md) | Insurance as a seat in the game | Superseded in part by 0015 |
 | [0015](0015-insurance-moves-only-the-seat.md) | Insurance moves only the seat, once its card is dealt | Superseded in part by 0017 |
 | [0016](0016-insurance-hands.md) | An insurance hand as a draft, written to the ledger when finished | Accepted |
-| [0017](0017-finished-hand-sets-stacks.md) | A finished hand sets the stacks it knows | Accepted |
+| [0017](0017-finished-hand-sets-stacks.md) | A finished hand sets the stacks it knows | Superseded in part by 0018 |
+| [0018](0018-short-premium-buy-in.md) | A premium a player cannot pay buys whole hands, once confirmed | Accepted |
 
 ## Template
 

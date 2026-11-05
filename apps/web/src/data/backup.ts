@@ -75,6 +75,7 @@ const eventSchema = z.discriminatedUnion("type", [
     type: z.enum(["buy_in", "rebuy", "cash_out"]),
     playerId: id,
     chips,
+    handId: id.optional(),
   }),
   z.object({
     ...eventBase,

@@ -14,8 +14,10 @@ import {
   handPotEntries,
   handResult,
   offersDecided,
+  type PlayerHandResult,
   playerHandResults,
   playersReady,
+  premiumBuyIns,
   reviseOffer,
   stakeOf,
   undoDeal,
@@ -232,6 +234,25 @@ describe("playerHandResults", () => {
         },
       ),
     );
+  });
+});
+
+describe("premiumBuyIns", () => {
+  const result = { playerId: "a", shortChips: 0 } as PlayerHandResult;
+
+  it("buys only for players who are short", () => {
+    expect(premiumBuyIns([result], 100)).toEqual([]);
+  });
+
+  it("buys enough whole hands and leaves the rest as their stack", () => {
+    expect(premiumBuyIns([{ ...result, shortChips: 20 }], 100)).toEqual([
+      { playerId: "a", shortChips: 20, buyInChips: 100, stackChips: 80 },
+    ]);
+    expect(premiumBuyIns([{ ...result, shortChips: 100 }], 100)[0]?.stackChips).toBe(0);
+    expect(premiumBuyIns([{ ...result, shortChips: 101 }], 100)[0]).toMatchObject({
+      buyInChips: 200,
+      stackChips: 99,
+    });
   });
 });
 

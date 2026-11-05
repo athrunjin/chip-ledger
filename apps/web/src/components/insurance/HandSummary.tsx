@@ -4,10 +4,12 @@ import {
   insuranceTopUp,
   type PlayerHandResult,
   playerHandResults,
+  premiumBuyIns,
 } from "@holdem/core";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { formatSignedChips } from "@/lib/chips";
 import { BoardCards, CardFace, type SeatChips } from "./InsuranceHandFlow";
+import { Modal } from "./Modal";
 
 const chipText = (chips: number) => chips.toLocaleString("zh-CN");
 
@@ -52,7 +54,9 @@ function PlayerResult({
         <Line label="后手">{stackChips === null ? "Cover 不适用" : chipText(stackChips)}</Line>
       </dl>
       {shortChips > 0 && (
-        <p className="mt-1 text-sm text-highlight">还差 {chipText(shortChips)} 保费没有支付。</p>
+        <p className="mt-1 text-sm text-highlight">
+          还差 {chipText(shortChips)} 保费，确认时需要买入。
+        </p>
       )}
     </li>
   );
@@ -64,6 +68,7 @@ export function HandSummary({
   nameOf,
   seat,
   recording,
+  seatedIds,
   saving,
   onBack,
   onConfirm,
@@ -72,6 +77,8 @@ export function HandSummary({
   nameOf: (id: string) => string;
   seat: SeatChips | undefined;
   recording: boolean;
+  /** Players still at the table, the only ones who can buy in. */
+  seatedIds: readonly string[];
   saving: boolean;
   onBack: () => void;
   onConfirm: () => void;
@@ -81,6 +88,9 @@ export function HandSummary({
     ? insuranceTopUp(seat.stackChips + premiumChips, payoutChips, seat.handChips)
     : 0;
   const results = playerHandResults(hand);
+  const seated = results.filter(({ playerId }) => seatedIds.includes(playerId));
+  const buyIns = recording && seat ? premiumBuyIns(seated, seat.handChips) : [];
+  const [confirming, setConfirming] = useState(false);
 
   return (
     <section aria-label="本手总结">
@@ -115,12 +125,49 @@ export function HandSummary({
         <button
           type="button"
           disabled={saving}
-          onClick={onConfirm}
+          onClick={() => (buyIns.length > 0 ? setConfirming(true) : onConfirm())}
           className="min-h-12 rounded-xl bg-accent font-semibold text-accent-text disabled:opacity-40"
         >
           {recording ? "确认并返回牌局" : "重新计算"}
         </button>
       </div>
+      {confirming && seat && (
+        <Modal title="需要自动买入" onClose={() => setConfirming(false)}>
+          <p role="alert" className="font-medium text-highlight">
+            以下玩家不够支付保费，确认后会增加买入手数。
+          </p>
+          <ul className="mt-2 flex flex-col gap-2">
+            {buyIns.map(({ playerId, shortChips, buyInChips, stackChips }) => (
+              <li key={playerId} className="rounded-xl border border-line bg-bg p-3">
+                <p className="font-semibold">
+                  {nameOf(playerId)} · 买入 {buyInChips / seat.handChips} 手（
+                  {chipText(buyInChips)} 筹码）
+                </p>
+                <p className="text-sm text-muted tabular-nums">
+                  欠保费 {chipText(shortChips)} · 买入后后手 {chipText(stackChips)}
+                </p>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              className="min-h-11 rounded-xl border border-line font-medium"
+            >
+              取消
+            </button>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={onConfirm}
+              className="min-h-11 rounded-xl bg-accent font-semibold text-accent-text disabled:opacity-40"
+            >
+              确认买入
+            </button>
+          </div>
+        </Modal>
+      )}
     </section>
   );
 }

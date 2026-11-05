@@ -563,6 +563,7 @@ export function InsuranceHandFlow({
           nameOf={nameOf}
           seat={seat}
           recording={store !== undefined}
+          seatedIds={seats.map(({ id }) => id)}
           saving={finishing}
           onBack={() => update({ ...hand, step: "settle" })}
           onConfirm={finish}
