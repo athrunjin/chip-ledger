@@ -65,6 +65,12 @@
   --color-loss: var(--loss);
 }
 
+/* Outside any layer, so it wins over the max-height utilities on each dialog */
+dialog {
+  bottom: var(--keyboard-inset, 0px);
+  max-height: calc(100dvh - var(--keyboard-inset, 0px) - 1rem);
+}
+
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
