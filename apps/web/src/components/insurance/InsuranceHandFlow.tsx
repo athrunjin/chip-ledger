@@ -288,14 +288,12 @@ function StartStep({ onBack, onChoose }: { onBack: () => void; onChoose: (count:
 function SettleStep({
   hand,
   nameOf,
-  store,
   saving,
   onChangeCard,
   onConfirm,
 }: {
   hand: InsuranceHand;
   nameOf: (id: string) => string;
-  store: HandStore | undefined;
   saving: boolean;
   onChangeCard: () => void;
   onConfirm: () => void;
@@ -552,7 +550,6 @@ export function InsuranceHandFlow({
         <SettleStep
           hand={hand}
           nameOf={nameOf}
-          store={store}
           saving={finishing}
           onChangeCard={() => update(undoDeal(hand))}
           onConfirm={confirmSettle}
