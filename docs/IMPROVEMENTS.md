@@ -26,7 +26,49 @@ Records discussions of feature and process improvements: what was proposed, how 
 
 ## Decided, waiting for development
 
-(none)
+### #I-015 Return to the table instead of rebuying
+
+- Type: feature
+- Date: proposed and decided 2026-11-05
+- Source: discussion
+- Problem: a player who left can only come back through 补码, which forces a new buy, when they usually just sit back down.
+- Proposal:
+  - Replace 补码 on players who have left with 返回 (return).
+  - Tapping it puts them back in the seated list, and the game continues as normal: hand controls, stack and leaving all work as before.
+  - Under the append-only ledger, this reverses their latest cash-out, which restores their stack.
+- Settled details: they come back with the chips they left with, with no confirmation, because leaving again undoes it.
+- Decision: do.
+- Tracking: no issue yet
+
+### #I-016 Remove undo from the game record
+
+- Type: feature
+- Date: proposed and decided 2026-11-05
+- Source: discussion
+- Problem: undoing individual records alongside hand controls, typed stacks and leaving makes the logic hard to follow.
+- Proposal:
+  - Remove 撤销 from the game record, which becomes read-only.
+  - Corrections go through normal controls: −/+ for hands, the chip cell for stacks, and 返回 after a mistaken leave.
+  - Reversals stay as an internal ledger mechanism, so the ledger is still append-only.
+- Settled details: undo was the only way to remove a first buy-in, so tapping − at 1 hand offers to remove a player added by mistake. It needs a confirmation and only works when their buy-in is their only record.
+- Decision: do.
+- Tracking: no issue yet
+
+### #I-017 Chronological game record with dates and a player filter
+
+- Type: feature
+- Date: proposed and decided 2026-11-05
+- Source: discussion
+- Problem: the record shows newest first with only a time, and there's no way to follow one player.
+- Proposal:
+  - Show records from the start of the game, oldest first.
+  - Add the date to each timestamp, for example 11/05 11:28.
+  - Add a player filter that shows only that player's records, also in time order.
+- Settled details:
+  - Reversals appear as their own rows in time order, such as 减手 and 返回, rather than striking out the original. Older games show the same way.
+  - The filter is a dropdown, because buttons for 9 players would take several lines.
+- Decision: do.
+- Tracking: no issue yet
 
 ## Done
 
