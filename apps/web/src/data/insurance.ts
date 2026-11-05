@@ -11,6 +11,7 @@ import {
   type LedgerEvent,
   latestCashOut,
   playerHandResults,
+  premiumBuyIns,
   type SavedInsuranceRule,
   summarizeByPlayer,
 } from "@holdem/core";
@@ -148,11 +149,15 @@ export function useFinishInsuranceHand(gameId: string) {
       const written = events.some((e) => belongsToHand(e, hand.id));
       if (!written) {
         const ledger = summarizeByPlayer(events);
-        const stackEvents = playerHandResults(hand).flatMap(({ playerId, stackChips }) =>
-          stackChips !== null && ledger.some((p) => p.playerId === playerId && p.seated)
-            ? [{ playerId, chips: stackChips }]
-            : [],
+        const results = playerHandResults(hand).filter(({ playerId }) =>
+          ledger.some((p) => p.playerId === playerId && p.seated),
         );
+        const buyIns = premiumBuyIns(results, handChips);
+        const stackEvents = results.flatMap(({ playerId, stackChips }) => {
+          if (stackChips === null) return [];
+          const buyIn = buyIns.find((b) => b.playerId === playerId);
+          return [{ playerId, chips: buyIn?.stackChips ?? stackChips }];
+        });
         const seat = ledger.find((p) => p.playerId === INSURANCE_PLAYER_ID);
         const cashOut = latestCashOut(events, INSURANCE_PLAYER_ID);
         const stack = (seat?.stackChips ?? 0) + (cashOut?.chips ?? 0);
@@ -172,9 +177,19 @@ export function useFinishInsuranceHand(gameId: string) {
                 },
               ]
             : []),
+          ...buyIns.map(
+            ({ playerId, buyInChips }): LedgerEvent => ({
+              ...newEventMeta(gameId, occurredAt),
+              type: "rebuy",
+              handId,
+              playerId,
+              chips: buyInChips,
+            }),
+          ),
+          // A moment later: a stack typed in the same change as a buy-in would add to it
           ...stackEvents.map(
             (stack): LedgerEvent => ({
-              ...newEventMeta(gameId, occurredAt),
+              ...newEventMeta(gameId, occurredAt + 1),
               type: "stack_set",
               handId,
               ...stack,

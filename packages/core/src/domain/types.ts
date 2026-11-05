@@ -154,6 +154,8 @@ export interface ChipEvent extends LedgerEventBase {
   readonly playerId: string;
   /** Whole number of chips. */
   readonly chips: number;
+  /** The insurance hand that needed this buy-in, so undoing the hand takes it back. */
+  readonly handId?: string;
 }
 
 /** A stack typed in by the organizer, replacing the player's current chips. */

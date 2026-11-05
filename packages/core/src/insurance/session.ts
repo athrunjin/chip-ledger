@@ -263,3 +263,24 @@ export function playerHandResults(hand: InsuranceHand): PlayerHandResult[] {
     };
   });
 }
+
+export interface PremiumBuyIn {
+  readonly playerId: string;
+  readonly shortChips: number;
+  /** Whole hands, enough to pay what is short. */
+  readonly buyInChips: number;
+  /** What the player has once the premium is paid from the buy-in. */
+  readonly stackChips: number;
+}
+
+/** The buy-ins a hand needs so every premium is paid. The organizer confirms these first. */
+export function premiumBuyIns(
+  results: readonly PlayerHandResult[],
+  handChips: number,
+): PremiumBuyIn[] {
+  return results.flatMap(({ playerId, shortChips }) => {
+    if (shortChips === 0) return [];
+    const buyInChips = Math.ceil(shortChips / handChips) * handChips;
+    return [{ playerId, shortChips, buyInChips, stackChips: buyInChips - shortChips }];
+  });
+}

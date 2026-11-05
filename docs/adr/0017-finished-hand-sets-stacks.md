@@ -1,6 +1,6 @@
 # 0017. A finished hand sets the stacks it knows
 
-- Status: Accepted
+- Status: Superseded in part by [0018](0018-short-premium-buy-in.md)
 - Date: 2026-11-05
 
 ## Context
