@@ -59,7 +59,7 @@ Records discussions of feature and process improvements: what was proposed, how 
   - Only players on the side that is too large share a split. Anyone who broke even isn't affected.
   - The organizer gets a 组织者 row in results and is a party in transfers under both plans.
   - When unhandled, transfers pay as far as they can and the remaining difference shows as a warning.
-  - The choice is saved with the game, can be changed on the settlement page, and appears in the shared image.
+  - The choice is saved with the game, can be changed on the settlement page until settlement is confirmed, and appears in the shared image.
   - Unbalanced books always need a choice before settling. There's no default.
   - Results show adjusted amounts with a note explaining the split. Win/loss in chips keeps the real figures.
   - An even split between all players was tried first and replaced after review, because it charged players who broke even.

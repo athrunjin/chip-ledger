@@ -31,18 +31,25 @@ export interface PlayerNet {
 /**
  * Each player's result in cash, before any difference is handled. Rounding per player would be a few cents off
  * when the ratio does not divide evenly, so each side's total comes first and `allocate` shares it out.
+ * The larger side is the smaller one plus the converted difference, so the cash difference always matches
+ * what the chip difference converts to.
  */
 function rawNetCents(players: readonly PlayerLedger[], ratio: ChipRatio): PlayerNet[] {
   const chips = players.map((p) => ({ id: p.playerId, net: p.cashedOutChips - p.boughtChips }));
+  const sideChips = (sign: number) =>
+    chips.reduce((total, p) => (p.net * sign > 0 ? total + Math.abs(p.net) : total), 0);
+  const wins = sideChips(1);
+  const losses = sideChips(-1);
+  const shared = chipsToCents(Math.min(wins, losses), ratio);
+  const extra = chipsToCents(Math.abs(wins - losses), ratio);
+
   const shares = new Map<string, Cents>();
   for (const sign of [1, -1]) {
     const side = chips.filter((p) => p.net * sign > 0);
     if (side.length === 0) continue;
+    const isLarger = sideChips(sign) === Math.max(wins, losses);
+    const total = cents(shared + (isLarger ? extra : 0));
     const sizes = side.map((p) => Math.abs(p.net));
-    const total = chipsToCents(
-      sizes.reduce((sum, size) => sum + size, 0),
-      ratio,
-    );
     allocate(total, sizes).forEach((share, i) => {
       const player = side[i];
       if (player) shares.set(player.id, cents(share * sign));

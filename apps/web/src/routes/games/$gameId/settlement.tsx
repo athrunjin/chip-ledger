@@ -103,18 +103,20 @@ function Notice({ gameId, children }: { gameId: string; children: ReactNode }) {
 function ImbalanceSection({ game, difference }: { game: Game; difference: number }) {
   const saveGame = useSaveGame();
   const cash = formatGameMoney(chipsToCents(Math.abs(difference), game.chipRatio), game.currency);
+  const settled = game.status === "settled";
 
   return (
     <section className="mb-4 rounded-xl border border-highlight bg-surface p-3">
       <h2 className="font-semibold">水上下不平衡</h2>
       <p className="mt-1 mb-3 text-sm text-muted">
-        差额 {formatDifference(difference, cash)}。选择怎么处理，或回到牌局核对记录。
+        差额 {formatDifference(difference, cash)}。
+        {settled ? "已确认结算，重新打开牌局后才能修改。" : "选择怎么处理，或回到牌局核对记录。"}
       </p>
       <ImbalanceOptions
         differenceChips={difference}
         cash={cash}
         value={game.imbalanceHandling}
-        disabled={saveGame.isPending}
+        disabled={saveGame.isPending || settled}
         onChange={(handling) => saveGame.mutate(chooseImbalanceHandling(game, handling))}
       />
       {saveGame.isError && (
@@ -262,10 +264,10 @@ function SettlementResult({
       <button
         type="button"
         aria-pressed={active}
-        disabled={saveGame.isPending}
+        disabled={saveGame.isPending || status === "settled"}
         onClick={() => choosePlan(next)}
         className={cn(
-          "min-h-11 rounded-xl border font-medium",
+          "min-h-11 rounded-xl border font-medium disabled:opacity-60",
           active ? "border-accent bg-accent text-accent-text" : "border-line bg-surface",
         )}
       >
@@ -352,7 +354,7 @@ function SettlementResult({
                 <span className="mb-1 block text-sm text-muted">由谁代收</span>
                 <select
                   value={collectorId}
-                  disabled={saveGame.isPending}
+                  disabled={saveGame.isPending || status === "settled"}
                   onChange={(event) => choosePlan(event.target.value)}
                   className="min-h-12 w-full rounded-xl border border-line bg-surface px-3"
                 >

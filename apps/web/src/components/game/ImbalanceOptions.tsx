@@ -36,7 +36,7 @@ export function ImbalanceOptions({
           disabled={disabled}
           onClick={() => onChange(handling)}
           className={cn(
-            "min-h-11 rounded-xl border px-3 text-left font-medium",
+            "min-h-11 rounded-xl border px-3 text-left font-medium disabled:opacity-60",
             value === handling
               ? "border-accent bg-accent text-accent-text"
               : "border-line bg-surface",

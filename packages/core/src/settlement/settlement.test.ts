@@ -1,7 +1,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
-import type { PlayerLedger } from "../ledger";
+import { chipsToCents, type PlayerLedger } from "../ledger";
 import { cents, sum } from "../money";
 import {
   chipDifference,
@@ -209,6 +209,13 @@ describe("settlementOutcome", () => {
     expect(netOf(nets, "a")).toBe(-285_000);
     expect(netOf(nets, "b")).toBe(-95_000);
     expect(netOf(nets, "c")).toBe(380_000);
+  });
+
+  it("matches the converted chip difference when the ratio does not divide evenly", () => {
+    const players = [ledger("a", 300, 401), ledger("b", 300, 250), ledger("c", 300, 251)];
+    const ratio = { chips: 3, amount: cents(100) };
+    const { difference } = settlementOutcome([...players, ledger("d", 300, 299)], ratio, "ignore");
+    expect(difference).toBe(chipsToCents(1, ratio));
   });
 
   it("never moves a player past 0 when splitting", () => {
