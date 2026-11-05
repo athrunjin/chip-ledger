@@ -177,8 +177,7 @@ export function useFinishInsuranceHand(gameId: string) {
       const written = events.some((e) => belongsToHand(e, hand.id));
       if (!written) {
         const ledger = summarizeByPlayer(events);
-        const tableStacks = new Map(ledger.map((p) => [p.playerId, p.stackChips]));
-        const results = playerHandResults(hand, tableStacks).filter(({ playerId }) =>
+        const results = playerHandResults(hand).filter(({ playerId }) =>
           ledger.some((p) => p.playerId === playerId && p.seated),
         );
         const buyIns = premiumBuyIns(results, handChips);

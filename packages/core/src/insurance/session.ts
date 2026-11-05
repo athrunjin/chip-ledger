@@ -212,7 +212,7 @@ export interface PlayerHandResult {
   readonly insuranceChips: number;
   /** The hand and the insurance together. */
   readonly netChips: number;
-  /** Chips left after the hand. A cover player's stack stays for the organizer to type. */
+  /** Chips left after the hand. A cover player has more behind, so theirs is unknown. */
   readonly stackChips: number | null;
   /** Premium the player's winnings could not pay. */
   readonly shortChips: number;
@@ -221,12 +221,9 @@ export interface PlayerHandResult {
 /**
  * How the finished board pays each player. Everyone but the cover is all-in, so what they end with
  * is all they have. An odd chip goes to the first winner entered, as seats are not recorded.
- * `tableStacks` holds the stacks before the hand: a cover's chips behind can pay a premium too.
+ * A cover is assumed to have enough behind for their premiums, so they are never short.
  */
-export function playerHandResults(
-  hand: InsuranceHand,
-  tableStacks: ReadonlyMap<string, number> = new Map(),
-): PlayerHandResult[] {
+export function playerHandResults(hand: InsuranceHand): PlayerHandResult[] {
   const cardsOf = new Map(hand.players.map((p) => [p.playerId, p.cards]));
   const won = new Map<string, number>();
   const refunds = new Map<string, number>();
@@ -255,19 +252,15 @@ export function playerHandResults(
     const potChips = won.get(playerId) ?? 0;
     const refundChips = refunds.get(playerId) ?? 0;
     const left = potChips + refundChips + insuranceChips;
-    const stake = stakeOf(player, hand.players);
-    const tableStack = tableStacks.get(playerId);
-    const behind = Math.max(0, (tableStack ?? 0) - stake);
-    const unknownCover = cover && tableStack === undefined;
     return {
       playerId,
       cover,
       potChips,
       refundChips,
       insuranceChips,
-      netChips: left - stake,
+      netChips: left - stakeOf(player, hand.players),
       stackChips: cover ? null : Math.max(0, left),
-      shortChips: unknownCover ? 0 : Math.max(0, -(left + (cover ? behind : 0))),
+      shortChips: cover ? 0 : Math.max(0, -left),
     };
   });
 }

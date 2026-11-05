@@ -98,7 +98,7 @@ export function HandSummary({
   const topUp = seat
     ? insuranceTopUp(seat.stackChips + premiumChips, payoutChips, seat.handChips)
     : 0;
-  const results = playerHandResults(hand, seat?.playerStacks);
+  const results = playerHandResults(hand);
   const seated = results.filter(({ playerId }) => seatedIds.includes(playerId));
   const buyIns = recording && seat ? premiumBuyIns(seated, seat.handChips) : [];
   const [confirming, setConfirming] = useState(false);

@@ -1,4 +1,4 @@
-# 0020. An all-in player's entered chips update the table at once
+# 0019. An all-in player's entered chips update the table at once
 
 - Status: Accepted
 - Date: 2026-11-06
@@ -14,6 +14,7 @@ The chips entered for an all-in player are counted at the table, so they are mor
 - These players' chips are their whole stack. Finishing the hand still replaces that stack with what they end with.
 - A cover player's chips are unknown, so nothing is written for them.
 - Premiums and payouts still move nothing until the hand is finished.
+- A cover is assumed to have enough behind for their premiums, so they never get a buy-in prompt.
 
 ## Consequences
 
