@@ -20,6 +20,7 @@ Trying the calculator showed that an all-in is one piece of work: choose the pla
 - The dealt card decides each purchase, by whether it is among the cards sold. The organizer no longer marks a hit or a miss for these.
 - Finishing writes every purchase and its result to the ledger in one write, tagged with `handId`, with the same timestamp as any hands bought for the seat. Writing checks for that `handId` first, so a retry cannot pay twice.
 - Finished hands stay in the table as the record of the board and players. Undoing a hand reverses its ledger events and removes the row.
+- A tied lead cannot be insured, unless the leaders have equal chances and another player in the pot is behind them.
 - A cover player has no chip amount: `stakeOf` uses the deepest of the others. At most one player can be the cover, and a hand does not need one.
 - A hand with nothing bought is still recorded, and writes nothing to the ledger.
 - Backups move to version 4 and include hands, open ones too. Older backups still restore.

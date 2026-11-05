@@ -42,8 +42,8 @@ export interface QuoteInput {
   /** What the buyer put in. */
   readonly stakeChips: number;
   readonly outs: number;
-  /** The buyer is tied for the lead, but with a different chance of winning. */
-  readonly unevenTie?: boolean;
+  /** The buyer is tied in a way that leaves no lead to insure. */
+  readonly blockedTie?: boolean;
 }
 
 export interface QuoteOption {
@@ -58,7 +58,7 @@ export interface QuoteOption {
 }
 
 export type QuoteBlock =
-  | "uneven-tie"
+  | "tied-lead"
   | "street-closed"
   | "too-many-players"
   | "no-outs"
@@ -101,7 +101,7 @@ function capChips({ rule, street, potChips }: QuoteInput): number {
 
 export function quoteInsurance(input: QuoteInput): InsuranceQuote {
   const { rule, street, potPlayers, shareChips, stakeChips, outs } = input;
-  if (input.unevenTie) return { ok: false, block: "uneven-tie" };
+  if (input.blockedTie) return { ok: false, block: "tied-lead" };
   if (street === "turn" && !rule.coverTurn) return { ok: false, block: "street-closed" };
   if (rule.maxPotPlayers !== undefined && potPlayers > rule.maxPotPlayers) {
     return { ok: false, block: "too-many-players" };

@@ -99,20 +99,37 @@ describe("offers", () => {
     expect(reviseOffer(bought(start), "river-0-a").purchases).toEqual([]);
   });
 
-  it("refuses a tied lead when the chances differ", () => {
-    const tied = hand({
-      players: [player("a", 1000, ["As", "Kh"]), player("b", 1000, ["Ad", "Kc"])],
-      board: [c("Qs"), c("7s"), c("2s"), c("3d")],
-    });
-    const offers = handOffers(tied, RULE_30);
-    expect(offers.map((o) => o.quote)).toEqual([
-      { ok: false, block: "uneven-tie" },
-      { ok: false, block: "uneven-tie" },
-    ]);
+  it.each([
+    [
+      "with different chances",
+      [player("a", 1000, ["As", "Kh"]), player("b", 1000, ["Ad", "Kc"])],
+      ["Qs", "7s", "2s", "3d"],
+    ],
+    [
+      "with equal chances and nobody behind",
+      [player("a", 1000, ["Ks", "Qs"]), player("b", 1000, ["Kh", "Qh"])],
+      ["2s", "7s", "2h", "7h"],
+    ],
+    [
+      "with different chances and someone behind",
+      [
+        player("a", 1000, ["As", "Kh"]),
+        player("b", 1000, ["Ad", "Kc"]),
+        player("c", 1000, ["Jd", "Td"]),
+      ],
+      ["Qs", "7s", "2s", "3d"],
+    ],
+  ])("refuses a tied lead %s", (_, players, board) => {
+    const tied = hand({ players, board: board.map(c) });
+    const offers = handOffers(tied, RULE_30).filter((o) => o.pot.leaders.length > 1);
+    expect(offers.length).toBeGreaterThan(1);
+    expect(offers.map((o) => o.quote)).toEqual(
+      offers.map(() => ({ ok: false, block: "tied-lead" })),
+    );
     expect(offersDecided(tied, offers)).toBe(true);
   });
 
-  it("still sells a tied lead when the chances match", () => {
+  it("still sells equal tied leaders with someone behind them", () => {
     const tied = hand({
       players: [
         player("a", 1000, ["Js", "Jd"]),
