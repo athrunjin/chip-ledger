@@ -1,4 +1,4 @@
-import { BUILT_IN_RULES, RULE_30 } from "@holdem/core";
+import { BUILT_IN_RULES, blankInsuranceHand, RULE_30 } from "@holdem/core";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
@@ -11,6 +11,9 @@ export const Route = createFileRoute("/tools_/insurance")({
 });
 
 const SEATS = Array.from({ length: 9 }, (_, i) => ({ id: `seat-${i + 1}`, name: `玩家 ${i + 1}` }));
+
+const scratchHand = () =>
+  blankInsuranceHand({ id: "scratch", organizerId: "guest", gameId: "tool", createdAt: 0 });
 
 /** The calculator on its own: nothing here touches a game. */
 function InsuranceToolPage() {
@@ -46,7 +49,7 @@ function InsuranceToolPage() {
           ))}
         </select>
       </label>
-      <InsuranceCalculator rule={rule} seats={SEATS} />
+      <InsuranceCalculator rule={rule} seats={SEATS} createHand={scratchHand} />
     </Page>
   );
 }

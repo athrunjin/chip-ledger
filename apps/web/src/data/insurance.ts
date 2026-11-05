@@ -1,7 +1,10 @@
 import {
+  blankInsuranceHand,
   type Game,
+  handResult,
   INSURANCE_PLAYER_ID,
   type InsuranceBuyEvent,
+  type InsuranceHand,
   type InsuranceRecord,
   insuranceSeatChange,
   insuranceTopUp,
@@ -87,6 +90,147 @@ function reseat(gameId: string, events: readonly LedgerEvent[], occurredAt: numb
 
 function ledgerScope(gameId: string) {
   return { id: `ledger-${gameId}` };
+}
+
+export function newInsuranceHand(gameId: string): InsuranceHand {
+  return blankInsuranceHand({
+    id: crypto.randomUUID(),
+    organizerId: GUEST_ORGANIZER_ID,
+    gameId,
+    createdAt: Date.now(),
+  });
+}
+
+const handsKey = (gameId: string) => ["insurance-hands", gameId] as const;
+
+export function useInsuranceHands(gameId: string) {
+  return useQuery({
+    queryKey: handsKey(gameId),
+    queryFn: () => repository.insuranceHands.listByGame(gameId),
+  });
+}
+
+export function useSaveInsuranceHand(gameId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    scope: ledgerScope(gameId),
+    mutationFn: (hand: InsuranceHand) => repository.insuranceHands.save(hand),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: handsKey(gameId) }),
+  });
+}
+
+export function useDiscardInsuranceHand(gameId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    scope: ledgerScope(gameId),
+    mutationFn: (id: string) => repository.insuranceHands.remove(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: handsKey(gameId) }),
+  });
+}
+
+interface FinishInput {
+  readonly hand: InsuranceHand;
+  readonly handChips: number;
+}
+
+/** The hand's money reaches the ledger in one write, and only here. */
+export function useFinishInsuranceHand(gameId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    scope: ledgerScope(gameId),
+    mutationFn: async ({ hand, handChips }: FinishInput) => {
+      const events = await repository.ledger.listByGame(gameId);
+      const written = events.some(
+        (e) =>
+          (e.type === "insurance_buy" || e.type === "insurance_settle") && e.handId === hand.id,
+      );
+      if (!written && hand.purchases.length > 0) {
+        const seat = summarizeByPlayer(events).find((p) => p.playerId === INSURANCE_PLAYER_ID);
+        const cashOut = latestCashOut(events, INSURANCE_PLAYER_ID);
+        const stack = (seat?.stackChips ?? 0) + (cashOut?.chips ?? 0);
+        const { premiumChips, payoutChips } = handResult(hand);
+        const topUp = insuranceTopUp(stack + premiumChips, payoutChips, handChips);
+        const occurredAt = Date.now();
+        const handId = hand.id;
+        await repository.ledger.appendAll([
+          ...reseat(gameId, events, occurredAt),
+          ...(topUp > 0
+            ? [
+                {
+                  ...newEventMeta(gameId, occurredAt),
+                  type: "rebuy" as const,
+                  playerId: INSURANCE_PLAYER_ID,
+                  chips: topUp,
+                },
+              ]
+            : []),
+          ...hand.purchases.flatMap((purchase): LedgerEvent[] => {
+            const { playerId, street, oddsHundredths } = purchase;
+            const bought = {
+              ...newEventMeta(gameId, occurredAt),
+              type: "insurance_buy" as const,
+              handId,
+              playerId,
+              chips: purchase.premiumChips,
+              payoutChips: purchase.payoutChips,
+              outs: purchase.outs.length,
+              oddsHundredths,
+              street,
+            };
+            const hit = purchase.hit === true;
+            return [
+              bought,
+              {
+                ...newEventMeta(gameId, occurredAt),
+                type: "insurance_settle",
+                handId,
+                purchaseId: bought.id,
+                playerId,
+                hit,
+                chips: hit ? purchase.payoutChips : 0,
+              },
+            ];
+          }),
+        ]);
+      }
+      await repository.insuranceHands.save({ ...hand, status: "done" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ledger", gameId] });
+      queryClient.invalidateQueries({ queryKey: handsKey(gameId) });
+    },
+  });
+}
+
+/** Takes a finished hand back whole. Hands added to pay it stay bought. */
+export function useUndoInsuranceHand(gameId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    scope: ledgerScope(gameId),
+    mutationFn: async (handId: string) => {
+      const events = await repository.ledger.listByGame(gameId);
+      const occurredAt = Date.now();
+      await repository.ledger.appendAll(
+        events
+          .filter(
+            (e) =>
+              (e.type === "insurance_buy" || e.type === "insurance_settle") && e.handId === handId,
+          )
+          .map(
+            ({ id }): LedgerEvent => ({
+              ...newEventMeta(gameId, occurredAt),
+              type: "reversal",
+              reversedEventId: id,
+            }),
+          ),
+      );
+      await repository.insuranceHands.remove(handId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ledger", gameId] });
+      queryClient.invalidateQueries({ queryKey: handsKey(gameId) });
+    },
+  });
 }
 
 export type InsurancePurchase = Pick<

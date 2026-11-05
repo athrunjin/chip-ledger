@@ -44,6 +44,7 @@ const data: BackupData = {
     },
   ],
   insuranceRules: [],
+  insuranceHands: [],
 };
 
 const edit = (change: (backup: Record<string, unknown>) => void) => {
@@ -53,6 +54,24 @@ const edit = (change: (backup: Record<string, unknown>) => void) => {
 };
 
 describe("backup file", () => {
+  it("rejects a hand from a game outside the backup", () => {
+    const hand = {
+      id: "h",
+      organizerId: "guest",
+      gameId: "missing",
+      status: "open",
+      step: "players",
+      players: [],
+      pools: [],
+      board: [],
+      purchases: [],
+      declined: [],
+      createdAt: 1,
+    } as const;
+    const text = serializeBackup({ ...data, insuranceHands: [hand] }, 1);
+    expect(parseBackup(text)).toEqual({ ok: false, issue: "invalid" });
+  });
+
   it("reads version 2 backups, which have no saved rules", () => {
     const older = edit((backup) => {
       backup.version = 2;
@@ -175,7 +194,7 @@ describe("backup file", () => {
 
   it("rejects backups from a newer version", () => {
     const text = edit((backup) => {
-      backup.version = 4;
+      backup.version = 5;
     });
     expect(parseBackup(text)).toEqual({ ok: false, issue: "newer-version" });
   });

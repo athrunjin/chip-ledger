@@ -53,6 +53,49 @@ export interface SavedInsuranceRule {
   readonly createdAt: Timestamp;
 }
 
+export interface InsuranceHandPlayer {
+  readonly playerId: string;
+  /** What they put in. Ignored for a cover player, who matches the next deepest. */
+  readonly chips: number;
+  /** The deepest stack among these players. At most one per hand. */
+  readonly cover: boolean;
+  readonly cards: readonly number[];
+}
+
+/** Bought during a hand. Reaches the ledger only when the hand is finished. */
+export interface InsuranceHandPurchase {
+  readonly id: string;
+  readonly offerKey: string;
+  readonly playerId: string;
+  readonly street: "turn" | "river";
+  /** The cards sold, which decide the result. */
+  readonly outs: readonly number[];
+  readonly oddsHundredths: number;
+  readonly premiumChips: number;
+  readonly payoutChips: number;
+  /** Set once the card is dealt. */
+  readonly hit?: boolean;
+}
+
+export type InsuranceHandStep = "players" | "start" | "buy" | "deal" | "settle";
+
+/** One all-in worked through card by card. It is a draft until the organizer finishes it (ADR 0016). */
+export interface InsuranceHand {
+  readonly id: string;
+  readonly organizerId: OrganizerId;
+  readonly gameId: string;
+  readonly status: "open" | "done";
+  readonly step: InsuranceHandStep;
+  readonly players: readonly InsuranceHandPlayer[];
+  /** Dead money, one amount per pool. */
+  readonly pools: readonly number[];
+  readonly board: readonly number[];
+  readonly purchases: readonly InsuranceHandPurchase[];
+  /** Offers the organizer turned down. */
+  readonly declined: readonly string[];
+  readonly createdAt: Timestamp;
+}
+
 /** The insurance seat in a game. It has chips like a player but no record in the player list (ADR 0014). */
 export const INSURANCE_PLAYER_ID = "insurance";
 
@@ -138,6 +181,8 @@ export interface InsuranceBuyEvent extends LedgerEventBase {
   readonly outs: number;
   readonly oddsHundredths: number;
   readonly street: "turn" | "river";
+  /** The insurance hand this came from. Missing for one bought from an outs count. */
+  readonly handId?: string;
 }
 
 /** The card came: a hit moves the payout from the insurance seat to the player, a miss moves nothing. */
@@ -148,6 +193,7 @@ export interface InsuranceSettleEvent extends LedgerEventBase {
   readonly hit: boolean;
   /** Chips paid out, 0 on a miss. */
   readonly chips: number;
+  readonly handId?: string;
 }
 
 /** Ledger event. Append-only, never changed (ADR 0005). */
