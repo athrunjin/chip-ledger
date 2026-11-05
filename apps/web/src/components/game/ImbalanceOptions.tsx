@@ -20,7 +20,7 @@ export function ImbalanceOptions({
   onChange,
 }: ImbalanceOptionsProps) {
   const options: readonly [ImbalanceHandling, string][] = [
-    ["split", "玩家平均分摊"],
+    ["split", `按水${differenceChips > 0 ? "上" : "下"}比例分摊`],
     ["organizer", `组织者${differenceChips > 0 ? "补齐" : "收取"} ${cash}`],
     ["ignore", "不做处理"],
   ];

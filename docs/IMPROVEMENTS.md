@@ -48,19 +48,21 @@ Records discussions of feature and process improvements: what was proposed, how 
 - Problem: settlement is blocked until the chips balance, but at a real game a difference sometimes can't be traced.
 - Proposal:
   - Allow settling with a difference. Choosing that shows three options:
-    - Split evenly between players.
+    - Split in proportion to win/loss.
     - The organizer tops up a shortfall, or collects an excess.
     - Leave it unhandled.
   - The difference is chips cashed out − chips bought. Above 0, players took out more than went in, so someone has to pay it. Below 0, chips are left over.
-  - Splitting uses `allocate`, so the shares add up to exactly the difference.
+  - A split comes off the side that is too large, in proportion to each player's result, using `allocate` so the shares add up to exactly the difference.
+    Example: with 200 too much on the win side, winners of 3000 and 1000 give up 150 and 50. With too much on the loss side, losers pay less in the same way.
 - Impact: `netCents` currently refuses unbalanced books, so settlement calculations need to change, along with the results table and shared image. Saving the choice is a data model change and needs an ADR.
 - Settled details:
-  - An even split is shared by every player in the game, including those who left early.
+  - Only players on the side that is too large share a split. Anyone who broke even isn't affected.
   - The organizer gets a 组织者 row in results and is a party in transfers under both plans.
   - When unhandled, transfers pay as far as they can and the remaining difference shows as a warning.
   - The choice is saved with the game, can be changed on the settlement page, and appears in the shared image.
   - Unbalanced books always need a choice before settling. There's no default.
   - Results show adjusted amounts with a note explaining the split. Win/loss in chips keeps the real figures.
+  - An even split between all players was tried first and replaced after review, because it charged players who broke even.
 - Depends on: #I-013
 - Decision: do.
 - Tracking: issue #36, [ADR 0013](adr/0013-unbalanced-settlement.md)

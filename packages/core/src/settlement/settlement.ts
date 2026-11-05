@@ -70,6 +70,27 @@ export interface SettlementOutcome {
   readonly unresolved: Cents;
 }
 
+/**
+ * Takes the difference off the side that is too large, in proportion to each player's result.
+ * With 200 too much, winners of 3000 and 1000 give up 150 and 50. With too little, losers pay less.
+ */
+function splitDifference(raw: readonly PlayerNet[], difference: Cents): PlayerNet[] {
+  const sign = Math.sign(difference);
+  const side = raw.filter((p) => p.net * sign > 0);
+  const shares = new Map<string, Cents>();
+  allocate(
+    cents(Math.abs(difference)),
+    side.map((p) => Math.abs(p.net)),
+  ).forEach((share, i) => {
+    const player = side[i];
+    if (player) shares.set(player.playerId, share);
+  });
+  return raw.map(({ playerId, net }) => ({
+    playerId,
+    net: cents(net - sign * (shares.get(playerId) ?? ZERO)),
+  }));
+}
+
 /** Works out results for any books. Unbalanced books with no handling chosen stay unhandled. */
 export function settlementOutcome(
   players: readonly PlayerLedger[],
@@ -81,15 +102,7 @@ export function settlementOutcome(
   if (difference === 0) return { nets: raw, difference, unresolved: ZERO };
 
   if (handling === "split") {
-    const shares = allocate(
-      difference,
-      raw.map(() => 1),
-    );
-    const nets = raw.map((p, i) => ({
-      playerId: p.playerId,
-      net: cents(p.net - (shares[i] ?? ZERO)),
-    }));
-    return { nets, difference, unresolved: ZERO };
+    return { nets: splitDifference(raw, difference), difference, unresolved: ZERO };
   }
   if (handling === "organizer") {
     const organizer = { playerId: ORGANIZER_COLLECTOR, net: cents(-difference) };

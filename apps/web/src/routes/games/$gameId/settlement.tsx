@@ -207,9 +207,10 @@ function SettlementResult({
       return `未处理差额 ${size}${holder}`;
     }
     if (organizerNet !== undefined) return `组织者${difference > 0 ? "补齐" : "收取"} ${size}`;
-    const count = results.length;
-    const each = formatGameMoney(cents(Math.round(-difference / count)), currency, "exceptZero");
-    return `差额由 ${count} 人平均分摊，每人${difference % count === 0 ? "" : "约"} ${each}`;
+    const count = results.filter((r) => r.netChips * difference > 0).length;
+    return difference > 0
+      ? `水上多 ${size}，由 ${count} 位赢家按水上比例扣减`
+      : `水下多 ${size}，由 ${count} 位输家按水下比例少付`;
   }
   const note = imbalanceNote();
 

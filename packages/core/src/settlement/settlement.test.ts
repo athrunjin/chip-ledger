@@ -192,12 +192,30 @@ describe("settlementOutcome", () => {
     });
   });
 
-  it("splits the difference evenly between players", () => {
-    const { nets, difference, unresolved } = settlementOutcome(excess, oneToOne, "split");
-    expect(difference).toBe(30_000);
+  it("takes an excess off winners in proportion to their wins", () => {
+    const players = [ledger("a", 1000, 4000), ledger("b", 1000, 2000), ledger("c", 3800, 0)];
+    const { nets, difference, unresolved } = settlementOutcome(players, oneToOne, "split");
+    expect(difference).toBe(20_000);
     expect(unresolved).toBe(0);
-    expect(netOf(nets, "a")).toBe(35_000);
-    expect(netOf(nets, "b")).toBe(-35_000);
+    expect(netOf(nets, "a")).toBe(285_000);
+    expect(netOf(nets, "b")).toBe(95_000);
+    expect(netOf(nets, "c")).toBe(-380_000);
+  });
+
+  it("lets losers pay less in proportion when chips are left over", () => {
+    const players = [ledger("a", 3000, 0), ledger("b", 1000, 0), ledger("c", 1000, 4800)];
+    const { nets, difference } = settlementOutcome(players, oneToOne, "split");
+    expect(difference).toBe(-20_000);
+    expect(netOf(nets, "a")).toBe(-285_000);
+    expect(netOf(nets, "b")).toBe(-95_000);
+    expect(netOf(nets, "c")).toBe(380_000);
+  });
+
+  it("never moves a player past 0 when splitting", () => {
+    const players = [ledger("a", 500, 1000), ledger("b", 500, 500)];
+    const { nets } = settlementOutcome(players, oneToOne, "split");
+    expect(netOf(nets, "a")).toBe(0);
+    expect(netOf(nets, "b")).toBe(0);
   });
 
   it("has the organizer pay an excess", () => {

@@ -17,7 +17,7 @@ Settlement used to refuse books whose chips don't balance. At a live game a diff
 
 - `Game` gains an optional `imbalanceHandling`: `split`, `organizer` or `ignore`. It's only used when the books don't balance, and they always need a choice first.
 - `settlementOutcome` replaces `netCents` for display. It returns results after handling, the cash difference and any unresolved part.
-- `split` shares the difference between every player in the game with `allocate`, so results add up to exactly 0.
+- `split` takes the difference off the side that is too large, in proportion to each player's result, using `allocate`. Winners give up part of an excess, and losers pay less when chips are left over. Results add up to exactly 0, and nobody moves past 0.
 - `organizer` adds a `ORGANIZER_COLLECTOR` entry to the results, so both transfer plans treat them as a party.
 - `ignore` leaves results as they are. Transfers pay as far as they can, and the unresolved amount is shown.
 - `netCents` still refuses unbalanced books, for callers that need a guarantee.
