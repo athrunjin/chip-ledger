@@ -23,6 +23,7 @@ Once recorded, a decision isn't edited. If it changes later, write a new record 
 | [0016](0016-insurance-hands.md) | An insurance hand as a draft, written to the ledger when finished | Accepted |
 | [0017](0017-finished-hand-sets-stacks.md) | A finished hand sets the stacks it knows | Superseded in part by 0018 |
 | [0018](0018-short-premium-buy-in.md) | A premium a player cannot pay buys whole hands, once confirmed | Accepted |
+| [0019](0019-cover-short-premium.md) | A cover player can be short of a premium too | Accepted |
 
 ## Template
 

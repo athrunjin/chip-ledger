@@ -231,7 +231,13 @@ function GameInsurance({ game }: { game: Game }) {
             },
           }}
           seat={
-            handChips === undefined ? undefined : { stackChips: seat?.stackChips ?? 0, handChips }
+            handChips === undefined
+              ? undefined
+              : {
+                  stackChips: seat?.stackChips ?? 0,
+                  handChips,
+                  playerStacks: new Map(ledger.map((p) => [p.playerId, p.stackChips])),
+                }
           }
           openHand={openHand}
           createHand={() => newInsuranceHand(gameId)}

@@ -45,6 +45,8 @@ export interface HandStore {
 export interface SeatChips {
   readonly stackChips: number;
   readonly handChips: number;
+  /** Players' stacks before the hand. */
+  readonly playerStacks: ReadonlyMap<string, number>;
 }
 
 interface InsuranceHandFlowProps {

@@ -212,7 +212,7 @@ export interface PlayerHandResult {
   readonly insuranceChips: number;
   /** The hand and the insurance together. */
   readonly netChips: number;
-  /** Chips left after the hand. A cover player has more behind, so theirs is unknown. */
+  /** Chips left after the hand. A cover player's stack stays for the organizer to type. */
   readonly stackChips: number | null;
   /** Premium the player's winnings could not pay. */
   readonly shortChips: number;
@@ -221,8 +221,12 @@ export interface PlayerHandResult {
 /**
  * How the finished board pays each player. Everyone but the cover is all-in, so what they end with
  * is all they have. An odd chip goes to the first winner entered, as seats are not recorded.
+ * `tableStacks` holds the stacks before the hand: a cover's chips behind can pay a premium too.
  */
-export function playerHandResults(hand: InsuranceHand): PlayerHandResult[] {
+export function playerHandResults(
+  hand: InsuranceHand,
+  tableStacks: ReadonlyMap<string, number> = new Map(),
+): PlayerHandResult[] {
   const cardsOf = new Map(hand.players.map((p) => [p.playerId, p.cards]));
   const won = new Map<string, number>();
   const refunds = new Map<string, number>();
@@ -251,15 +255,19 @@ export function playerHandResults(hand: InsuranceHand): PlayerHandResult[] {
     const potChips = won.get(playerId) ?? 0;
     const refundChips = refunds.get(playerId) ?? 0;
     const left = potChips + refundChips + insuranceChips;
+    const stake = stakeOf(player, hand.players);
+    const tableStack = tableStacks.get(playerId);
+    const behind = Math.max(0, (tableStack ?? 0) - stake);
+    const unknownCover = cover && tableStack === undefined;
     return {
       playerId,
       cover,
       potChips,
       refundChips,
       insuranceChips,
-      netChips: left - stakeOf(player, hand.players),
+      netChips: left - stake,
       stackChips: cover ? null : Math.max(0, left),
-      shortChips: cover ? 0 : Math.max(0, -left),
+      shortChips: unknownCover ? 0 : Math.max(0, -(left + (cover ? behind : 0))),
     };
   });
 }

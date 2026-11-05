@@ -192,6 +192,35 @@ describe("playerHandResults", () => {
     expect(k).toMatchObject({ cover: true, netChips: -1000, stackChips: null });
   });
 
+  describe("a cover player's premium", () => {
+    const players = [aces, player("k", 0, ["Ks", "Kd"], true)];
+    const flop = hand({ players, board: river.slice(0, 3), step: "buy" });
+    const offer = offerOf(hand({ players, board: river.slice(0, 3) }));
+    if (!offer.quote.ok) throw new Error("Expected a quote");
+    const bought = buyOffer(flop, offer, "p", offer.quote.fullPot, offer.quote.oddsHundredths);
+    const paying = {
+      ...bought,
+      purchases: bought.purchases.map((purchase) => ({ ...purchase, playerId: "k" })),
+    };
+    const lost = dealCard(dealCard(paying, c("3c")), c("4h"));
+    const premium = paying.purchases[0]?.premiumChips ?? 0;
+    const shortOf = (stack: number) =>
+      playerHandResults(lost, new Map([["k", stack]]))[1]?.shortChips;
+
+    it("is short when the chips behind cannot pay it", () => {
+      expect(shortOf(1000)).toBe(premium);
+      expect(shortOf(1000 + premium - 1)).toBe(1);
+    });
+
+    it("is paid from the chips behind", () => {
+      expect(shortOf(1000 + premium)).toBe(0);
+    });
+
+    it("is never short without a known stack", () => {
+      expect(playerHandResults(lost)[1]?.shortChips).toBe(0);
+    });
+  });
+
   it("adds insurance to the player's result, and notes a premium they could not pay", () => {
     const flop = hand({ board: river.slice(0, 3), step: "buy" });
     const purchased = bought(flop);

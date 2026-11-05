@@ -149,14 +149,14 @@ export function useFinishInsuranceHand(gameId: string) {
       const written = events.some((e) => belongsToHand(e, hand.id));
       if (!written) {
         const ledger = summarizeByPlayer(events);
-        const results = playerHandResults(hand).filter(({ playerId }) =>
+        const tableStacks = new Map(ledger.map((p) => [p.playerId, p.stackChips]));
+        const results = playerHandResults(hand, tableStacks).filter(({ playerId }) =>
           ledger.some((p) => p.playerId === playerId && p.seated),
         );
         const buyIns = premiumBuyIns(results, handChips);
         const stackEvents = results.flatMap(({ playerId, stackChips }) => {
-          if (stackChips === null) return [];
-          const buyIn = buyIns.find((b) => b.playerId === playerId);
-          return [{ playerId, chips: buyIn?.stackChips ?? stackChips }];
+          const chips = buyIns.find((b) => b.playerId === playerId)?.stackChips ?? stackChips;
+          return chips === null ? [] : [{ playerId, chips }];
         });
         const seat = ledger.find((p) => p.playerId === INSURANCE_PLAYER_ID);
         const cashOut = latestCashOut(events, INSURANCE_PLAYER_ID);

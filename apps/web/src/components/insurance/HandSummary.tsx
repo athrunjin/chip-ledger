@@ -3,6 +3,7 @@ import {
   type InsuranceHand,
   insuranceTopUp,
   type PlayerHandResult,
+  type PremiumBuyIn,
   playerHandResults,
   premiumBuyIns,
 } from "@holdem/core";
@@ -26,12 +27,17 @@ function PlayerResult({
   result,
   name,
   cards,
+  buyIn,
+  handChips,
 }: {
   result: PlayerHandResult;
   name: string;
   cards: readonly number[];
+  buyIn: PremiumBuyIn | undefined;
+  handChips: number | undefined;
 }) {
   const { netChips, potChips, refundChips, insuranceChips, stackChips, shortChips } = result;
+  const stackAfter = buyIn?.stackChips ?? stackChips;
   return (
     <li className="rounded-xl border border-line bg-surface p-3">
       <div className="flex items-center gap-2">
@@ -51,7 +57,12 @@ function PlayerResult({
         <Line label="从底池拿走">{chipText(potChips)}</Line>
         {refundChips > 0 && <Line label="退回未跟注">{chipText(refundChips)}</Line>}
         <Line label="保险盈亏">{formatSignedChips(insuranceChips)}</Line>
-        <Line label="后手">{stackChips === null ? "Cover 不适用" : chipText(stackChips)}</Line>
+        {buyIn && handChips !== undefined && (
+          <Line label="需买入">
+            {buyIn.buyInChips / handChips} 手（{chipText(buyIn.buyInChips)}）
+          </Line>
+        )}
+        <Line label="后手">{stackAfter === null ? "Cover 不适用" : chipText(stackAfter)}</Line>
       </dl>
       {shortChips > 0 && (
         <p className="mt-1 text-sm text-highlight">
@@ -87,7 +98,7 @@ export function HandSummary({
   const topUp = seat
     ? insuranceTopUp(seat.stackChips + premiumChips, payoutChips, seat.handChips)
     : 0;
-  const results = playerHandResults(hand);
+  const results = playerHandResults(hand, seat?.playerStacks);
   const seated = results.filter(({ playerId }) => seatedIds.includes(playerId));
   const buyIns = recording && seat ? premiumBuyIns(seated, seat.handChips) : [];
   const [confirming, setConfirming] = useState(false);
@@ -103,6 +114,8 @@ export function HandSummary({
             result={result}
             name={nameOf(result.playerId)}
             cards={hand.players.find((p) => p.playerId === result.playerId)?.cards ?? []}
+            buyIn={buyIns.find((b) => b.playerId === result.playerId)}
+            handChips={seat?.handChips}
           />
         ))}
       </ul>
