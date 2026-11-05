@@ -13,6 +13,7 @@ import { cn } from "@/lib/cn";
 import { PremiumDialog } from "./PremiumDialog";
 
 const BLOCK_TEXT: Record<QuoteBlock, string> = {
+  "uneven-tie": "并列领先但胜率不同，不能投保",
   "street-closed": "当前规则不卖转牌保险",
   "too-many-players": "这个底池人数超过规则上限，不能投保",
   "no-outs": "没有反超牌，不需要保险",

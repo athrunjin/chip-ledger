@@ -8,6 +8,7 @@ import type {
 import {
   type AllInHand,
   analyzeAllIn,
+  hasUnevenTie,
   type InsuranceStreet,
   nextStreet,
   type PotAnalysis,
@@ -103,6 +104,7 @@ export function handOffers(hand: InsuranceHand, rule: InsuranceRule): HandOffer[
         shareChips: leader.shareChips,
         stakeChips: leader.stakeChips,
         outs: soldOuts(rule, leader),
+        unevenTie: hasUnevenTie(pot),
       };
       const tied = rule.tieOuts === "include" ? leader.tieCards : [];
       return {

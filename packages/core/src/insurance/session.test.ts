@@ -99,6 +99,31 @@ describe("offers", () => {
     expect(reviseOffer(bought(start), "river-0-a").purchases).toEqual([]);
   });
 
+  it("refuses a tied lead when the chances differ", () => {
+    const tied = hand({
+      players: [player("a", 1000, ["As", "Kh"]), player("b", 1000, ["Ad", "Kc"])],
+      board: [c("Qs"), c("7s"), c("2s"), c("3d")],
+    });
+    const offers = handOffers(tied, RULE_30);
+    expect(offers.map((o) => o.quote)).toEqual([
+      { ok: false, block: "uneven-tie" },
+      { ok: false, block: "uneven-tie" },
+    ]);
+    expect(offersDecided(tied, offers)).toBe(true);
+  });
+
+  it("still sells a tied lead when the chances match", () => {
+    const tied = hand({
+      players: [
+        player("a", 1000, ["Js", "Jd"]),
+        player("b", 1000, ["Jh", "Jc"]),
+        player("c", 1000, ["5s", "5d"]),
+      ],
+      board: [c("2c"), c("7h"), c("9d"), c("3s")],
+    });
+    expect(handOffers(tied, RULE_30).map((o) => o.quote.ok)).toEqual([true, true]);
+  });
+
   it("needs no decision when nothing can be sold", () => {
     const dead = hand({ players: [aces, player("x", 1000, ["As", "Ad"])] });
     expect(offersDecided(dead, [])).toBe(true);

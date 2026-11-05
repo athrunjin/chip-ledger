@@ -44,6 +44,15 @@ export interface PotAnalysis extends Pot {
   readonly equity: Readonly<Record<string, number>>;
 }
 
+/** Tied leaders with different chances are not really level, so neither has a lead to insure. */
+export function hasUnevenTie({
+  leaders,
+  equity,
+}: Pick<PotAnalysis, "leaders" | "equity">): boolean {
+  const chances = leaders.map(({ playerId }) => equity[playerId] ?? 0);
+  return Math.max(...chances) - Math.min(...chances) > 1e-9;
+}
+
 function unseenCards(hands: readonly AllInHand[], board: readonly Card[]): Card[] {
   const seen = new Set<Card>([...board, ...hands.flatMap((h) => h.cards)]);
   return DECK.filter((card) => !seen.has(card));
