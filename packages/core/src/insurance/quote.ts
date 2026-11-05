@@ -7,6 +7,20 @@ export function premiumFor(coverChips: number, oddsHundredths: number): number {
   return Math.ceil((coverChips * 100) / oddsHundredths);
 }
 
+/**
+ * Premium that leaves the buyer `netChips` on a hit, once the premium is paid. Without a refund each
+ * chip of premium earns its odds less itself. At odds of 1 or below that earns nothing, so this
+ * falls back to covering `netChips` with the payout alone.
+ */
+export function premiumForNet(
+  netChips: number,
+  oddsHundredths: number,
+  refundPremium: boolean,
+): number {
+  const gain = refundPremium ? oddsHundredths : oddsHundredths - 100;
+  return gain > 0 ? Math.ceil((netChips * 100) / gain) : premiumFor(netChips, oddsHundredths);
+}
+
 /** What `premiumChips` pays on a hit, including any refunded premium. */
 export function payoutFor(
   premiumChips: number,
@@ -48,11 +62,11 @@ export type InsuranceQuote =
   | {
       readonly ok: true;
       readonly oddsHundredths: number;
-      /** Highest premium allowed: the payout may not pass the pot share, nor the premium the rule's limit. */
+      /** Highest premium allowed: a hit may not leave more than the pot share, nor the premium pass the rule's limit. */
       readonly maxPremiumChips: number;
-      /** Covers what the buyer put in. */
+      /** A hit leaves the buyer what they put in. */
       readonly stake: QuoteOption;
-      /** Covers the buyer's whole share of the pot. */
+      /** A hit leaves the buyer their whole share of the pot. */
       readonly fullPot: QuoteOption;
     };
 
@@ -88,9 +102,11 @@ export function quoteInsurance(input: QuoteInput): InsuranceQuote {
   const oddsHundredths = rule.oddsHundredths[outs - 1];
   if (oddsHundredths === undefined) return { ok: false, block: "too-many-outs" };
 
-  const maxPremiumChips = Math.min(premiumFor(shareChips, oddsHundredths), capChips(input));
-  const option = (coverChips: number) => {
-    const target = premiumFor(coverChips, oddsHundredths);
+  const premiumToLeave = (netChips: number) =>
+    premiumForNet(netChips, oddsHundredths, rule.refundPremium);
+  const maxPremiumChips = Math.min(premiumToLeave(shareChips), capChips(input));
+  const option = (netChips: number) => {
+    const target = premiumToLeave(netChips);
     const premium = Math.min(target, maxPremiumChips);
     return priceOption(input, oddsHundredths, premium, premium < target);
   };

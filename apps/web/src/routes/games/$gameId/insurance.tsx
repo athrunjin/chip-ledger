@@ -60,15 +60,32 @@ function GameInsurance({ game }: { game: Game }) {
     .map((p) => ({ id: p.playerId, name: nameOf(p.playerId), stackChips: p.stackChips }));
   const records = insuranceRecords(events).toReversed();
 
-  function handleBuy({ playerId, option, oddsHundredths, outs, street }: BoughtInsurance) {
-    buyInsurance.mutate({
-      playerId,
-      chips: option.premiumChips,
-      payoutChips: option.payoutChips,
-      outs,
-      oddsHundredths,
-      street,
-    });
+  async function handleBuy({ playerId, option, oddsHundredths, outs, street }: BoughtInsurance) {
+    try {
+      return await buyInsurance.mutateAsync({
+        playerId,
+        chips: option.premiumChips,
+        payoutChips: option.payoutChips,
+        outs,
+        oddsHundredths,
+        street,
+      });
+    } catch {
+      return undefined; // The page shows the failure from the mutation
+    }
+  }
+
+  function handleRevise(purchaseId: string) {
+    const record = records.find(({ purchase }) => purchase.id === purchaseId);
+    if (!record) return true;
+    if (
+      record.status !== "pending" &&
+      !window.confirm("这笔保险已开奖，修改会撤销它的结果。继续？")
+    ) {
+      return false;
+    }
+    undoInsurance.mutate(record);
+    return true;
   }
 
   function handleSettle(record: InsuranceRecord, hit: boolean) {
@@ -76,7 +93,7 @@ function GameInsurance({ game }: { game: Game }) {
   }
 
   function handleUndo(record: InsuranceRecord) {
-    if (window.confirm("撤销这笔保险？保费和赔付都会退回。")) undoInsurance.mutate(record);
+    if (window.confirm("撤销这笔保险？它的盈亏也会一起撤销。")) undoInsurance.mutate(record);
   }
 
   const failed = buyInsurance.isError || settleInsurance.isError || undoInsurance.isError;
@@ -108,7 +125,11 @@ function GameInsurance({ game }: { game: Game }) {
           rule={insurance}
           seats={seats}
           saving={buyInsurance.isPending}
-          onBuy={handleBuy}
+          recorder={{
+            onBuy: handleBuy,
+            onRevise: handleRevise,
+            boughtIds: new Set(records.map(({ purchase }) => purchase.id)),
+          }}
         />
       )}
 

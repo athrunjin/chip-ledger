@@ -515,39 +515,37 @@ describe("insurance", () => {
 
   const start = [chip("s", "buy_in", seat, 1000), chip("a", "buy_in", "a", 1000)];
 
-  it("moves the premium to the insurance seat when bought", () => {
+  it("moves no chips until the card is dealt", () => {
     expect(stacks([...start, later(buy("b", "a", 100, 350), 2)])).toEqual({
-      insurance: 1100,
-      a: 900,
+      insurance: 1000,
+      a: 1000,
     });
   });
 
-  it("moves the payout back on a hit and nothing on a miss", () => {
+  it("moves only the seat when the card is dealt", () => {
     const bought = [...start, later(buy("b", "a", 100, 350), 2)];
     expect(stacks([...bought, later(settle("h", "b", "a", 350), 3)])).toEqual({
       insurance: 750,
-      a: 1250,
+      a: 1000,
     });
     expect(stacks([...bought, later(settle("m", "b", "a", 0), 3)])).toEqual({
       insurance: 1100,
-      a: 900,
+      a: 1000,
     });
   });
 
-  it("keeps the table balanced through a purchase, a hit and an undo", () => {
+  it("restores the seat when a result is undone", () => {
     const events = [
       ...start,
       later(buy("b", "a", 100, 350), 2),
       later(settle("h", "b", "a", 350), 3),
     ];
-    expect(ledgerTotals(summarizeByPlayer(events)).balanceChips).toBe(0);
-
     const undone = [...events, later(reversal("r1", "h"), 4), later(reversal("r2", "b"), 4)];
     expect(stacks(undone)).toEqual({ insurance: 1000, a: 1000 });
     expect(insuranceRecords(undone)).toEqual([]);
   });
 
-  it("stays balanced for any purchases on a stack that can pay them", () => {
+  it("changes the seat by exactly its results and never a player's stack", () => {
     const purchase = fc.record({
       premium: fc.integer({ min: 1, max: 50 }),
       payout: fc.integer({ min: 1, max: 900 }),
@@ -563,20 +561,23 @@ describe("insurance", () => {
           events.push(later(buy(`b${i}`, "a", premium, payout), i * 2 + 2));
           events.push(later(settle(`h${i}`, `b${i}`, "a", hit ? payout : 0), i * 2 + 3));
         });
-        expect(ledgerTotals(summarizeByPlayer(events)).balanceChips).toBe(0);
+        const net = purchases.reduce(
+          (total, { premium, payout, hit }) => total + premium - (hit ? payout : 0),
+          0,
+        );
+        expect(stacks(events)).toEqual({ insurance: 100_000 + net, a: 1000 });
       }),
     );
   });
 
-  it("takes an all-in player's premium without a negative stack, and undoes exactly that", () => {
+  it("leaves a typed stack alone", () => {
     const events = [
-      chip("s", "buy_in", seat, 1000),
-      chip("a", "buy_in", "a", 1000),
+      ...start,
       later({ ...base, id: "t", type: "stack_set", playerId: "a", chips: 30 }, 2),
       later(buy("b", "a", 100, 350), 3),
+      later(settle("h", "b", "a", 350), 4),
     ];
-    expect(stacks(events).a).toBe(0);
-    expect(stacks([...events, later(reversal("r", "b"), 4)]).a).toBe(30);
+    expect(stacks(events).a).toBe(30);
   });
 
   it("reports purchases with their results", () => {

@@ -10,15 +10,17 @@ import {
   type PotTotals,
   parseChips,
   potTotals,
+  type QuoteInput,
   soldOuts,
 } from "@holdem/core";
 import { ChevronDown, Plus, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { TextField } from "@/components/TextField";
 import { formatCardText } from "@/lib/cards";
 import { cn } from "@/lib/cn";
 import { CardPicker } from "./CardPicker";
-import { QuotePanel, type QuotePurchase } from "./QuotePanel";
+import { DeadMoneyDialog } from "./DeadMoneyDialog";
+import { type QuoteDecision, QuotePanel, type QuotePurchase } from "./QuotePanel";
 import { SeatPicker } from "./SeatPicker";
 
 export interface InsuranceSeat {
@@ -34,25 +36,40 @@ export interface BoughtInsurance extends QuotePurchase {
   readonly street: InsuranceStreet;
 }
 
+export interface InsuranceRecorder {
+  /** Resolves to the purchase's ID, or undefined if it was not saved. */
+  onBuy: (purchase: BoughtInsurance) => Promise<string | undefined>;
+  /** Takes a purchase back for changing. False if the organizer kept it. */
+  onRevise: (purchaseId: string) => boolean;
+  /** Purchases still in effect. */
+  boughtIds: ReadonlySet<string>;
+}
+
 interface InsuranceCalculatorProps {
   rule: InsuranceRule;
   seats: readonly InsuranceSeat[];
   saving?: boolean;
   /** Missing for the standalone calculator, which records nothing. */
-  onBuy?: ((purchase: BoughtInsurance) => void) | undefined;
+  recorder?: InsuranceRecorder;
 }
+
+/** What has been decided for each quote on this page, by a key for that exact offer. */
+interface Decisions {
+  get: (key: string) => QuoteDecision | undefined;
+  buy: (key: string, purchase: BoughtInsurance) => Promise<void>;
+  decline: (key: string) => void;
+  revise: (key: string) => void;
+}
+
+type CalculatorViewProps = Omit<InsuranceCalculatorProps, "recorder"> & {
+  decisions: Decisions | undefined;
+};
 
 interface Row {
   readonly key: string;
   readonly seatId: string | null;
   readonly chips: string;
   readonly cards: readonly (Card | null)[];
-}
-
-/** Chips in the pot beyond what the all-in players put in. */
-interface Pool {
-  readonly text: string;
-  readonly confirmed: boolean;
 }
 
 /** Where the card picker is filling. */
@@ -96,6 +113,43 @@ function CardSlot({
   );
 }
 
+function LeaderQuote({
+  id,
+  decisionKey,
+  input,
+  playerId,
+  saving,
+  decisions,
+}: {
+  id: string;
+  decisionKey: string;
+  input: QuoteInput;
+  playerId: string;
+  saving: boolean | undefined;
+  decisions: Decisions | undefined;
+}) {
+  return (
+    <QuotePanel
+      id={id}
+      input={input}
+      saving={saving}
+      decision={decisions?.get(decisionKey)}
+      onBuy={
+        decisions &&
+        ((purchase) =>
+          decisions.buy(decisionKey, {
+            ...purchase,
+            playerId,
+            outs: input.outs,
+            street: input.street,
+          }))
+      }
+      onDecline={decisions && (() => decisions.decline(decisionKey))}
+      onRevise={decisions && (() => decisions.revise(decisionKey))}
+    />
+  );
+}
+
 function PotCard({
   pot,
   index,
@@ -103,7 +157,8 @@ function PotCard({
   street,
   nameOf,
   saving,
-  onBuy,
+  boardKey,
+  decisions,
 }: {
   pot: PotAnalysis;
   index: number;
@@ -111,7 +166,8 @@ function PotCard({
   street: InsuranceStreet;
   nameOf: (id: string) => string;
   saving: boolean | undefined;
-  onBuy: InsuranceCalculatorProps["onBuy"];
+  boardKey: string;
+  decisions: Decisions | undefined;
 }) {
   const title = index === 0 ? "主池" : `边池 ${index}`;
   return (
@@ -147,8 +203,9 @@ function PotCard({
               <li>平分：{leader.tieCards.map(formatCardText).join(" ")}</li>
             )}
           </ul>
-          <QuotePanel
+          <LeaderQuote
             id={`${index}-${leader.playerId}`}
+            decisionKey={[boardKey, pot.playerIds, pot.amountChips, leader.playerId].join("|")}
             input={{
               rule,
               street,
@@ -158,17 +215,9 @@ function PotCard({
               stakeChips: leader.stakeChips,
               outs: soldOuts(rule, leader),
             }}
+            playerId={leader.playerId}
             saving={saving}
-            onBuy={
-              onBuy &&
-              ((purchase) =>
-                onBuy({
-                  ...purchase,
-                  playerId: leader.playerId,
-                  outs: soldOuts(rule, leader),
-                  street,
-                }))
-            }
+            decisions={decisions}
           />
         </div>
       ))}
@@ -176,87 +225,7 @@ function PotCard({
   );
 }
 
-function PoolRow({
-  index,
-  pool,
-  onChange,
-  onRemove,
-}: {
-  index: number;
-  pool: Pool;
-  onChange: (pool: Pool) => void;
-  onRemove: () => void;
-}) {
-  const label = `池 ${index + 1}`;
-  const inputRef = useRef<HTMLInputElement>(null);
-  const valid = Boolean(parseChips(pool.text));
-
-  useEffect(() => {
-    if (!pool.confirmed) inputRef.current?.focus();
-  }, [pool.confirmed]);
-
-  const removeButton = (
-    <button
-      type="button"
-      aria-label={`删除${label}`}
-      onClick={onRemove}
-      className="grid size-12 shrink-0 place-items-center rounded-xl border border-line"
-    >
-      <X className="size-5" aria-hidden />
-    </button>
-  );
-
-  if (pool.confirmed) {
-    return (
-      <div className="mt-1 flex items-center gap-2">
-        <p className="flex min-h-12 min-w-0 flex-1 items-center justify-between gap-2 rounded-xl border border-line bg-surface px-3">
-          <span className="text-muted">{label}</span>
-          <span className="font-semibold tabular-nums">{chipText(parseChips(pool.text) ?? 0)}</span>
-        </p>
-        <button
-          type="button"
-          onClick={() => onChange({ ...pool, confirmed: false })}
-          className="min-h-12 shrink-0 rounded-xl border border-line px-3 font-medium"
-        >
-          修改
-        </button>
-        {removeButton}
-      </div>
-    );
-  }
-
-  return (
-    <form
-      className="mt-1 flex items-end gap-2"
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (valid) onChange({ ...pool, confirmed: true });
-      }}
-    >
-      <div className="min-w-0 flex-1">
-        <TextField
-          id={`pool-${index}`}
-          label={label}
-          value={pool.text}
-          issue={undefined}
-          inputMode="numeric"
-          inputRef={inputRef}
-          onChange={(value) => onChange({ ...pool, text: digitsOnly(value) })}
-        />
-      </div>
-      <button
-        type="submit"
-        disabled={!valid}
-        className="min-h-12 shrink-0 rounded-xl bg-accent px-4 font-semibold text-accent-text disabled:opacity-40"
-      >
-        确认
-      </button>
-      {removeButton}
-    </form>
-  );
-}
-
-function PotSummary({ totals }: { totals: PotTotals }) {
+function PotSummary({ totals, onEditDead }: { totals: PotTotals; onEditDead: () => void }) {
   return (
     <section aria-label="底池合计" className="mt-3 rounded-xl border border-line bg-surface p-3">
       <dl className="grid grid-cols-2 gap-2">
@@ -266,7 +235,17 @@ function PotSummary({ totals }: { totals: PotTotals }) {
         </div>
         <div>
           <dt className="text-sm text-muted">死钱（已含在内）</dt>
-          <dd className="text-xl font-semibold tabular-nums">{chipText(totals.deadChips)}</dd>
+          <dd className="flex items-center justify-between gap-2">
+            <span className="text-xl font-semibold tabular-nums">{chipText(totals.deadChips)}</span>
+            <button
+              type="button"
+              aria-label="编辑死钱"
+              onClick={onEditDead}
+              className="grid size-11 shrink-0 place-items-center rounded-lg border border-line text-highlight"
+            >
+              <Plus className="size-5" aria-hidden />
+            </button>
+          </dd>
         </div>
       </dl>
       {totals.uncalledChips > 0 && (
@@ -278,10 +257,11 @@ function PotSummary({ totals }: { totals: PotTotals }) {
   );
 }
 
-function ByCards({ rule, seats, saving, onBuy }: InsuranceCalculatorProps) {
+function ByCards({ rule, seats, saving, decisions }: CalculatorViewProps) {
   const [rows, setRows] = useState<readonly Row[]>([blankRow("row-0"), blankRow("row-1")]);
   const rowsAdded = useRef(rows.length);
-  const [pools, setPools] = useState<readonly Pool[]>([]);
+  const [pools, setPools] = useState<readonly string[]>([]);
+  const [editingDead, setEditingDead] = useState(false);
   const [board, setBoard] = useState<readonly (Card | null)[]>([null, null, null, null, null]);
   const [slot, setSlot] = useState<Slot>();
   const [seatRow, setSeatRow] = useState<string>();
@@ -301,7 +281,7 @@ function ByCards({ rule, seats, saving, onBuy }: InsuranceCalculatorProps) {
       : [];
   });
   const complete = hands.length === rows.length;
-  const poolEntries = pools.flatMap(({ text }, i) => {
+  const poolEntries = pools.flatMap((text, i) => {
     const chips = parseChips(text);
     return chips ? [{ playerId: `pool-${i}`, chips }] : [];
   });
@@ -477,33 +457,7 @@ function ByCards({ rule, seats, saving, onBuy }: InsuranceCalculatorProps) {
         </ul>
       </div>
 
-      <div className="mt-3">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted">其余底池数</span>
-          <button
-            type="button"
-            onClick={() => setPools([...pools, { text: "", confirmed: false }])}
-            className="inline-flex min-h-11 items-center gap-1 text-highlight"
-          >
-            <Plus className="size-4" aria-hidden />
-            添加
-          </button>
-        </div>
-        {pools.map((pool, i) => (
-          <PoolRow
-            // biome-ignore lint/suspicious/noArrayIndexKey: rows have no identity of their own
-            key={i}
-            index={i}
-            pool={pool}
-            onChange={(next) => setPools(pools.map((p, j) => (j === i ? next : p)))}
-            onRemove={() => setPools(pools.filter((_, j) => j !== i))}
-          />
-        ))}
-      </div>
-
-      {totals.effectiveChips + totals.deadChips + totals.uncalledChips > 0 && (
-        <PotSummary totals={totals} />
-      )}
+      <PotSummary totals={totals} onEditDead={() => setEditingDead(true)} />
 
       <div className="mt-2">
         <span className="mb-1 block text-sm text-muted">公共牌</span>
@@ -537,9 +491,21 @@ function ByCards({ rule, seats, saving, onBuy }: InsuranceCalculatorProps) {
             street={street}
             nameOf={nameOf}
             saving={saving}
-            onBuy={onBuy}
+            boardKey={boardCards.join()}
+            decisions={decisions}
           />
         ))}
+
+      {editingDead && (
+        <DeadMoneyDialog
+          pools={pools}
+          onConfirm={(next) => {
+            setPools(next);
+            setEditingDead(false);
+          }}
+          onCancel={() => setEditingDead(false)}
+        />
+      )}
 
       {slot && (
         <CardPicker
@@ -565,7 +531,7 @@ function ByCards({ rule, seats, saving, onBuy }: InsuranceCalculatorProps) {
   );
 }
 
-function ByOuts({ rule, seats, saving, onBuy }: InsuranceCalculatorProps) {
+function ByOuts({ rule, seats, saving, decisions }: CalculatorViewProps) {
   const [pot, setPot] = useState("");
   const [stake, setStake] = useState("");
   const [outs, setOuts] = useState("");
@@ -579,7 +545,7 @@ function ByOuts({ rule, seats, saving, onBuy }: InsuranceCalculatorProps) {
 
   return (
     <div className="mt-3 flex flex-col gap-3">
-      {onBuy && (
+      {decisions && (
         <label className="block">
           <span className="mb-1 block text-sm text-muted">投保玩家</span>
           <select
@@ -641,8 +607,9 @@ function ByOuts({ rule, seats, saving, onBuy }: InsuranceCalculatorProps) {
       </div>
       {ready ? (
         <section className="rounded-xl border border-line bg-surface p-3">
-          <QuotePanel
+          <LeaderQuote
             id="manual"
+            decisionKey={["manual", buyer, street, potChips, stakeChips, outCount].join("|")}
             input={{
               rule,
               street,
@@ -652,11 +619,9 @@ function ByOuts({ rule, seats, saving, onBuy }: InsuranceCalculatorProps) {
               stakeChips,
               outs: outCount,
             }}
+            playerId={buyer}
             saving={saving}
-            onBuy={
-              onBuy &&
-              ((purchase) => onBuy({ ...purchase, playerId: buyer, outs: outCount, street }))
-            }
+            decisions={decisions}
           />
         </section>
       ) : (
@@ -666,9 +631,44 @@ function ByOuts({ rule, seats, saving, onBuy }: InsuranceCalculatorProps) {
   );
 }
 
+function useDecisions(recorder: InsuranceRecorder | undefined): Decisions | undefined {
+  const [decided, setDecided] = useState<ReadonlyMap<string, QuoteDecision>>(new Map());
+  if (!recorder) return undefined;
+
+  const write = (key: string, decision: QuoteDecision | undefined) =>
+    setDecided((current) => {
+      const next = new Map(current);
+      if (decision) next.set(key, decision);
+      else next.delete(key);
+      return next;
+    });
+
+  return {
+    get(key) {
+      const decision = decided.get(key);
+      // A purchase undone from the records below is open again
+      return decision?.kind === "bought" && !recorder.boughtIds.has(decision.purchaseId)
+        ? undefined
+        : decision;
+    },
+    async buy(key, purchase) {
+      const { premiumChips, payoutChips } = purchase.option;
+      const purchaseId = await recorder.onBuy(purchase);
+      if (purchaseId) write(key, { kind: "bought", purchaseId, premiumChips, payoutChips });
+    },
+    decline: (key) => write(key, { kind: "declined" }),
+    revise(key) {
+      const decision = decided.get(key);
+      if (decision?.kind === "bought" && !recorder.onRevise(decision.purchaseId)) return;
+      write(key, undefined);
+    },
+  };
+}
+
 /** Works out insurance from the cards, or from an outs count for a quick price. */
-export function InsuranceCalculator(props: InsuranceCalculatorProps) {
+export function InsuranceCalculator({ recorder, ...props }: InsuranceCalculatorProps) {
   const [mode, setMode] = useState<"cards" | "outs">("cards");
+  const decisions = useDecisions(recorder);
   return (
     <>
       <div className="grid grid-cols-2 gap-2">
@@ -689,7 +689,11 @@ export function InsuranceCalculator(props: InsuranceCalculatorProps) {
           填 outs
         </button>
       </div>
-      {mode === "cards" ? <ByCards {...props} /> : <ByOuts {...props} />}
+      {mode === "cards" ? (
+        <ByCards {...props} decisions={decisions} />
+      ) : (
+        <ByOuts {...props} decisions={decisions} />
+      )}
     </>
   );
 }

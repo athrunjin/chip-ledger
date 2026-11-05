@@ -58,6 +58,9 @@ export function soleBuyIn(events: readonly LedgerEvent[], playerId: string): Chi
  *
  * Events with the same timestamp were written together and count as one change, because a
  * reversal plus its replacement buy must not stop at 0 halfway. The stack never goes below 0.
+ *
+ * Insurance never touches a player's stack, and moves the seat only when its card is dealt: by the
+ * premium, less the payout on a hit (ADR 0015).
  */
 function liveStacks(events: readonly LedgerEvent[]): Map<string, number> {
   const byId = new Map(events.map((e) => [e.id, e]));
@@ -65,8 +68,9 @@ function liveStacks(events: readonly LedgerEvent[]): Map<string, number> {
   const applied = new Map<string, number>();
   const insuranceOf = (id: string) => {
     const target = byId.get(id);
-    if (target?.type === "insurance_buy") return target.chips;
-    return target?.type === "insurance_settle" ? -target.chips : 0;
+    if (target?.type !== "insurance_settle") return 0;
+    const purchase = byId.get(target.purchaseId);
+    return (purchase?.type === "insurance_buy" ? purchase.chips : 0) - target.chips;
   };
   const stackOf = (playerId: string) => stacks.get(playerId) ?? 0;
 
@@ -97,8 +101,8 @@ function liveStacks(events: readonly LedgerEvent[]): Map<string, number> {
           ? event.chips - current
           : event.type === "cash_out"
             ? -current
-            : event.type === "insurance_buy"
-              ? -Math.min(event.chips, current) // All-in players pay from the pot they win
+            : event.type === "insurance_buy" || event.type === "insurance_settle"
+              ? 0
               : event.chips;
       applied.set(event.id, change);
       addChange(event.playerId, change);
@@ -280,7 +284,7 @@ export function insuranceRecords(events: readonly LedgerEvent[]): InsuranceRecor
   });
 }
 
-/** Chips to add so the insurance seat can pay `payoutChips`: enough whole hands to cover the shortfall. */
+/** Chips to add so the insurance seat can pay `payoutChips`: enough whole hands to cover the shortfall. `stackChips` includes the premium. */
 export function insuranceTopUp(stackChips: number, payoutChips: number, handChips: number): number {
   const short = payoutChips - stackChips;
   return short <= 0 ? 0 : Math.ceil(short / handChips) * handChips;

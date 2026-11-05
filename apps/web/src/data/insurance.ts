@@ -101,10 +101,12 @@ export function useBuyInsurance(gameId: string) {
     mutationFn: async (purchase: InsurancePurchase) => {
       const events = await repository.ledger.listByGame(gameId);
       const occurredAt = Date.now();
+      const meta = newEventMeta(gameId, occurredAt);
       await repository.ledger.appendAll([
         ...reseat(gameId, events, occurredAt),
-        { ...newEventMeta(gameId, occurredAt), type: "insurance_buy", ...purchase },
+        { ...meta, type: "insurance_buy", ...purchase },
       ]);
+      return meta.id;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ledger", gameId] }),
   });
@@ -126,7 +128,7 @@ export function useSettleInsurance(gameId: string) {
       const cashOut = latestCashOut(events, INSURANCE_PLAYER_ID);
       const stack = (seat?.stackChips ?? 0) + (cashOut?.chips ?? 0);
       const chips = hit ? purchase.payoutChips : 0;
-      const topUp = insuranceTopUp(stack, chips, handChips);
+      const topUp = insuranceTopUp(stack + purchase.chips, chips, handChips);
       const occurredAt = Date.now();
       const { id: purchaseId, playerId } = purchase;
       await repository.ledger.appendAll([
