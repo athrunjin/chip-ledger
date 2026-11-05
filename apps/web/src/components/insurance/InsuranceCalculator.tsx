@@ -7,16 +7,19 @@ import {
   type InsuranceStreet,
   nextStreet,
   type PotAnalysis,
+  type PotTotals,
   parseChips,
+  potTotals,
   soldOuts,
 } from "@holdem/core";
-import { Plus, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ChevronDown, Plus, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { TextField } from "@/components/TextField";
 import { formatCardText } from "@/lib/cards";
 import { cn } from "@/lib/cn";
 import { CardPicker } from "./CardPicker";
 import { QuotePanel, type QuotePurchase } from "./QuotePanel";
+import { SeatPicker } from "./SeatPicker";
 
 export interface InsuranceSeat {
   readonly id: string;
@@ -40,9 +43,16 @@ interface InsuranceCalculatorProps {
 }
 
 interface Row {
-  readonly seatId: string;
+  readonly key: string;
+  readonly seatId: string | null;
   readonly chips: string;
   readonly cards: readonly (Card | null)[];
+}
+
+/** Chips in the pot beyond what the all-in players put in. */
+interface Pool {
+  readonly text: string;
+  readonly confirmed: boolean;
 }
 
 /** Where the card picker is filling. */
@@ -50,6 +60,9 @@ type Slot = { readonly row: string; readonly index: number } | { readonly board:
 
 const chipText = (chips: number) => chips.toLocaleString("zh-CN");
 const percentText = (share: number) => `${(share * 100).toFixed(1)}%`;
+const digitsOnly = (text: string) => text.replace(/\D/g, "");
+
+const blankRow = (key: string): Row => ({ key, seatId: null, chips: "", cards: [null, null] });
 
 const toggleClass = (active: boolean) =>
   cn(
@@ -163,13 +176,119 @@ function PotCard({
   );
 }
 
+function PoolRow({
+  index,
+  pool,
+  onChange,
+  onRemove,
+}: {
+  index: number;
+  pool: Pool;
+  onChange: (pool: Pool) => void;
+  onRemove: () => void;
+}) {
+  const label = `池 ${index + 1}`;
+  const inputRef = useRef<HTMLInputElement>(null);
+  const valid = Boolean(parseChips(pool.text));
+
+  useEffect(() => {
+    if (!pool.confirmed) inputRef.current?.focus();
+  }, [pool.confirmed]);
+
+  const removeButton = (
+    <button
+      type="button"
+      aria-label={`删除${label}`}
+      onClick={onRemove}
+      className="grid size-12 shrink-0 place-items-center rounded-xl border border-line"
+    >
+      <X className="size-5" aria-hidden />
+    </button>
+  );
+
+  if (pool.confirmed) {
+    return (
+      <div className="mt-1 flex items-center gap-2">
+        <p className="flex min-h-12 min-w-0 flex-1 items-center justify-between gap-2 rounded-xl border border-line bg-surface px-3">
+          <span className="text-muted">{label}</span>
+          <span className="font-semibold tabular-nums">{chipText(parseChips(pool.text) ?? 0)}</span>
+        </p>
+        <button
+          type="button"
+          onClick={() => onChange({ ...pool, confirmed: false })}
+          className="min-h-12 shrink-0 rounded-xl border border-line px-3 font-medium"
+        >
+          修改
+        </button>
+        {removeButton}
+      </div>
+    );
+  }
+
+  return (
+    <form
+      className="mt-1 flex items-end gap-2"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (valid) onChange({ ...pool, confirmed: true });
+      }}
+    >
+      <div className="min-w-0 flex-1">
+        <TextField
+          id={`pool-${index}`}
+          label={label}
+          value={pool.text}
+          issue={undefined}
+          inputMode="numeric"
+          inputRef={inputRef}
+          onChange={(value) => onChange({ ...pool, text: digitsOnly(value) })}
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={!valid}
+        className="min-h-12 shrink-0 rounded-xl bg-accent px-4 font-semibold text-accent-text disabled:opacity-40"
+      >
+        确认
+      </button>
+      {removeButton}
+    </form>
+  );
+}
+
+function PotSummary({ totals }: { totals: PotTotals }) {
+  return (
+    <section aria-label="底池合计" className="mt-3 rounded-xl border border-line bg-surface p-3">
+      <dl className="grid grid-cols-2 gap-2">
+        <div>
+          <dt className="text-sm text-muted">有效总底池</dt>
+          <dd className="text-xl font-semibold tabular-nums">{chipText(totals.effectiveChips)}</dd>
+        </div>
+        <div>
+          <dt className="text-sm text-muted">死钱（已含在内）</dt>
+          <dd className="text-xl font-semibold tabular-nums">{chipText(totals.deadChips)}</dd>
+        </div>
+      </dl>
+      {totals.uncalledChips > 0 && (
+        <p className="mt-1 text-sm text-muted">
+          未被跟注的 {chipText(totals.uncalledChips)} 退回，不计入。
+        </p>
+      )}
+    </section>
+  );
+}
+
 function ByCards({ rule, seats, saving, onBuy }: InsuranceCalculatorProps) {
-  const [rows, setRows] = useState<readonly Row[]>([]);
-  const [folded, setFolded] = useState<readonly string[]>([]);
+  const [rows, setRows] = useState<readonly Row[]>([blankRow("row-0"), blankRow("row-1")]);
+  const rowsAdded = useRef(rows.length);
+  const [pools, setPools] = useState<readonly Pool[]>([]);
   const [board, setBoard] = useState<readonly (Card | null)[]>([null, null, null, null, null]);
   const [slot, setSlot] = useState<Slot>();
+  const [seatRow, setSeatRow] = useState<string>();
 
   const nameOf = (id: string) => seats.find((s) => s.id === id)?.name ?? "未知玩家";
+  const rowName = (row: Row) =>
+    row.seatId === null ? `全下 ${rows.indexOf(row) + 1}` : nameOf(row.seatId);
   const usedCards = new Set([...rows.flatMap((r) => r.cards), ...board].filter((c) => c !== null));
   const boardCards = board.filter((card) => card !== null);
   const street = nextStreet(boardCards);
@@ -177,44 +296,63 @@ function ByCards({ rule, seats, saving, onBuy }: InsuranceCalculatorProps) {
   const hands = rows.flatMap((row): AllInHand[] => {
     const chips = parseChips(row.chips);
     const cards = row.cards.filter((card) => card !== null);
-    return chips && cards.length === 2 ? [{ playerId: row.seatId, cards, chips }] : [];
+    return row.seatId && chips && cards.length === 2
+      ? [{ playerId: row.seatId, cards, chips }]
+      : [];
   });
-  const complete = rows.length >= 2 && hands.length === rows.length;
-  const foldedEntries = folded.flatMap((text, i) => {
+  const complete = hands.length === rows.length;
+  const poolEntries = pools.flatMap(({ text }, i) => {
     const chips = parseChips(text);
-    return chips ? [{ playerId: `folded-${i}`, chips }] : [];
+    return chips ? [{ playerId: `pool-${i}`, chips }] : [];
   });
-  const handKey = JSON.stringify([hands, foldedEntries, boardCards]);
+  const handKey = JSON.stringify([hands, poolEntries, boardCards]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: handKey is the value of these inputs
   const pots = useMemo(
-    () => (complete && street ? analyzeAllIn(hands, foldedEntries, boardCards) : []),
+    () => (complete && street ? analyzeAllIn(hands, poolEntries, boardCards) : []),
     [handKey, complete, street],
   );
 
-  function toggleSeat(seat: InsuranceSeat) {
-    setRows((current) =>
-      current.some((r) => r.seatId === seat.id)
-        ? current.filter((r) => r.seatId !== seat.id)
-        : [
-            ...current,
-            { seatId: seat.id, chips: seat.stackChips?.toString() ?? "", cards: [null, null] },
-          ],
+  const stakeEntries = rows.flatMap(({ key, chips: text }) => {
+    const chips = parseChips(text);
+    return chips ? [{ playerId: key, chips }] : [];
+  });
+  const totals = potTotals([
+    ...stakeEntries,
+    ...poolEntries.map((entry) => ({ ...entry, folded: true })),
+  ]);
+
+  function addRow() {
+    setRows([...rows, blankRow(`row-${rowsAdded.current}`)]);
+    rowsAdded.current += 1;
+  }
+
+  function chooseSeat(seat: InsuranceSeat) {
+    setRows(
+      rows.map((r) =>
+        r.key === seatRow
+          ? { ...r, seatId: seat.id, chips: seat.stackChips?.toString() ?? r.chips }
+          : r,
+      ),
     );
+    setSeatRow(undefined);
   }
 
-  function setRowChips(seatId: string, chips: string) {
-    setRows(rows.map((r) => (r.seatId === seatId ? { ...r, chips } : r)));
+  function setRowChips(key: string, chips: string) {
+    setRows(rows.map((r) => (r.key === key ? { ...r, chips: digitsOnly(chips) } : r)));
   }
 
-  /** The first empty place after this one, so a whole hand can be entered in one go. */
-  function nextEmpty(nextRows: readonly Row[], nextBoard: readonly (Card | null)[]) {
-    for (const row of nextRows) {
-      const index = row.cards.indexOf(null);
-      if (index >= 0) return { row: row.seatId, index };
-    }
+  /** Carries on from a hand to the players after it, then the flop, then anyone skipped. */
+  function nextEmpty(from: Slot, nextRows: readonly Row[], nextBoard: readonly (Card | null)[]) {
+    const emptyIn = (list: readonly Row[]) => {
+      const row = list.find((r) => r.cards.includes(null));
+      return row && { row: row.key, index: row.cards.indexOf(null) };
+    };
     const open = nextBoard.indexOf(null);
-    return open >= 0 && open < 3 ? { board: open } : undefined;
+    const flop = open >= 0 && open < 3 ? { board: open } : undefined;
+    if ("board" in from) return flop ?? emptyIn(nextRows);
+    const at = nextRows.findIndex((r) => r.key === from.row);
+    return emptyIn(nextRows.slice(at)) ?? flop ?? emptyIn(nextRows.slice(0, at));
   }
 
   function placeCard(card: Card | null) {
@@ -222,7 +360,7 @@ function ByCards({ rule, seats, saving, onBuy }: InsuranceCalculatorProps) {
     const nextRows =
       "row" in slot
         ? rows.map((r) =>
-            r.seatId === slot.row
+            r.key === slot.row
               ? { ...r, cards: r.cards.map((c, i) => (i === slot.index ? card : c)) }
               : r,
           )
@@ -230,54 +368,98 @@ function ByCards({ rule, seats, saving, onBuy }: InsuranceCalculatorProps) {
     const nextBoard = "board" in slot ? board.map((c, i) => (i === slot.board ? card : c)) : board;
     setRows(nextRows);
     setBoard(nextBoard);
-    setSlot(card === null ? undefined : nextEmpty(nextRows, nextBoard));
+    setSlot(card === null ? undefined : nextEmpty(slot, nextRows, nextBoard));
   }
 
   function slotCard(target: Slot) {
     if ("board" in target) return board[target.board] ?? null;
-    return rows.find((r) => r.seatId === target.row)?.cards[target.index] ?? null;
+    return rows.find((r) => r.key === target.row)?.cards[target.index] ?? null;
   }
 
   function slotTitle(target: Slot) {
     if ("board" in target) return `公共牌第 ${target.board + 1} 张`;
-    return `${nameOf(target.row)} 第 ${target.index + 1} 张手牌`;
+    const row = rows.find((r) => r.key === target.row);
+    return `${row ? rowName(row) : "未知玩家"} 第 ${target.index + 1} 张手牌`;
   }
 
-  /** Later streets need the earlier ones first. */
-  const nextBoardSlot = board.indexOf(null);
+  /** A filled card opens to be changed; an empty place fills from the first gap. */
+  const pickFor = (cards: readonly (Card | null)[], index: number) =>
+    cards[index] === null ? cards.indexOf(null) : index;
+
+  /** Where a tab lands: the first gap, or the first card when nothing is left to fill. */
+  const firstGap = (cards: readonly (Card | null)[]) => Math.max(cards.indexOf(null), 0);
+
+  const tabs = [
+    ...rows.map((row) => ({
+      id: row.key,
+      label: rowName(row),
+      active: slot !== undefined && "row" in slot && slot.row === row.key,
+      onSelect: () => setSlot({ row: row.key, index: firstGap(row.cards) }),
+    })),
+    {
+      id: "board",
+      label: "公共牌",
+      active: slot !== undefined && "board" in slot,
+      onSelect: () => setSlot({ board: firstGap(board) }),
+    },
+  ];
+
+  const takenSeats = rows.flatMap((r) => (r.seatId && r.key !== seatRow ? [r.seatId] : []));
 
   return (
     <>
-      <fieldset className="mt-3">
-        <legend className="mb-1 text-sm text-muted">全下的玩家</legend>
-        <div className="flex flex-wrap gap-2">
-          {seats.map((seat) => (
-            <button
-              key={seat.id}
-              type="button"
-              aria-pressed={rows.some((r) => r.seatId === seat.id)}
-              onClick={() => toggleSeat(seat)}
-              className={toggleClass(rows.some((r) => r.seatId === seat.id))}
-            >
-              {seat.name}
-            </button>
-          ))}
+      <div className="mt-3">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted">全下的玩家</span>
+          <button
+            type="button"
+            disabled={rows.length >= seats.length}
+            onClick={addRow}
+            className="inline-flex min-h-11 items-center gap-1 text-highlight disabled:opacity-40"
+          >
+            <Plus className="size-4" aria-hidden />
+            添加
+          </button>
         </div>
-      </fieldset>
-
-      {rows.length > 0 && (
-        <ul className="mt-3 flex flex-col gap-2">
+        <ul className="flex flex-col gap-2">
           {rows.map((row) => (
-            <li key={row.seatId} className="rounded-xl border border-line bg-surface p-2">
-              <div className="flex items-end gap-2">
+            <li key={row.key} className="rounded-xl border border-line bg-surface p-2">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSeatRow(row.key)}
+                  className={cn(
+                    "flex min-h-11 min-w-0 flex-1 items-center justify-between gap-2 rounded-lg border px-3",
+                    row.seatId === null
+                      ? "border-dashed border-line text-muted"
+                      : "border-line bg-bg font-medium",
+                  )}
+                >
+                  <span className="truncate">
+                    {row.seatId === null ? "选择玩家" : nameOf(row.seatId)}
+                  </span>
+                  <ChevronDown className="size-4 shrink-0" aria-hidden />
+                </button>
+                {rows.length > 2 && (
+                  <button
+                    type="button"
+                    aria-label={`删除${rowName(row)}`}
+                    onClick={() => setRows(rows.filter((r) => r !== row))}
+                    className="grid size-11 shrink-0 place-items-center rounded-lg border border-line"
+                  >
+                    <X className="size-5" aria-hidden />
+                  </button>
+                )}
+              </div>
+              <div className="mt-1 flex items-end gap-2">
                 <div className="min-w-0 flex-1">
                   <TextField
-                    id={`stake-${row.seatId}`}
-                    label={`${nameOf(row.seatId)} 投入`}
+                    id={`stake-${row.key}`}
+                    label={`${rowName(row)} 投入`}
                     value={row.chips}
                     issue={undefined}
                     inputMode="numeric"
-                    onChange={(chips) => setRowChips(row.seatId, chips)}
+                    onChange={(chips) => setRowChips(row.key, chips)}
                   />
                 </div>
                 {row.cards.map((card, index) => (
@@ -285,52 +467,43 @@ function ByCards({ rule, seats, saving, onBuy }: InsuranceCalculatorProps) {
                     // biome-ignore lint/suspicious/noArrayIndexKey: a hand has two fixed places
                     key={index}
                     card={card}
-                    label={`${nameOf(row.seatId)} 第 ${index + 1} 张手牌`}
-                    onClick={() => setSlot({ row: row.seatId, index })}
+                    label={`${rowName(row)} 第 ${index + 1} 张手牌`}
+                    onClick={() => setSlot({ row: row.key, index: pickFor(row.cards, index) })}
                   />
                 ))}
               </div>
             </li>
           ))}
         </ul>
-      )}
+      </div>
 
       <div className="mt-3">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-muted">已弃牌玩家的投入</span>
+          <span className="text-sm text-muted">其余底池数</span>
           <button
             type="button"
-            onClick={() => setFolded([...folded, ""])}
+            onClick={() => setPools([...pools, { text: "", confirmed: false }])}
             className="inline-flex min-h-11 items-center gap-1 text-highlight"
           >
             <Plus className="size-4" aria-hidden />
             添加
           </button>
         </div>
-        {folded.map((text, i) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: rows have no identity of their own
-          <div key={i} className="mt-1 flex items-end gap-2">
-            <div className="min-w-0 flex-1">
-              <TextField
-                id={`folded-${i}`}
-                label={`弃牌玩家 ${i + 1}`}
-                value={text}
-                issue={undefined}
-                inputMode="numeric"
-                onChange={(value) => setFolded(folded.map((f, j) => (j === i ? value : f)))}
-              />
-            </div>
-            <button
-              type="button"
-              aria-label={`删除弃牌玩家 ${i + 1}`}
-              onClick={() => setFolded(folded.filter((_, j) => j !== i))}
-              className="grid size-12 place-items-center rounded-xl border border-line"
-            >
-              <X className="size-5" aria-hidden />
-            </button>
-          </div>
+        {pools.map((pool, i) => (
+          <PoolRow
+            // biome-ignore lint/suspicious/noArrayIndexKey: rows have no identity of their own
+            key={i}
+            index={i}
+            pool={pool}
+            onChange={(next) => setPools(pools.map((p, j) => (j === i ? next : p)))}
+            onRemove={() => setPools(pools.filter((_, j) => j !== i))}
+          />
         ))}
       </div>
+
+      {totals.effectiveChips + totals.deadChips + totals.uncalledChips > 0 && (
+        <PotSummary totals={totals} />
+      )}
 
       <div className="mt-2">
         <span className="mb-1 block text-sm text-muted">公共牌</span>
@@ -341,17 +514,13 @@ function ByCards({ rule, seats, saving, onBuy }: InsuranceCalculatorProps) {
               key={i}
               card={card}
               label={`公共牌第 ${i + 1} 张`}
-              onClick={() =>
-                setSlot({ board: nextBoardSlot >= 0 && i > nextBoardSlot ? nextBoardSlot : i })
-              }
+              onClick={() => setSlot({ board: pickFor(board, i) })}
             />
           ))}
         </div>
       </div>
 
-      {!complete && (
-        <p className="mt-3 text-sm text-muted">选至少两位玩家，填好投入和手牌后开始计算。</p>
-      )}
+      {!complete && <p className="mt-3 text-sm text-muted">选好玩家，填好投入和手牌后开始计算。</p>}
       {complete && !street && (
         <p className="mt-3 text-sm text-muted">
           {boardCards.length < 3 ? "翻牌前不卖保险，请先选好三张翻牌。" : "五张公共牌已发完。"}
@@ -374,13 +543,22 @@ function ByCards({ rule, seats, saving, onBuy }: InsuranceCalculatorProps) {
 
       {slot && (
         <CardPicker
-          key={JSON.stringify(slot)}
           title={slotTitle(slot)}
+          tabs={tabs}
           usedCards={usedCards}
           canClear={slotCard(slot) !== null}
           onPick={placeCard}
           onClear={() => placeCard(null)}
           onClose={() => setSlot(undefined)}
+        />
+      )}
+
+      {seatRow && (
+        <SeatPicker
+          seats={seats}
+          takenSeats={takenSeats}
+          onPick={chooseSeat}
+          onClose={() => setSeatRow(undefined)}
         />
       )}
     </>
@@ -442,7 +620,7 @@ function ByOuts({ rule, seats, saving, onBuy }: InsuranceCalculatorProps) {
           value={pot}
           issue={undefined}
           inputMode="numeric"
-          onChange={setPot}
+          onChange={(value) => setPot(digitsOnly(value))}
         />
         <TextField
           id="manual-stake"
@@ -450,7 +628,7 @@ function ByOuts({ rule, seats, saving, onBuy }: InsuranceCalculatorProps) {
           value={stake}
           issue={undefined}
           inputMode="numeric"
-          onChange={setStake}
+          onChange={(value) => setStake(digitsOnly(value))}
         />
         <TextField
           id="manual-outs"
@@ -458,7 +636,7 @@ function ByOuts({ rule, seats, saving, onBuy }: InsuranceCalculatorProps) {
           value={outs}
           issue={undefined}
           inputMode="numeric"
-          onChange={setOuts}
+          onChange={(value) => setOuts(digitsOnly(value))}
         />
       </div>
       {ready ? (
