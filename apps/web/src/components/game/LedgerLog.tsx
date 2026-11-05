@@ -1,33 +1,42 @@
-import { canReverse, type LedgerEvent } from "@holdem/core";
+import { gameRecord, type LedgerEvent, type RecordKind } from "@holdem/core";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
 
-type RecordEvent = Exclude<LedgerEvent, { type: "reversal" }>;
-
-const EVENT_LABEL: Record<RecordEvent["type"], string> = {
+const RECORD_LABEL: Record<RecordKind, string> = {
   buy_in: "买入",
   rebuy: "补码",
+  reduce: "减手",
+  remove: "移出",
   cash_out: "离桌",
+  return: "返回",
   stack_set: "改筹码",
+  stack_undo: "撤销改筹码",
 };
 
 /** Long lists get a second collapse button at the bottom, so nobody has to scroll back up. */
 const BOTTOM_CLOSE_FROM = 6;
 
-const TIME = new Intl.DateTimeFormat("zh-CN", { hour: "2-digit", minute: "2-digit" });
+const TIME = new Intl.DateTimeFormat("zh-CN", {
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
 
 interface LedgerLogProps {
   events: readonly LedgerEvent[];
   nameOf: (playerId: string) => string;
-  editable: boolean;
-  onReverse: (eventId: string) => void;
 }
 
-/** Game record, collapsed by default and newest first. Undone records stay visible and are struck through. */
-export function LedgerLog({ events, nameOf, editable, onReverse }: LedgerLogProps) {
+/** Read-only game record, collapsed by default, oldest first, with a filter for one player. */
+export function LedgerLog({ events, nameOf }: LedgerLogProps) {
   const [open, setOpen] = useState(false);
-  const entries = events.filter((e): e is RecordEvent => e.type !== "reversal").toReversed();
+  const [playerId, setPlayerId] = useState("");
+  const entries = gameRecord(events);
+  const playerIds = [...new Set(entries.map((entry) => entry.playerId))];
+  const shown = playerId ? entries.filter((entry) => entry.playerId === playerId) : entries;
 
   return (
     <section className="mt-4 pb-8">
@@ -47,31 +56,38 @@ export function LedgerLog({ events, nameOf, editable, onReverse }: LedgerLogProp
       </h2>
       {open && (
         <>
+          <label className="mt-2 block">
+            <span className="sr-only">查看玩家</span>
+            <select
+              value={playerId}
+              onChange={(event) => setPlayerId(event.target.value)}
+              className="min-h-11 w-full rounded-xl border border-line bg-surface px-3"
+            >
+              <option value="">全部玩家</option>
+              {playerIds.map((id) => (
+                <option key={id} value={id}>
+                  {nameOf(id)}
+                </option>
+              ))}
+            </select>
+          </label>
           <ul className="mt-2 divide-y divide-line rounded-xl border border-line bg-surface px-3">
-            {entries.map(({ id, type, playerId, chips, occurredAt }) => {
-              const active = canReverse(events, id);
-              return (
-                <li key={id} className="flex min-h-12 items-center justify-between gap-3 py-1">
-                  <span className={cn("min-w-0 truncate", !active && "text-muted line-through")}>
-                    {TIME.format(occurredAt)} {nameOf(playerId)} {EVENT_LABEL[type]}{" "}
-                    {chips.toLocaleString("zh-CN")}
-                  </span>
-                  {active && editable && (
-                    <button
-                      type="button"
-                      aria-label={`撤销 ${nameOf(playerId)} ${EVENT_LABEL[type]} ${chips}`}
-                      onClick={() => onReverse(id)}
-                      className="min-h-11 shrink-0 px-2 text-sm text-highlight"
-                    >
-                      撤销
-                    </button>
-                  )}
-                  {!active && <span className="shrink-0 text-sm text-muted">已撤销</span>}
-                </li>
-              );
-            })}
+            {shown.map((entry) => (
+              <li key={entry.id} className="flex min-h-11 items-center gap-2 py-1">
+                <span className="shrink-0 text-xs text-muted tabular-nums">
+                  {TIME.format(entry.occurredAt)}
+                </span>
+                <span className="min-w-0 flex-1 truncate">
+                  {!playerId && `${nameOf(entry.playerId)} `}
+                  {RECORD_LABEL[entry.kind]}
+                </span>
+                <span className="shrink-0 font-medium tabular-nums">
+                  {entry.chips.toLocaleString("zh-CN")}
+                </span>
+              </li>
+            ))}
           </ul>
-          {entries.length >= BOTTOM_CLOSE_FROM && (
+          {shown.length >= BOTTOM_CLOSE_FROM && (
             <button
               type="button"
               onClick={() => setOpen(false)}

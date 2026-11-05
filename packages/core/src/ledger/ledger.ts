@@ -19,16 +19,32 @@ export function activeChipEvents(events: readonly LedgerEvent[]): ChipEvent[] {
   return events.filter((e): e is ChipEvent => isChipEvent(e) && !reversed.has(e.id));
 }
 
-/** Only events not yet reversed can be undone. A reversal cannot be undone; record the event again instead. */
-export function canReverse(events: readonly LedgerEvent[], eventId: string): boolean {
+/** The player's latest cash-out still in effect. Reversing it puts them back at the table. */
+export function latestCashOut(
+  events: readonly LedgerEvent[],
+  playerId: string,
+): ChipEvent | undefined {
+  return activeChipEvents(events).findLast((e) => e.playerId === playerId && e.type === "cash_out");
+}
+
+/**
+ * The player's first buy-in, if it is the only record in effect for them, so they can be removed
+ * as a mistake without losing anything else.
+ */
+export function soleBuyIn(events: readonly LedgerEvent[], playerId: string): ChipEvent | undefined {
   const reversed = reversedEventIds(events);
-  return events.some((e) => e.id === eventId && e.type !== "reversal" && !reversed.has(e.id));
+  const typedStack = events.some(
+    (e) => e.type === "stack_set" && e.playerId === playerId && !reversed.has(e.id),
+  );
+  const records = activeChipEvents(events).filter((e) => e.playerId === playerId);
+  const [only] = records;
+  return !typedStack && records.length === 1 && only?.type === "buy_in" ? only : undefined;
 }
 
 /**
  * Each player's current chips, replaying events in order. Every event changes the stack by some
  * amount, and reversing it takes that amount back, so a typed stack survives later hand changes:
- * at 700 chips, removing a 500-chip hand leaves 200.
+ * at 700 chips, removing a 500-chip hand leaves 200. Reversing a cash-out restores the chips left with.
  *
  * Events with the same timestamp were written together and count as one change, because a
  * reversal plus its replacement buy must not stop at 0 halfway. The stack never goes below 0.
@@ -52,7 +68,9 @@ function liveStacks(events: readonly LedgerEvent[]): Map<string, number> {
       if (event.type === "reversal") {
         const target = byId.get(event.reversedEventId);
         if (target && target.type !== "reversal") {
-          addChange(target.playerId, -(applied.get(target.id) ?? 0));
+          // Returning to the table brings back the chips they left with
+          const change = target.type === "cash_out" ? target.chips : -(applied.get(target.id) ?? 0);
+          addChange(target.playerId, change);
         }
         continue;
       }
@@ -185,4 +203,86 @@ export function adjustHands(
 /** Converts chips to cash at the game's ratio, rounded half up to the cent. */
 export function chipsToCents(chips: number, ratio: ChipRatio): Cents {
   return multiply(ratio.amount, chips / ratio.chips, "half-up");
+}
+
+export type RecordKind =
+  | "buy_in"
+  | "rebuy"
+  | "reduce"
+  | "remove"
+  | "stack_set"
+  | "stack_undo"
+  | "cash_out"
+  | "return";
+
+/** One thing that happened in a game, as the organizer would describe it. */
+export interface RecordEntry {
+  readonly id: string;
+  readonly kind: RecordKind;
+  readonly playerId: string;
+  readonly chips: number;
+  readonly occurredAt: number;
+}
+
+/**
+ * The ledger as a timeline, oldest first. A reversal has no meaning of its own to the organizer, so it
+ * is named after what it did. Events one player wrote together become one entry: reversing 3 hands
+ * and buying 1 again reads as removing 2.
+ */
+export function gameRecord(events: readonly LedgerEvent[]): RecordEntry[] {
+  const byId = new Map(events.map((e) => [e.id, e]));
+  const bought = new Map<string, number>();
+  const entries: RecordEntry[] = [];
+
+  let index = 0;
+  while (index < events.length) {
+    const occurredAt = events[index]?.occurredAt ?? 0;
+    const buys = new Map<string, { id: string; added?: ChipEvent; reversed: number }>();
+    const trackBuy = (id: string, playerId: string) => {
+      const buy = buys.get(playerId) ?? { id, reversed: 0 };
+      buys.set(playerId, buy);
+      return buy;
+    };
+
+    for (; events[index]?.occurredAt === occurredAt; index++) {
+      const event = events[index];
+      if (!event) break;
+      const target = event.type === "reversal" ? byId.get(event.reversedEventId) : event;
+      if (!target || target.type === "reversal") continue;
+
+      const { id } = event;
+      const { playerId, chips } = target;
+      const undoing = event.type === "reversal";
+      if (target.type === "buy_in" || target.type === "rebuy") {
+        const buy = trackBuy(id, playerId);
+        if (undoing) buy.reversed += chips;
+        else buy.added = target;
+      } else if (target.type === "cash_out") {
+        const kind = undoing ? "return" : "cash_out";
+        entries.push({ id, kind, playerId, chips, occurredAt });
+      } else {
+        const kind = undoing ? "stack_undo" : "stack_set";
+        entries.push({ id, kind, playerId, chips, occurredAt });
+      }
+    }
+
+    for (const [playerId, { id, added, reversed }] of buys) {
+      const addedChips = added?.chips ?? 0;
+      const total = (bought.get(playerId) ?? 0) + addedChips - reversed;
+      bought.set(playerId, total);
+      if (reversed === 0 && added) {
+        entries.push({
+          id,
+          kind: added.type as RecordKind,
+          playerId,
+          chips: addedChips,
+          occurredAt,
+        });
+      } else if (reversed > addedChips) {
+        const kind = total === 0 ? "remove" : "reduce";
+        entries.push({ id, kind, playerId, chips: reversed - addedChips, occurredAt });
+      }
+    }
+  }
+  return entries;
 }
