@@ -121,6 +121,34 @@ export function useSaveInsuranceHand(gameId: string) {
   });
 }
 
+interface EnteredStack {
+  readonly playerId: string;
+  readonly chips: number;
+}
+
+/**
+ * An all-in player's chips are counted at the table, so they are the true stack and go straight to
+ * the game. It stays if the hand is discarded or undone, like any typed stack.
+ */
+export function useEnterStack(gameId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    scope: ledgerScope(gameId),
+    mutationFn: async ({ playerId, chips }: EnteredStack) => {
+      const events = await repository.ledger.listByGame(gameId);
+      const player = summarizeByPlayer(events).find((p) => p.playerId === playerId);
+      if (player?.stackChips === chips) return;
+      await repository.ledger.append({
+        ...newEventMeta(gameId, Date.now()),
+        type: "stack_set",
+        playerId,
+        chips,
+      });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ledger", gameId] }),
+  });
+}
+
 export function useDiscardInsuranceHand(gameId: string) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -154,9 +182,8 @@ export function useFinishInsuranceHand(gameId: string) {
         );
         const buyIns = premiumBuyIns(results, handChips);
         const stackEvents = results.flatMap(({ playerId, stackChips }) => {
-          if (stackChips === null) return [];
-          const buyIn = buyIns.find((b) => b.playerId === playerId);
-          return [{ playerId, chips: buyIn?.stackChips ?? stackChips }];
+          const chips = buyIns.find((b) => b.playerId === playerId)?.stackChips ?? stackChips;
+          return chips === null ? [] : [{ playerId, chips }];
         });
         const seat = ledger.find((p) => p.playerId === INSURANCE_PLAYER_ID);
         const cashOut = latestCashOut(events, INSURANCE_PLAYER_ID);

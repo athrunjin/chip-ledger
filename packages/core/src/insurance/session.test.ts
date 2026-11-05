@@ -192,6 +192,15 @@ describe("playerHandResults", () => {
     expect(k).toMatchObject({ cover: true, netChips: -1000, stackChips: null });
   });
 
+  it("never reports a cover player as short of a premium", () => {
+    const players = [aces, player("k", 0, ["Ks", "Kd"], true)];
+    const flop = hand({ players, board: river.slice(0, 3), step: "buy" });
+    const paying = bought(flop);
+    const purchases = paying.purchases.map((purchase) => ({ ...purchase, playerId: "k" }));
+    const lost = dealCard(dealCard({ ...paying, purchases }, c("3c")), c("4h"));
+    expect(playerHandResults(lost)[1]).toMatchObject({ shortChips: 0, stackChips: null });
+  });
+
   it("adds insurance to the player's result, and notes a premium they could not pay", () => {
     const flop = hand({ board: river.slice(0, 3), step: "buy" });
     const purchased = bought(flop);
@@ -201,6 +210,17 @@ describe("playerHandResults", () => {
     expect(a).toMatchObject({ potChips: 0, insuranceChips: -premium, stackChips: 0 });
     expect(a?.shortChips).toBe(premium);
     expect(k).toMatchObject({ potChips: 2000, stackChips: 2000 });
+  });
+
+  it("notes a premium larger than the pot the player won", () => {
+    const flop = hand({ board: river.slice(0, 3), step: "buy" });
+    const purchased = bought(flop);
+    const costly = {
+      ...purchased,
+      purchases: purchased.purchases.map((p) => ({ ...p, premiumChips: 2500 })),
+    };
+    const [a] = playerHandResults(dealCard(dealCard(costly, c("3c")), c("4h")));
+    expect(a).toMatchObject({ potChips: 2000, stackChips: 0, shortChips: 500 });
   });
 
   it("splits a tie and gives the odd chip to the first winner", () => {

@@ -221,6 +221,7 @@ export interface PlayerHandResult {
 /**
  * How the finished board pays each player. Everyone but the cover is all-in, so what they end with
  * is all they have. An odd chip goes to the first winner entered, as seats are not recorded.
+ * A cover is assumed to have enough behind for their premiums, so they are never short.
  */
 export function playerHandResults(hand: InsuranceHand): PlayerHandResult[] {
   const cardsOf = new Map(hand.players.map((p) => [p.playerId, p.cards]));
