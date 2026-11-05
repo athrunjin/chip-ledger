@@ -1,7 +1,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import type { InsuranceHand, InsuranceHandPlayer } from "../domain";
-import { type Card, makeCard } from "./cards";
+import { type Card, DECK, makeCard } from "./cards";
 import { potTotals } from "./pots";
 import { RULE_30 } from "./rules";
 import {
@@ -14,6 +14,7 @@ import {
   handPotEntries,
   handResult,
   offersDecided,
+  playerHandResults,
   playersReady,
   reviseOffer,
   stakeOf,
@@ -170,6 +171,67 @@ describe("dealCard", () => {
     expect(undone).toMatchObject({ step: "deal", board: turn.board });
     expect(undone.purchases[0]?.hit).toBe(false);
     expect(undoDeal(turn).purchases[0]).not.toHaveProperty("hit");
+  });
+});
+
+describe("playerHandResults", () => {
+  const river = [c("2c"), c("7h"), c("9d"), c("3c"), c("4h")];
+
+  it("pays the winner and gives the excess back", () => {
+    const players = [aces, { ...kings, chips: 300 }];
+    const [a, k] = playerHandResults(hand({ players, board: river, step: "summary" }));
+    expect(a).toMatchObject({ potChips: 600, refundChips: 700, netChips: 300, stackChips: 1300 });
+    expect(k).toMatchObject({ potChips: 0, refundChips: 0, netChips: -300, stackChips: 0 });
+  });
+
+  it("gives a cover player a result but no stack", () => {
+    const players = [aces, player("k", 0, ["Ks", "Kd"], true)];
+    const [, k] = playerHandResults(hand({ players, board: river }));
+    expect(k).toMatchObject({ cover: true, netChips: -1000, stackChips: null });
+  });
+
+  it("adds insurance to the player's result, and notes a premium they could not pay", () => {
+    const flop = hand({ board: river.slice(0, 3), step: "buy" });
+    const purchased = bought(flop);
+    const dealt = dealCard(dealCard(purchased, c("3c")), c("Kh"));
+    const [a, k] = playerHandResults(dealt);
+    const premium = purchased.purchases[0]?.premiumChips ?? 0;
+    expect(a).toMatchObject({ potChips: 0, insuranceChips: -premium, stackChips: 0 });
+    expect(a?.shortChips).toBe(premium);
+    expect(k).toMatchObject({ potChips: 2000, stackChips: 2000 });
+  });
+
+  it("splits a tie and gives the odd chip to the first winner", () => {
+    const players = [player("a", 100, ["As", "Kh"]), player("b", 100, ["Ad", "Kc"])];
+    const pools = [1];
+    const results = playerHandResults(hand({ players, pools, board: river }));
+    expect(results.map((r) => r.potChips)).toEqual([101, 100]);
+  });
+
+  it("shares out every chip in the pots", () => {
+    const seat = fc.record({ chips: fc.integer({ min: 1, max: 5000 }), hit: fc.boolean() });
+    fc.assert(
+      fc.property(
+        fc.shuffledSubarray([...DECK], { minLength: 13, maxLength: 13 }),
+        fc.array(seat, { minLength: 4, maxLength: 4 }),
+        fc.array(fc.integer({ min: 1, max: 500 }), { maxLength: 3 }),
+        (cards, seats, pools) => {
+          const players = seats.map(({ chips }, i) => ({
+            playerId: `p${i}`,
+            chips,
+            cover: false,
+            cards: cards.slice(i * 2, i * 2 + 2),
+          }));
+          const results = playerHandResults(hand({ players, pools, board: cards.slice(8) }));
+          const paid = results.reduce((sum, r) => sum + r.potChips + r.refundChips, 0);
+          const total = [...seats.map((s) => s.chips), ...pools].reduce((a, b) => a + b, 0);
+          expect(paid).toBe(total);
+          expect(results.reduce((sum, r) => sum + r.netChips, 0)).toBe(
+            pools.reduce((a, b) => a + b, 0),
+          );
+        },
+      ),
+    );
   });
 });
 

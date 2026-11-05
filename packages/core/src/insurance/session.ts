@@ -13,9 +13,10 @@ import {
   type PotAnalysis,
   type PotLeader,
   tieBlocksInsurance,
+  winnersOf,
 } from "./analysis";
 import type { Card } from "./cards";
-import type { PotEntry } from "./pots";
+import { buildPots, type PotEntry } from "./pots";
 import {
   type InsuranceQuote,
   type QuoteInput,
@@ -198,4 +199,67 @@ export function handResult({ purchases }: Pick<InsuranceHand, "purchases">): Han
   const premiumChips = settled.reduce((total, p) => total + p.premiumChips, 0);
   const payoutChips = settled.reduce((total, p) => total + (p.hit ? p.payoutChips : 0), 0);
   return { premiumChips, payoutChips, seatChips: premiumChips - payoutChips };
+}
+
+export interface PlayerHandResult {
+  readonly playerId: string;
+  readonly cover: boolean;
+  /** Won from the pots, dead money included. */
+  readonly potChips: number;
+  /** Excess nobody called, which came straight back. */
+  readonly refundChips: number;
+  /** Payouts less premiums. */
+  readonly insuranceChips: number;
+  /** The hand and the insurance together. */
+  readonly netChips: number;
+  /** Chips left after the hand. A cover player has more behind, so theirs is unknown. */
+  readonly stackChips: number | null;
+  /** Premium the player's winnings could not pay. */
+  readonly shortChips: number;
+}
+
+/**
+ * How the finished board pays each player. Everyone but the cover is all-in, so what they end with
+ * is all they have. An odd chip goes to the first winner entered, as seats are not recorded.
+ */
+export function playerHandResults(hand: InsuranceHand): PlayerHandResult[] {
+  const cardsOf = new Map(hand.players.map((p) => [p.playerId, p.cards]));
+  const won = new Map<string, number>();
+  const refunds = new Map<string, number>();
+  const add = (totals: Map<string, number>, id: string, chips: number) =>
+    totals.set(id, (totals.get(id) ?? 0) + chips);
+
+  for (const pot of buildPots(handPotEntries(hand))) {
+    const [only] = pot.playerIds;
+    if (pot.playerIds.length === 1 && only !== undefined) {
+      add(refunds, only, pot.amountChips);
+      continue;
+    }
+    const winners = winnersOf(pot.playerIds, cardsOf, hand.board);
+    const share = Math.floor(pot.amountChips / winners.length);
+    const odd = pot.amountChips - share * winners.length;
+    winners.forEach((id, i) => {
+      add(won, id, share + (i < odd ? 1 : 0));
+    });
+  }
+
+  return hand.players.map((player) => {
+    const { playerId, cover } = player;
+    const insuranceChips = hand.purchases
+      .filter((p) => p.playerId === playerId)
+      .reduce((total, p) => total + (p.hit ? p.payoutChips : 0) - p.premiumChips, 0);
+    const potChips = won.get(playerId) ?? 0;
+    const refundChips = refunds.get(playerId) ?? 0;
+    const left = potChips + refundChips + insuranceChips;
+    return {
+      playerId,
+      cover,
+      potChips,
+      refundChips,
+      insuranceChips,
+      netChips: left - stakeOf(player, hand.players),
+      stackChips: cover ? null : Math.max(0, left),
+      shortChips: cover ? 0 : Math.max(0, -left),
+    };
+  });
 }

@@ -77,7 +77,7 @@ export interface InsuranceHandPurchase {
   readonly hit?: boolean;
 }
 
-export type InsuranceHandStep = "players" | "start" | "buy" | "deal" | "settle";
+export type InsuranceHandStep = "players" | "start" | "buy" | "deal" | "settle" | "summary";
 
 /** One all-in worked through card by card. It is a draft until the organizer finishes it (ADR 0016). */
 export interface InsuranceHand {
@@ -162,6 +162,8 @@ export interface StackSetEvent extends LedgerEventBase {
   readonly playerId: string;
   /** Whole number of chips. */
   readonly chips: number;
+  /** The insurance hand that set this, so undoing the hand restores it. */
+  readonly handId?: string;
 }
 
 /** Reversal: undoes the event `reversedEventId` points to, leaving the old record unchanged. */

@@ -27,6 +27,7 @@ import { formatSignedChips } from "@/lib/chips";
 import { cn } from "@/lib/cn";
 import { CardPicker } from "./CardPicker";
 import { DeadMoneyDialog } from "./DeadMoneyDialog";
+import { HandSummary } from "./HandSummary";
 import type { InsuranceSeat } from "./InsuranceCalculator";
 import { type Decisions, LeaderQuote } from "./LeaderQuote";
 import { Modal } from "./Modal";
@@ -40,6 +41,12 @@ export interface HandStore {
   finish: (hand: InsuranceHand) => Promise<void>;
 }
 
+/** The insurance seat now, to show where it will end up. */
+export interface SeatChips {
+  readonly stackChips: number;
+  readonly handChips: number;
+}
+
 interface InsuranceHandFlowProps {
   rule: InsuranceRule;
   seats: readonly InsuranceSeat[];
@@ -47,6 +54,7 @@ interface InsuranceHandFlowProps {
   open: InsuranceHand | undefined;
   createHand: () => InsuranceHand;
   store: HandStore | undefined;
+  seat: SeatChips | undefined;
 }
 
 /** The player being added or changed, through seat, chips and cards. */
@@ -64,7 +72,7 @@ const primaryClass =
   "min-h-12 w-full rounded-xl bg-accent font-semibold text-accent-text disabled:opacity-40";
 const secondaryClass = "min-h-11 w-full rounded-xl border border-line font-medium";
 
-function CardFace({ card }: { card: Card | null }) {
+export function CardFace({ card }: { card: Card | null }) {
   const red = card !== null && /[hd]/.test(formatCard(card)[1] ?? "");
   return (
     <span
@@ -80,7 +88,7 @@ function CardFace({ card }: { card: Card | null }) {
 }
 
 /** Five places: dealt cards, then question marks. `dealt` draws the shape before cards are known. */
-function BoardCards({ cards, dealt = 0 }: { cards?: readonly Card[]; dealt?: number }) {
+export function BoardCards({ cards, dealt = 0 }: { cards?: readonly Card[]; dealt?: number }) {
   const shown = cards?.length ?? dealt;
   return (
     <span className="flex gap-1" role="img" aria-label={`公共牌已发 ${shown} 张`}>
@@ -329,7 +337,7 @@ function SettleStep({
           onClick={onConfirm}
           className="min-h-11 rounded-xl bg-accent font-semibold text-accent-text disabled:opacity-40"
         >
-          {!last ? "确认结算" : store ? "完成这手保险" : "重新计算"}
+          确认结算
         </button>
       </div>
     </section>
@@ -343,6 +351,7 @@ export function InsuranceHandFlow({
   open,
   createHand,
   store,
+  seat,
 }: InsuranceHandFlowProps) {
   const [hand, setHand] = useState(() => open ?? createHand());
   const [adding, setAdding] = useState<Adding>();
@@ -377,10 +386,10 @@ export function InsuranceHandFlow({
   }
 
   async function confirmSettle() {
-    if (hand.board.length < 5) {
-      update({ ...hand, step: "buy" });
-      return;
-    }
+    update({ ...hand, step: hand.board.length < 5 ? "buy" : "summary" });
+  }
+
+  async function finish() {
     if (store) {
       setFinishing(true);
       try {
@@ -425,7 +434,7 @@ export function InsuranceHandFlow({
 
   return (
     <>
-      {hand.step !== "players" && (
+      {hand.step !== "players" && hand.step !== "summary" && (
         <section aria-label="这手牌" className="mt-3 flex flex-col gap-1">
           {hand.players.map((player) => (
             <PlayerRow
@@ -548,7 +557,19 @@ export function InsuranceHandFlow({
         />
       )}
 
-      {hand.players.length > 0 && (
+      {hand.step === "summary" && (
+        <HandSummary
+          hand={hand}
+          nameOf={nameOf}
+          seat={seat}
+          recording={store !== undefined}
+          saving={finishing}
+          onBack={() => update({ ...hand, step: "settle" })}
+          onConfirm={finish}
+        />
+      )}
+
+      {hand.players.length > 0 && hand.step !== "summary" && (
         <button
           type="button"
           onClick={discard}
