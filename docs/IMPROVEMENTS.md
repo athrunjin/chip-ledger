@@ -26,46 +26,7 @@ Records discussions of feature and process improvements: what was proposed, how 
 
 ## Decided, waiting for development
 
-### #I-013 Balance check and leave-all when settling
-
-- Type: feature
-- Date: proposed and decided 2026-11-05
-- Source: discussion
-- Problem: tapping settle with players still seated only shows a notice, so everyone has to leave one by one and the balance is only checked at the end.
-- Proposal:
-  - Tapping settle opens a dialog that says whether wins and losses balance, and by how much if not.
-  - If players are still seated, offer "leave all and settle", which cashes out every seated player at their current stack in one transaction.
-  - Each cash-out stays in the game record and can be undone separately.
-  - If everyone has left and the books balance, go straight to the settlement page.
-- Decision: do.
-- Tracking: issue #35
-
-### #I-014 Settling with unbalanced chips
-
-- Type: feature
-- Date: proposed and decided 2026-11-05
-- Source: discussion
-- Problem: settlement is blocked until the chips balance, but at a real game a difference sometimes can't be traced.
-- Proposal:
-  - Allow settling with a difference. Choosing that shows three options:
-    - Split in proportion to win/loss.
-    - The organizer tops up a shortfall, or collects an excess.
-    - Leave it unhandled.
-  - The difference is chips cashed out − chips bought. Above 0, players took out more than went in, so someone has to pay it. Below 0, chips are left over.
-  - A split comes off the side that is too large, in proportion to each player's result, using `allocate` so the shares add up to exactly the difference.
-    Example: with 200 too much on the win side, winners of 3000 and 1000 give up 150 and 50. With too much on the loss side, losers pay less in the same way.
-- Impact: `netCents` currently refuses unbalanced books, so settlement calculations need to change, along with the results table and shared image. Saving the choice is a data model change and needs an ADR.
-- Settled details:
-  - Only players on the side that is too large share a split. Anyone who broke even isn't affected.
-  - The organizer gets a 组织者 row in results and is a party in transfers under both plans.
-  - When unhandled, transfers pay as far as they can and the remaining difference shows as a warning.
-  - The choice is saved with the game, can be changed on the settlement page until settlement is confirmed, and appears in the shared image.
-  - Unbalanced books always need a choice before settling. There's no default.
-  - Results show adjusted amounts with a note explaining the split. Win/loss in chips keeps the real figures.
-  - An even split between all players was tried first and replaced after review, because it charged players who broke even.
-- Depends on: #I-013
-- Decision: do.
-- Tracking: issue #36, [ADR 0013](adr/0013-unbalanced-settlement.md)
+(none)
 
 ## Done
 
@@ -244,6 +205,47 @@ Records discussions of feature and process improvements: what was proposed, how 
   - The shared image always shows the chosen plan in full, without collapsing.
 - Decision: do. Released after passing a trial with the preview build.
 - Tracking: issue #33, PR #34, [ADR 0012](adr/0012-settlement-collector.md)
+
+### #I-013 Balance check and leave-all when settling
+
+- Type: feature
+- Date: proposed, decided and completed 2026-11-05
+- Source: discussion
+- Problem: tapping settle with players still seated only shows a notice, so everyone has to leave one by one and the balance is only checked at the end.
+- Proposal:
+  - Tapping settle opens a dialog that says whether wins and losses balance, and by how much if not.
+  - If players are still seated, offer "leave all and settle", which cashes out every seated player at their current stack in one transaction.
+  - Each cash-out stays in the game record and can be undone separately.
+  - If everyone has left and the books balance, go straight to the settlement page.
+- Decision: do. Released after passing a trial with the preview build.
+- Tracking: issue #35, PR #37
+
+### #I-014 Settling with unbalanced chips
+
+- Type: feature
+- Date: proposed, decided and completed 2026-11-05
+- Source: discussion
+- Problem: settlement is blocked until the chips balance, but at a real game a difference sometimes can't be traced.
+- Proposal:
+  - Allow settling with a difference. Choosing that shows three options:
+    - Split in proportion to win/loss.
+    - The organizer tops up a shortfall, or collects an excess.
+    - Leave it unhandled.
+  - The difference is chips cashed out − chips bought. Above 0, players took out more than went in, so someone has to pay it. Below 0, chips are left over.
+  - A split comes off the side that is too large, in proportion to each player's result, using `allocate` so the shares add up to exactly the difference.
+    Example: with 200 too much on the win side, winners of 3000 and 1000 give up 150 and 50. With too much on the loss side, losers pay less in the same way.
+- Impact: `netCents` currently refuses unbalanced books, so settlement calculations need to change, along with the results table and shared image. Saving the choice is a data model change and needs an ADR.
+- Settled details:
+  - Only players on the side that is too large share a split. Anyone who broke even isn't affected.
+  - The organizer gets a 组织者 row in results and is a party in transfers under both plans.
+  - When unhandled, transfers pay as far as they can and the remaining difference shows as a warning.
+  - The choice is saved with the game, can be changed on the settlement page until settlement is confirmed, and appears in the shared image.
+  - Unbalanced books always need a choice before settling. There's no default.
+  - Results show adjusted amounts with a note explaining the split. Win/loss in chips keeps the real figures.
+  - An even split between all players was tried first and replaced after review, because it charged players who broke even.
+- Depends on: #I-013
+- Decision: do. Released after passing a trial with the preview build.
+- Tracking: issue #36, PR #37, [ADR 0013](adr/0013-unbalanced-settlement.md)
 
 ## Not doing or deferred
 
