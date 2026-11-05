@@ -22,27 +22,19 @@ Records discussions of feature and process improvements: what was proposed, how 
 
 ## Under discussion
 
-(none)
+### #I-019 Insurance for a preflop all-in
+
+- Type: feature
+- Date: proposed 2026-11-06
+- Source: discussion
+- Problem: the guided hand shows 翻牌未发出 as disabled, marked as in development, because insurance only covers the next single card.
+- Proposal: to be discussed. Pricing the flop would need its own odds.
+- Decision: not decided.
+- Tracking: none yet
 
 ## Decided, waiting for development
 
-### #I-018 Insurance rules and multiway calculation
-
-- Type: feature
-- Date: proposed and decided 2026-11-05
-- Source: discussion
-- Problem: M3 needs insurance that each organizer can set up their own way, works when several players are all in, and records premiums and payouts at the table.
-- Proposal:
-  - The host turns insurance on when starting a game, and picks last time's setup, a built-in table or a saved rule. Rules can be edited and saved under a name.
-  - The rule covers odds by outs, the outs limit, whether tie cards count, whether a flop all-in can insure the turn, the pot player limit, premium caps by street, and whether a hit refunds the premium.
-  - Picking cards shows every pot with its leader, each opponent's outs, equity, odds and the price of both covers. Entering an outs count gives a quick price.
-- Settled details:
-  - 保险 is a seat in the game, not a player: the name is reserved, it starts with one hand, shows last and cannot leave.
-  - Everything is paid in chips at the table. If the seat cannot pay, it buys enough whole hands in the same step.
-  - At settlement its result goes to the organizer by default, or a chosen player, or its own row, and the result is labeled either way.
-  - A hit does not refund the premium by default. New games default to the table where 1 out pays 30.
-- Decision: do.
-- Tracking: issue #42, [ADR 0014](adr/0014-insurance-seat.md)
+(none)
 
 ## Done
 
@@ -306,6 +298,31 @@ Records discussions of feature and process improvements: what was proposed, how 
   - The filter is a dropdown, because buttons for 9 players would take several lines.
 - Decision: do. Released after passing a trial with the preview build.
 - Tracking: issue #40, PR #41
+
+### #I-018 Insurance rules and multiway calculation
+
+- Type: feature
+- Date: proposed and decided 2026-11-05, completed 2026-11-06
+- Source: discussion
+- Problem: M3 needs insurance that each organizer can set up their own way, works when several players are all in, and records premiums and payouts at the table.
+- Proposal:
+  - The host turns insurance on when starting a game, and picks last time's setup, a built-in table or a saved rule. Rules can be edited and saved under a name.
+  - The rule covers odds by outs, the outs limit, whether tie cards count, whether a flop all-in can insure the turn, the pot player limit, premium caps by street, and whether a hit refunds the premium.
+  - Picking cards shows every pot with its leader, each opponent's outs, equity, odds and the price of both covers. Entering an outs count gives a quick price.
+- Settled details:
+  - 保险 is a seat in the game, not a player: the name is reserved, it starts with one hand, shows last and cannot leave.
+  - Everything is paid in chips at the table. If the seat cannot pay, it buys enough whole hands in the same step.
+  - At settlement its result goes to the organizer by default, or a chosen player, or its own row, and the result is labeled either way.
+  - A hit does not refund the premium by default. New games default to the table where 1 out pays 30.
+- Changes from trying it at the table:
+  - Each all-in is one guided hand: add players, choose how far the board is, then buy, deal and settle each street. It resumes if the page is left.
+  - 保本 and 满池 leave the buyer their stake or pot share after the premium, with and without a refund. A quote locks once bought or declined.
+  - A tied lead cannot be insured, unless the leaders have equal chances and another player in the pot is behind them.
+  - Entered stacks update the table at once. Finishing a hand shows a summary, then updates all-in players and the seat.
+  - A player who cannot pay a premium buys whole hands after a prompt. A cover is assumed to have enough behind.
+  - Dialogs stay above the phone keyboard.
+- Decision: do. Released after trials on a real device with the preview builds.
+- Tracking: issue #42, PR #43, #44, #45, #46, #47, #48, ADRs [0014](adr/0014-insurance-seat.md), [0015](adr/0015-insurance-moves-only-the-seat.md), [0016](adr/0016-insurance-hands.md), [0017](adr/0017-finished-hand-sets-stacks.md), [0018](adr/0018-short-premium-buy-in.md), [0019](adr/0019-entered-stack-updates-table.md)
 
 ## Not doing or deferred
 

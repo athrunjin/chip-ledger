@@ -27,14 +27,18 @@ Each milestone maps to a GitHub Milestone, and each feature in it maps to an iss
 - Each player's time at the table (including leaving and coming back)
 - Dealer fee rules: hourly rate, rounding for part hours
 
-## M3 Insurance calculator
+## M3 Insurance calculator (done)
 
-- Insurance chosen per game, with saved rules and last-used settings
-- Configurable odds table (by number of outs) and limits
-- Multiway pots: side pots, outs for each opponent, equity
-- Payout and break-even calculations
-- Insurance as a seat in the game ledger, with its result assigned at settlement
-- A standalone calculator on the tools page
+- [x] Insurance chosen per game, with saved rules and last-used settings
+- [x] Configurable odds table (by number of outs) and limits
+- [x] Multiway pots: side pots, outs for each opponent, equity
+- [x] Payout and break-even calculations
+- [x] Insurance as a seat in the game ledger, with its result assigned at settlement
+- [x] A standalone calculator on the tools page
+- [x] A guided hand from the players to the river, which resumes if the page is left
+- [x] A summary of each finished hand, which updates the table
+
+A preflop all-in is not covered yet, see #I-019 in the [improvement log](IMPROVEMENTS.md).
 
 ## M4 Rake
 
