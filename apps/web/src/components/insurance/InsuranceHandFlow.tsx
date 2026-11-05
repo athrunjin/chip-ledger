@@ -37,6 +37,8 @@ import { SeatPicker } from "./SeatPicker";
 /** Keeps the hand. Missing for the standalone calculator, which records nothing. */
 export interface HandStore {
   save: (hand: InsuranceHand) => void;
+  /** A player's counted chips, which update the table at once. */
+  enterStack: (playerId: string, chips: number) => void;
   discard: (handId: string) => void;
   finish: (hand: InsuranceHand) => Promise<void>;
 }
@@ -409,6 +411,7 @@ export function InsuranceHandFlow({
       ? hand.players.map((p) => (p.playerId === entry.playerId ? entry : p))
       : [...hand.players, entry];
     update({ ...hand, players });
+    if (!entry.cover) store?.enterStack(entry.playerId, entry.chips);
     if (known) setAdding(undefined);
     else if (players.length === 1) setAdding({ stage: "seat" });
     else setAdding(players.length < seats.length ? { stage: "more" } : undefined);

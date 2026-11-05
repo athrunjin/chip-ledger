@@ -21,6 +21,7 @@ import {
   newInsuranceHand,
   useBuyInsurance,
   useDiscardInsuranceHand,
+  useEnterStack,
   useFinishInsuranceHand,
   useInsuranceHands,
   useSaveInsuranceHand,
@@ -133,6 +134,7 @@ function GameInsurance({ game }: { game: Game }) {
     .toReversed();
   const { data: hands } = useInsuranceHands(gameId);
   const saveHand = useSaveInsuranceHand(gameId);
+  const enterStack = useEnterStack(gameId);
   const discardHand = useDiscardInsuranceHand(gameId);
   const finishHand = useFinishInsuranceHand(gameId);
   const undoHand = useUndoInsuranceHand(gameId);
@@ -186,6 +188,7 @@ function GameInsurance({ game }: { game: Game }) {
     settleInsurance.isError ||
     undoInsurance.isError ||
     saveHand.isError ||
+    enterStack.isError ||
     finishHand.isError ||
     undoHand.isError;
 
@@ -223,6 +226,7 @@ function GameInsurance({ game }: { game: Game }) {
           }}
           handStore={{
             save: saveHand.mutate,
+            enterStack: (playerId, chips) => enterStack.mutate({ playerId, chips }),
             discard: discardHand.mutate,
             finish: async (hand) => {
               if (handChips === undefined) return;

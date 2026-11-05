@@ -232,6 +232,17 @@ describe("playerHandResults", () => {
     expect(k).toMatchObject({ potChips: 2000, stackChips: 2000 });
   });
 
+  it("notes a premium larger than the pot the player won", () => {
+    const flop = hand({ board: river.slice(0, 3), step: "buy" });
+    const purchased = bought(flop);
+    const costly = {
+      ...purchased,
+      purchases: purchased.purchases.map((p) => ({ ...p, premiumChips: 2500 })),
+    };
+    const [a] = playerHandResults(dealCard(dealCard(costly, c("3c")), c("4h")));
+    expect(a).toMatchObject({ potChips: 2000, stackChips: 0, shortChips: 500 });
+  });
+
   it("splits a tie and gives the odd chip to the first winner", () => {
     const players = [player("a", 100, ["As", "Kh"]), player("b", 100, ["Ad", "Kc"])];
     const pools = [1];
