@@ -1,7 +1,7 @@
 /** Settlement: balance check, each player's result in cash, and transfers. */
-import type { ChipRatio } from "../domain";
+import type { ChipRatio, ImbalanceHandling } from "../domain";
 import { chipsToCents, type PlayerLedger } from "../ledger";
-import { allocate, type Cents, cents, InvalidMoneyError, ZERO } from "../money";
+import { allocate, type Cents, cents, InvalidMoneyError, sum, ZERO } from "../money";
 
 export interface BalanceAdjustments {
   readonly rakeChips: number;
@@ -29,39 +29,73 @@ export interface PlayerNet {
 }
 
 /**
- * Each player's result in cash. Rounding per player would be a few cents off when the ratio does not divide evenly,
- * so the winners' total comes first, then `allocate` shares it across winners and losers so everyone adds up to exactly 0.
- * Only for books whose chips already balance.
+ * Each player's result in cash, before any difference is handled. Rounding per player would be a few cents off
+ * when the ratio does not divide evenly, so each side's total comes first and `allocate` shares it out.
  */
+function rawNetCents(players: readonly PlayerLedger[], ratio: ChipRatio): PlayerNet[] {
+  const chips = players.map((p) => ({ id: p.playerId, net: p.cashedOutChips - p.boughtChips }));
+  const shares = new Map<string, Cents>();
+  for (const sign of [1, -1]) {
+    const side = chips.filter((p) => p.net * sign > 0);
+    if (side.length === 0) continue;
+    const sizes = side.map((p) => Math.abs(p.net));
+    const total = chipsToCents(
+      sizes.reduce((sum, size) => sum + size, 0),
+      ratio,
+    );
+    allocate(total, sizes).forEach((share, i) => {
+      const player = side[i];
+      if (player) shares.set(player.id, cents(share * sign));
+    });
+  }
+  return chips.map((p) => ({ playerId: p.id, net: shares.get(p.id) ?? ZERO }));
+}
+
+/** Each player's result in cash, adding up to exactly 0. Only for books whose chips already balance. */
 export function netCents(players: readonly PlayerLedger[], ratio: ChipRatio): PlayerNet[] {
   if (chipDifference(players) !== 0) {
     throw new InvalidMoneyError("The books do not balance, so results cannot be converted");
   }
-  const chips = players.map((p) => ({ id: p.playerId, net: p.cashedOutChips - p.boughtChips }));
-  const winners = chips.filter((p) => p.net > 0);
-  const losers = chips.filter((p) => p.net < 0);
-  if (winners.length === 0) return chips.map((p) => ({ playerId: p.id, net: ZERO }));
+  return rawNetCents(players, ratio);
+}
 
-  const total = chipsToCents(
-    winners.reduce((sum, p) => sum + p.net, 0),
-    ratio,
-  );
-  const shares = new Map<string, Cents>();
-  allocate(
-    total,
-    winners.map((p) => p.net),
-  ).forEach((share, i) => {
-    const winner = winners[i];
-    if (winner) shares.set(winner.id, share);
-  });
-  allocate(
-    total,
-    losers.map((p) => -p.net),
-  ).forEach((share, i) => {
-    const loser = losers[i];
-    if (loser) shares.set(loser.id, cents(-share));
-  });
-  return chips.map((p) => ({ playerId: p.id, net: shares.get(p.id) ?? ZERO }));
+export const IMBALANCE_HANDLINGS: readonly ImbalanceHandling[] = ["split", "organizer", "ignore"];
+
+export interface SettlementOutcome {
+  /** Results after handling any difference. An organizer who covers it appears as `ORGANIZER_COLLECTOR`. */
+  readonly nets: readonly PlayerNet[];
+  /** Cash difference before handling. Positive means players are owed more than others lost. */
+  readonly difference: Cents;
+  /** The part of the difference left unhandled. */
+  readonly unresolved: Cents;
+}
+
+/** Works out results for any books. Unbalanced books with no handling chosen stay unhandled. */
+export function settlementOutcome(
+  players: readonly PlayerLedger[],
+  ratio: ChipRatio,
+  handling: ImbalanceHandling | undefined,
+): SettlementOutcome {
+  const raw = rawNetCents(players, ratio);
+  const difference = sum(raw.map((p) => p.net));
+  if (difference === 0) return { nets: raw, difference, unresolved: ZERO };
+
+  if (handling === "split") {
+    const shares = allocate(
+      difference,
+      raw.map(() => 1),
+    );
+    const nets = raw.map((p, i) => ({
+      playerId: p.playerId,
+      net: cents(p.net - (shares[i] ?? ZERO)),
+    }));
+    return { nets, difference, unresolved: ZERO };
+  }
+  if (handling === "organizer") {
+    const organizer = { playerId: ORGANIZER_COLLECTOR, net: cents(-difference) };
+    return { nets: [...raw, organizer], difference, unresolved: ZERO };
+  }
+  return { nets: raw, difference, unresolved: difference };
 }
 
 export interface Transfer {

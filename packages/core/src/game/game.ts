@@ -3,7 +3,7 @@
  *
  * Form values are strings typed by the user, converted here to integers (cents, chips).
  */
-import type { Currency, Game, OrganizerId, Timestamp } from "../domain";
+import type { Currency, Game, ImbalanceHandling, OrganizerId, Timestamp } from "../domain";
 import { type Cents, cents, toDecimalString, tryParseMoney } from "../money";
 
 export const CURRENCIES: readonly Currency[] = ["AUD", "CNY"];
@@ -143,6 +143,10 @@ export function settleGame(game: Game, settledAt: Timestamp): Game {
 export function chooseCollector(game: Game, collectorId: string | undefined): Game {
   const { collectorId: _, ...rest } = game;
   return collectorId === undefined ? rest : { ...rest, collectorId };
+}
+
+export function chooseImbalanceHandling(game: Game, imbalanceHandling: ImbalanceHandling): Game {
+  return { ...game, imbalanceHandling };
 }
 
 /** Reopens a settled game when a mistake turns up, so recording can continue. */

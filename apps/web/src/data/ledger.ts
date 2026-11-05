@@ -1,4 +1,4 @@
-import { adjustHands, type HandChange, type LedgerEvent } from "@holdem/core";
+import { adjustHands, type HandChange, type LedgerEvent, summarizeByPlayer } from "@holdem/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { GUEST_ORGANIZER_ID, repository } from ".";
@@ -94,6 +94,31 @@ export function useLeaveTable(gameId: string) {
         ...adjustment,
         { ...newEventMeta(gameId, leftAt), type: "cash_out", playerId, chips },
       ]);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ledger", gameId] }),
+  });
+}
+
+/** Every seated player leaves with their current stack, in one write. */
+export function useLeaveAll(gameId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    scope: ledgerScope(gameId),
+    mutationFn: async () => {
+      const events = await repository.ledger.listByGame(gameId);
+      const leftAt = Date.now();
+      await repository.ledger.appendAll(
+        summarizeByPlayer(events)
+          .filter((player) => player.seated)
+          .map(
+            ({ playerId, stackChips }): LedgerEvent => ({
+              ...newEventMeta(gameId, leftAt),
+              type: "cash_out",
+              playerId,
+              chips: stackChips,
+            }),
+          ),
+      );
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ledger", gameId] }),
   });

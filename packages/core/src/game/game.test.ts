@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { cents } from "../money";
 import {
   chooseCollector,
+  chooseImbalanceHandling,
   createGame,
   DEFAULT_GAME_SETTINGS,
   type GameSettings,
@@ -187,6 +188,13 @@ describe("chooseCollector", () => {
     const chosen = chooseCollector(game, "p1");
     expect(chosen.collectorId).toBe("p1");
     expect(chooseCollector(chosen, undefined)).toEqual(game);
+  });
+});
+
+describe("chooseImbalanceHandling", () => {
+  it("saves the choice on the game", () => {
+    const game = createGame(meta, DEFAULT_GAME_SETTINGS);
+    expect(chooseImbalanceHandling(game, "split").imbalanceHandling).toBe("split");
   });
 });
 

@@ -38,7 +38,7 @@ Records discussions of feature and process improvements: what was proposed, how 
   - Each cash-out stays in the game record and can be undone separately.
   - If everyone has left and the books balance, go straight to the settlement page.
 - Decision: do.
-- Tracking: no issue yet
+- Tracking: issue #35
 
 ### #I-014 Settling with unbalanced chips
 
@@ -63,7 +63,7 @@ Records discussions of feature and process improvements: what was proposed, how 
   - Results show adjusted amounts with a note explaining the split. Win/loss in chips keeps the real figures.
 - Depends on: #I-013
 - Decision: do.
-- Tracking: no issue yet
+- Tracking: issue #36, [ADR 0013](adr/0013-unbalanced-settlement.md)
 
 ## Done
 

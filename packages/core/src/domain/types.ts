@@ -19,6 +19,9 @@ export interface ChipRatio {
   readonly amount: Cents;
 }
 
+/** How to settle a chip difference: split it, have the organizer cover it, or leave it. */
+export type ImbalanceHandling = "split" | "organizer" | "ignore";
+
 export type GameStatus = "open" | "settled";
 
 export interface Game {
@@ -38,6 +41,8 @@ export interface Game {
   readonly createdAt: Timestamp;
   /** Who collects and pays out at settlement: a player ID or `ORGANIZER_COLLECTOR`. Missing means the optimal plan. */
   readonly collectorId?: string;
+  /** How a chip difference is settled. Only used when the books do not balance. */
+  readonly imbalanceHandling?: ImbalanceHandling;
   /** When settlement was confirmed. Cleared on reopening. */
   readonly settledAt?: Timestamp;
 }

@@ -1,8 +1,10 @@
 import {
   canReverse,
   chipsToCents,
+  chooseImbalanceHandling,
   type Game,
   type HandChange,
+  type ImbalanceHandling,
   lastBuyChips,
   ledgerTotals,
   nextBuyType,
@@ -17,12 +19,14 @@ import { HandsDialog } from "@/components/game/HandsDialog";
 import { LeaveDialog } from "@/components/game/LeaveDialog";
 import { LedgerLog } from "@/components/game/LedgerLog";
 import { LedgerPlayers } from "@/components/game/LedgerPlayers";
+import { SettleDialog } from "@/components/game/SettleDialog";
 import { Page } from "@/components/Page";
-import { useGame } from "@/data/games";
+import { useGame, useSaveGame } from "@/data/games";
 import {
   newEventMeta,
   useAdjustHands,
   useAppendEvent,
+  useLeaveAll,
   useLeaveTable,
   useLedger,
 } from "@/data/ledger";
@@ -64,6 +68,9 @@ type PendingEntry = {
   name: string;
 };
 
+const settleClass =
+  "inline-flex min-h-11 items-center rounded-xl bg-accent px-4 font-semibold text-accent-text";
+
 const HANDS_TITLE = { join: "买入", edit: "调整手数", rejoin: "补码" } as const;
 
 function GameLedger({ game }: { game: Game }) {
@@ -81,6 +88,10 @@ function GameLedger({ game }: { game: Game }) {
   const appendEvent = useAppendEvent(gameId);
   const adjustHands = useAdjustHands(gameId);
   const leaveTable = useLeaveTable(gameId);
+  const leaveAll = useLeaveAll(gameId);
+  const saveGame = useSaveGame();
+  const navigate = Route.useNavigate();
+  const [settling, setSettling] = useState(false);
   const [pending, setPending] = useState<PendingEntry>();
 
   const editable = status === "open";
@@ -146,6 +157,30 @@ function GameLedger({ game }: { game: Game }) {
     setPending({ kind, playerId, name: nameOf(playerId) });
   }
 
+  const seatedCount = ledger.filter((p) => p.seated).length;
+
+  function goToSettlement() {
+    navigate({ to: "/games/$gameId/settlement", params: { gameId } });
+  }
+
+  function handleSettle() {
+    if (seatedCount === 0 && totals.balanceChips === 0) {
+      goToSettlement();
+    } else {
+      setSettling(true);
+    }
+  }
+
+  async function confirmSettle(handling: ImbalanceHandling | undefined) {
+    try {
+      if (seatedCount > 0) await leaveAll.mutateAsync();
+      if (handling) await saveGame.mutateAsync(chooseImbalanceHandling(game, handling));
+      goToSettlement();
+    } catch {
+      // The dialog stays open and shows the failure from the mutation state
+    }
+  }
+
   function handleReverse(eventId: string) {
     if (!canReverse(events, eventId) || !window.confirm("撤销这笔记录？")) return;
     appendEvent.mutate({
@@ -169,15 +204,16 @@ function GameLedger({ game }: { game: Game }) {
               设置
             </Link>
           )}
-          {ledger.length > 0 && (
-            <Link
-              to="/games/$gameId/settlement"
-              params={{ gameId }}
-              className="inline-flex min-h-11 items-center rounded-xl bg-accent px-4 font-semibold text-accent-text"
-            >
-              {editable ? "结算" : "查看结算"}
-            </Link>
-          )}
+          {ledger.length > 0 &&
+            (editable ? (
+              <button type="button" onClick={handleSettle} className={settleClass}>
+                结算
+              </button>
+            ) : (
+              <Link to="/games/$gameId/settlement" params={{ gameId }} className={settleClass}>
+                查看结算
+              </Link>
+            ))}
         </div>
       }
     >
@@ -241,6 +277,19 @@ function GameLedger({ game }: { game: Game }) {
 
       {events.length > 0 && (
         <LedgerLog events={events} nameOf={nameOf} editable={editable} onReverse={handleReverse} />
+      )}
+
+      {settling && (
+        <SettleDialog
+          seatedCount={seatedCount}
+          balanceChips={totals.balanceChips}
+          cash={formatGameMoney(chipsToCents(Math.abs(totals.balanceChips), chipRatio), currency)}
+          initialHandling={game.imbalanceHandling}
+          saving={leaveAll.isPending || saveGame.isPending}
+          saveFailed={leaveAll.isError || saveGame.isError}
+          onSubmit={confirmSettle}
+          onClose={() => setSettling(false)}
+        />
       )}
 
       {pending?.kind === "leave" && (
