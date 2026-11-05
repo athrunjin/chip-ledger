@@ -54,7 +54,7 @@ export function SettleDialog({
       </p>
       {seatedCount > 0 && (
         <p className="text-sm text-muted">
-          还有 {seatedCount} 人在桌，一键离桌会按当前筹码记录，之后可以在牌局记录里撤销。
+          还有 {seatedCount} 人在桌，一键离桌会按当前筹码记录，之后可以点「返回」回到牌桌。
         </p>
       )}
       {!balanced && (

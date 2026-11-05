@@ -20,6 +20,10 @@ interface LedgerPlayersProps {
   onEditHands: (playerId: string) => void;
   onEditStack: (playerId: string) => void;
   onRebuy: (playerId: string) => void;
+  /** Players who can be removed at 1 hand, because they were added by mistake */
+  removableIds: ReadonlySet<string>;
+  onRemove: (playerId: string) => void;
+  onReturn: (playerId: string) => void;
   onLeave: (playerId: string) => void;
 }
 
@@ -34,6 +38,9 @@ export function LedgerPlayers({
   onEditHands,
   onEditStack,
   onRebuy,
+  removableIds,
+  onRemove,
+  onReturn,
   onLeave,
 }: LedgerPlayersProps) {
   const seated = players.filter((p) => p.seated);
@@ -53,13 +60,14 @@ export function LedgerPlayers({
     const count = boughtChips / handChips;
     if (!editable) return <span className="shrink-0 font-semibold">{count} 手</span>;
     const name = nameOf(playerId);
+    const removable = count <= 1 && removableIds.has(playerId);
     return (
       <div className="flex shrink-0 items-center">
         <button
           type="button"
-          aria-label={`${name}减 1 手`}
-          disabled={count <= 1}
-          onClick={() => onStepHands(playerId, -1)}
+          aria-label={removable ? `${name}移出这局` : `${name}减 1 手`}
+          disabled={count <= 1 && !removable}
+          onClick={() => (removable ? onRemove(playerId) : onStepHands(playerId, -1))}
           className={`${stepClass} disabled:opacity-40`}
         >
           −
@@ -146,11 +154,11 @@ export function LedgerPlayers({
                 {editable && (
                   <button
                     type="button"
-                    aria-label={`${nameOf(playerId)}补码入座`}
-                    onClick={() => onRebuy(playerId)}
+                    aria-label={`${nameOf(playerId)}返回牌桌`}
+                    onClick={() => onReturn(playerId)}
                     className={actionClass}
                   >
-                    补码
+                    返回
                   </button>
                 )}
               </li>

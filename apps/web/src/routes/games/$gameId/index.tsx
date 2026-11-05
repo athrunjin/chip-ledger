@@ -1,14 +1,15 @@
 import {
-  canReverse,
   chipsToCents,
   chooseImbalanceHandling,
   type Game,
   type HandChange,
   type ImbalanceHandling,
   lastBuyChips,
+  latestCashOut,
   ledgerTotals,
   nextBuyType,
   type Player,
+  soleBuyIn,
   summarizeByPlayer,
 } from "@holdem/core";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -60,10 +61,10 @@ function GamePage() {
 /**
  * The record being entered.
  * `buy` and `stack` take chips, `leave` confirms both, and the others take hands:
- * `join` is a first buy-in, `edit` sets a target, and `rejoin` adds hands after leaving.
+ * `join` is a first buy-in and `edit` sets a target.
  */
 type PendingEntry = {
-  kind: "buy" | "stack" | "leave" | "join" | "edit" | "rejoin";
+  kind: "buy" | "stack" | "leave" | "join" | "edit";
   playerId: string;
   name: string;
 };
@@ -71,7 +72,7 @@ type PendingEntry = {
 const settleClass =
   "inline-flex min-h-11 items-center rounded-xl bg-accent px-4 font-semibold text-accent-text";
 
-const HANDS_TITLE = { join: "买入", edit: "调整手数", rejoin: "补码" } as const;
+const HANDS_TITLE = { join: "买入", edit: "调整手数" } as const;
 
 function GameLedger({ game }: { game: Game }) {
   const {
@@ -152,9 +153,18 @@ function GameLedger({ game }: { game: Game }) {
     adjustHands.mutate({ playerId, handChips, change }, { onSuccess: () => onSuccess?.() });
   }
 
-  function handleRebuy(playerId: string) {
-    const kind = handChips === undefined ? "buy" : "rejoin";
-    setPending({ kind, playerId, name: nameOf(playerId) });
+  function appendReversal(reversedEventId: string) {
+    appendEvent.mutate({ ...newEventMeta(gameId), type: "reversal", reversedEventId });
+  }
+
+  function handleReturn(playerId: string) {
+    const cashOut = latestCashOut(events, playerId);
+    if (cashOut) appendReversal(cashOut.id);
+  }
+
+  function handleRemove(playerId: string) {
+    const buyIn = soleBuyIn(events, playerId);
+    if (buyIn && window.confirm(`把 ${nameOf(playerId)} 移出这局？`)) appendReversal(buyIn.id);
   }
 
   const seatedCount = ledger.filter((p) => p.seated).length;
@@ -179,15 +189,6 @@ function GameLedger({ game }: { game: Game }) {
     } catch {
       // The dialog stays open and shows the failure from the mutation state
     }
-  }
-
-  function handleReverse(eventId: string) {
-    if (!canReverse(events, eventId) || !window.confirm("撤销这笔记录？")) return;
-    appendEvent.mutate({
-      ...newEventMeta(gameId),
-      type: "reversal",
-      reversedEventId: eventId,
-    });
   }
 
   return (
@@ -265,7 +266,10 @@ function GameLedger({ game }: { game: Game }) {
         onStepHands={(playerId, by) => handleHands(playerId, { by })}
         onEditHands={(playerId) => setPending({ kind: "edit", playerId, name: nameOf(playerId) })}
         onEditStack={(playerId) => setPending({ kind: "stack", playerId, name: nameOf(playerId) })}
-        onRebuy={handleRebuy}
+        onRebuy={(playerId) => setPending({ kind: "buy", playerId, name: nameOf(playerId) })}
+        removableIds={new Set(ledger.map((p) => p.playerId).filter((id) => soleBuyIn(events, id)))}
+        onRemove={handleRemove}
+        onReturn={handleReturn}
         onLeave={(playerId) => setPending({ kind: "leave", playerId, name: nameOf(playerId) })}
       />
 
@@ -275,9 +279,7 @@ function GameLedger({ game }: { game: Game }) {
         </p>
       )}
 
-      {events.length > 0 && (
-        <LedgerLog events={events} nameOf={nameOf} editable={editable} onReverse={handleReverse} />
-      )}
+      {events.length > 0 && <LedgerLog events={events} nameOf={nameOf} />}
 
       {settling && (
         <SettleDialog
@@ -308,7 +310,7 @@ function GameLedger({ game }: { game: Game }) {
       )}
 
       {pending &&
-        (pending.kind === "join" || pending.kind === "edit" || pending.kind === "rejoin") &&
+        (pending.kind === "join" || pending.kind === "edit") &&
         handChips !== undefined && (
           <HandsDialog
             key={pending.playerId}
@@ -320,13 +322,7 @@ function GameLedger({ game }: { game: Game }) {
             currency={currency}
             saving={adjustHands.isPending}
             saveFailed={adjustHands.isError}
-            onSubmit={(hands) =>
-              handleHands(
-                pending.playerId,
-                pending.kind === "rejoin" ? { by: hands } : { to: hands },
-                closeDialog,
-              )
-            }
+            onSubmit={(hands) => handleHands(pending.playerId, { to: hands }, closeDialog)}
             onClose={closeDialog}
           />
         )}

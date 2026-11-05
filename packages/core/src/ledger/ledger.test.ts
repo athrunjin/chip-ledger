@@ -6,11 +6,13 @@ import { cents } from "../money";
 import {
   activeChipEvents,
   adjustHands,
-  canReverse,
   chipsToCents,
+  gameRecord,
   lastBuyChips,
+  latestCashOut,
   ledgerTotals,
   nextBuyType,
+  soleBuyIn,
   summarizeByPlayer,
 } from "./ledger";
 
@@ -73,7 +75,7 @@ describe("summarizeByPlayer", () => {
     expect(summarizeByPlayer(events)).toEqual([]);
   });
 
-  it("returns to the state before an event once it is reversed", () => {
+  it("returns the books to their state before an event once it is reversed", () => {
     const anyEvent = fc.record({
       type: fc.constantFrom<ChipEvent["type"]>("buy_in", "rebuy", "cash_out"),
       playerId: fc.constantFrom("a", "b", "c"),
@@ -84,7 +86,15 @@ describe("summarizeByPlayer", () => {
         const before: LedgerEvent[] = history.map((e, i) => ({ ...base, ...e, id: `e${i}` }));
         const event = { ...base, ...last, id: "last" };
         const after = [...before, event, reversal("r", "last")];
-        expect(summarizeByPlayer(after)).toEqual(summarizeByPlayer(before));
+        // Stacks are left out: returning after a cash-out keeps the chips left with
+        const books = (events: readonly LedgerEvent[]) =>
+          summarizeByPlayer(events).map(({ playerId, boughtChips, cashedOutChips, seated }) => ({
+            playerId,
+            boughtChips,
+            cashedOutChips,
+            seated,
+          }));
+        expect(books(after)).toEqual(books(before));
       }),
     );
   });
@@ -95,20 +105,6 @@ describe("activeChipEvents", () => {
     const kept = chip("2", "rebuy", "a", 200);
     const events = [chip("1", "buy_in", "a", 1000), kept, reversal("3", "1")];
     expect(activeChipEvents(events)).toEqual([kept]);
-  });
-});
-
-describe("canReverse", () => {
-  const events = [chip("1", "buy_in", "a", 1000), chip("2", "rebuy", "a", 200), reversal("3", "1")];
-
-  it("allows undoing chip events not yet reversed", () => {
-    expect(canReverse(events, "2")).toBe(true);
-  });
-
-  it("refuses reversed events, reversals and unknown events", () => {
-    expect(canReverse(events, "1")).toBe(false);
-    expect(canReverse(events, "3")).toBe(false);
-    expect(canReverse(events, "nope")).toBe(false);
   });
 });
 
@@ -310,10 +306,13 @@ describe("live stacks", () => {
     expect(stackOf(events)).toBe(1000);
   });
 
-  it("is 0 after leaving and restored if leaving is undone", () => {
+  it("is 0 after leaving and back to the chips left with after returning", () => {
     const left = [at(1, chip("1", "buy_in", "a", 500)), at(2, chip("2", "cash_out", "a", 600))];
     expect(summarizeByPlayer(left)[0]).toMatchObject({ stackChips: 0, netChips: 100 });
-    expect(stackOf([...left, at(3, reversal("r", "2"))])).toBe(500);
+    expect(summarizeByPlayer([...left, at(3, reversal("r", "2"))])[0]).toMatchObject({
+      stackChips: 600,
+      netChips: 100,
+    });
   });
 
   it("counts earlier cash-outs in the win or loss after sitting back down", () => {
@@ -328,7 +327,6 @@ describe("live stacks", () => {
   it("does not treat a typed stack as a buy or a cash-out", () => {
     const events = [at(1, chip("1", "buy_in", "a", 500)), stackSet("s", 0, 2)];
     expect(summarizeByPlayer(events)[0]).toMatchObject({ boughtChips: 500, seated: true });
-    expect(canReverse(events, "s")).toBe(true);
   });
 
   it("shows an imbalance until wins and losses are both entered", () => {
@@ -337,5 +335,137 @@ describe("live stacks", () => {
     expect(ledgerTotals(summarizeByPlayer(win)).balanceChips).toBe(200);
     const both = [...win, stackSet("s2", 300, 3, "b")];
     expect(ledgerTotals(summarizeByPlayer(both)).balanceChips).toBe(0);
+  });
+});
+
+describe("latestCashOut", () => {
+  it("finds the latest cash-out still in effect", () => {
+    const events = [
+      chip("1", "buy_in", "a", 500),
+      chip("2", "cash_out", "a", 600),
+      reversal("r", "2"),
+      chip("3", "cash_out", "a", 700),
+      chip("4", "cash_out", "b", 100),
+    ];
+    expect(latestCashOut(events, "a")?.id).toBe("3");
+  });
+
+  it("returning brings back the chips left with and seats the player", () => {
+    const left = [
+      { ...chip("1", "buy_in", "a", 500), occurredAt: 1 },
+      { ...chip("2", "cash_out", "a", 1300), occurredAt: 2 },
+    ];
+    const out = latestCashOut(left, "a");
+    if (!out) throw new Error("missing cash-out");
+    const back = [...left, { ...reversal("r", out.id), occurredAt: 3 }];
+    expect(summarizeByPlayer(back)[0]).toMatchObject({
+      seated: true,
+      cashedOutChips: 0,
+      stackChips: 1300,
+      netChips: 800,
+    });
+  });
+});
+
+describe("soleBuyIn", () => {
+  it("finds a buy-in that is the only record", () => {
+    expect(soleBuyIn([chip("1", "buy_in", "a", 500)], "a")?.id).toBe("1");
+  });
+
+  it("ignores hands that were added and removed again", () => {
+    const events = [
+      chip("1", "buy_in", "a", 500),
+      chip("2", "rebuy", "a", 500),
+      reversal("r", "2"),
+    ];
+    expect(soleBuyIn(events, "a")?.id).toBe("1");
+  });
+
+  it("refuses a player with other records", () => {
+    const rebuy = [chip("1", "buy_in", "a", 500), chip("2", "rebuy", "a", 500)];
+    const left = [chip("1", "buy_in", "a", 500), chip("2", "cash_out", "a", 500)];
+    const typed: LedgerEvent[] = [
+      chip("1", "buy_in", "a", 500),
+      { ...base, id: "s", type: "stack_set", playerId: "a", chips: 700 },
+    ];
+    expect(soleBuyIn(rebuy, "a")).toBeUndefined();
+    expect(soleBuyIn(left, "a")).toBeUndefined();
+    expect(soleBuyIn(typed, "a")).toBeUndefined();
+    expect(soleBuyIn([], "a")).toBeUndefined();
+  });
+});
+
+describe("gameRecord", () => {
+  const at = (occurredAt: number, event: LedgerEvent): LedgerEvent => ({ ...event, occurredAt });
+  const kinds = (events: readonly LedgerEvent[]) =>
+    gameRecord(events).map(({ kind, chips }) => `${kind} ${chips}`);
+
+  it("lists events oldest first", () => {
+    const events = [
+      at(1, chip("1", "buy_in", "a", 500)),
+      at(2, chip("2", "rebuy", "a", 500)),
+      at(3, chip("3", "cash_out", "a", 900)),
+    ];
+    expect(kinds(events)).toEqual(["buy_in 500", "rebuy 500", "cash_out 900"]);
+  });
+
+  it("keeps the original row and adds one for a reduced hand", () => {
+    const events = [
+      at(1, chip("1", "buy_in", "a", 500)),
+      at(2, chip("2", "rebuy", "a", 500)),
+      at(3, reversal("r", "2")),
+    ];
+    expect(kinds(events)).toEqual(["buy_in 500", "rebuy 500", "reduce 500"]);
+  });
+
+  it("reads a reversal and its replacement buy as one reduction", () => {
+    const events = [
+      at(1, chip("1", "buy_in", "a", 1500)),
+      at(2, reversal("r", "1")),
+      at(2, chip("2", "buy_in", "a", 500)),
+    ];
+    expect(kinds(events)).toEqual(["buy_in 1500", "reduce 1000"]);
+  });
+
+  it("names a reversed cash-out as a return", () => {
+    const events = [
+      at(1, chip("1", "buy_in", "a", 500)),
+      at(2, chip("2", "cash_out", "a", 1300)),
+      at(3, reversal("r", "2")),
+    ];
+    expect(kinds(events)).toEqual(["buy_in 500", "cash_out 1300", "return 1300"]);
+  });
+
+  it("names a fully reversed player as removed", () => {
+    const events = [at(1, chip("1", "buy_in", "a", 500)), at(2, reversal("r", "1"))];
+    expect(kinds(events)).toEqual(["buy_in 500", "remove 500"]);
+  });
+
+  it("shows typed stacks and undone ones from older games", () => {
+    const stack: LedgerEvent = {
+      ...base,
+      id: "s",
+      type: "stack_set",
+      playerId: "a",
+      chips: 700,
+      occurredAt: 2,
+    };
+    const events = [at(1, chip("1", "buy_in", "a", 500)), stack, at(3, reversal("r", "s"))];
+    expect(kinds(events)).toEqual(["buy_in 500", "stack_set 700", "stack_undo 700"]);
+  });
+
+  it("keeps players apart when they share a timestamp", () => {
+    const events = [
+      at(1, chip("1", "buy_in", "a", 500)),
+      at(1, chip("2", "buy_in", "b", 500)),
+      at(2, chip("3", "cash_out", "a", 500)),
+      at(2, chip("4", "cash_out", "b", 500)),
+    ];
+    expect(gameRecord(events).map((e) => `${e.playerId} ${e.kind}`)).toEqual([
+      "a buy_in",
+      "b buy_in",
+      "a cash_out",
+      "b cash_out",
+    ]);
   });
 });

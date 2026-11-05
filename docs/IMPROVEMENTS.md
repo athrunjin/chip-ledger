@@ -35,10 +35,10 @@ Records discussions of feature and process improvements: what was proposed, how 
 - Proposal:
   - Replace 补码 on players who have left with 返回 (return).
   - Tapping it puts them back in the seated list, and the game continues as normal: hand controls, stack and leaving all work as before.
-  - Under the append-only ledger, this reverses their latest cash-out, which restores their stack.
+  - Under the append-only ledger, this reverses their latest cash-out, and their stack becomes the chips they left with.
 - Settled details: they come back with the chips they left with, with no confirmation, because leaving again undoes it.
 - Decision: do.
-- Tracking: no issue yet
+- Tracking: issue #38
 
 ### #I-016 Remove undo from the game record
 
@@ -52,7 +52,7 @@ Records discussions of feature and process improvements: what was proposed, how 
   - Reversals stay as an internal ledger mechanism, so the ledger is still append-only.
 - Settled details: undo was the only way to remove a first buy-in, so tapping − at 1 hand offers to remove a player added by mistake. It needs a confirmation and only works when their buy-in is their only record.
 - Decision: do.
-- Tracking: no issue yet
+- Tracking: issue #39
 
 ### #I-017 Chronological game record with dates and a player filter
 
@@ -68,7 +68,7 @@ Records discussions of feature and process improvements: what was proposed, how 
   - Reversals appear as their own rows in time order, such as 减手 and 返回, rather than striking out the original. Older games show the same way.
   - The filter is a dropdown, because buttons for 9 players would take several lines.
 - Decision: do.
-- Tracking: no issue yet
+- Tracking: issue #40
 
 ## Done
 
