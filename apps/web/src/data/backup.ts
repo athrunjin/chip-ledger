@@ -3,6 +3,7 @@ import {
   type Cents,
   CURRENCIES,
   cents,
+  IMBALANCE_HANDLINGS,
   type LegacyGame,
   upgradeLegacyGame,
 } from "@holdem/core";
@@ -28,6 +29,7 @@ const gameFields = {
   buyInBigBlinds: chips.positive().optional(),
   handChips: chips.positive().optional(),
   collectorId: id.optional(),
+  imbalanceHandling: z.enum(IMBALANCE_HANDLINGS as ["split", "organizer", "ignore"]).optional(),
   status: z.enum(["open", "settled"]),
   createdAt: timestamp,
   settledAt: timestamp.optional(),

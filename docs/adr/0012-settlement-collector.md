@@ -19,6 +19,7 @@ Transfers aren't saved because the ledger can always reproduce them, but the cho
 - `Game` gains an optional `collectorId`: a player ID or `ORGANIZER_COLLECTOR`. Missing means the optimal plan.
 - `collectorTransfers` runs in `core`: every loser pays the collector, who pays every winner.
 - If the collector is no longer in the game, the optimal plan is used.
+- The choice can't change once settlement is confirmed. Reopen the game to change it.
 - The backup format stays at version 2 because the field is optional.
 
 ## Consequences

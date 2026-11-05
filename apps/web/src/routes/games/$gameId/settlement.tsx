@@ -1,27 +1,30 @@
 import {
+  cents,
   chipDifference,
   chipsToCents,
   chooseCollector,
+  chooseImbalanceHandling,
   collectorTransfers,
   type Game,
   isValidCollector,
-  netCents,
   ORGANIZER_COLLECTOR,
   type PlayerLedger,
-  type PlayerNet,
   reopenGame,
+  type SettlementOutcome,
   settleGame,
+  settlementOutcome,
   settleTransfers,
   summarizeByPlayer,
 } from "@holdem/core";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight, ChevronDown, Share2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import { ImbalanceOptions } from "@/components/game/ImbalanceOptions";
 import { Page } from "@/components/Page";
 import { useGame, useSaveGame } from "@/data/games";
 import { useLedger } from "@/data/ledger";
 import { usePlayers } from "@/data/players";
-import { formatSignedChips, netColor } from "@/lib/chips";
+import { formatDifference, formatSignedChips, netColor } from "@/lib/chips";
 import { cn } from "@/lib/cn";
 import { formatGameMoney } from "@/lib/currency";
 import { renderSettlementImage } from "@/lib/settlement-image";
@@ -63,20 +66,19 @@ function SettlementPage() {
         <Notice gameId={gameId}>
           还有 {seated.length} 人在桌：{seated.join("、")}。全部离桌后才能结算。
         </Notice>
-      ) : difference !== 0 ? (
-        <Notice gameId={gameId}>
-          账目不平衡：离桌筹码比买入{difference > 0 ? "多" : "少"}{" "}
-          {Math.abs(difference).toLocaleString("zh-CN")} 筹码（
-          {formatGameMoney(chipsToCents(Math.abs(difference), game.chipRatio), game.currency)}
-          ）。请核对后修正记录。
-        </Notice>
       ) : (
-        <SettlementResult
-          game={game}
-          nets={netCents(ledger, game.chipRatio)}
-          ledger={ledger}
-          nameOf={nameOf}
-        />
+        <>
+          {difference !== 0 && <ImbalanceSection game={game} difference={difference} />}
+          {(difference === 0 || game.imbalanceHandling) && (
+            <SettlementResult
+              game={game}
+              outcome={settlementOutcome(ledger, game.chipRatio, game.imbalanceHandling)}
+              differenceChips={difference}
+              ledger={ledger}
+              nameOf={nameOf}
+            />
+          )}
+        </>
       )}
     </Page>
   );
@@ -97,14 +99,51 @@ function Notice({ gameId, children }: { gameId: string; children: ReactNode }) {
   );
 }
 
+/** Shows a chip difference and how it is handled. */
+function ImbalanceSection({ game, difference }: { game: Game; difference: number }) {
+  const saveGame = useSaveGame();
+  const cash = formatGameMoney(chipsToCents(Math.abs(difference), game.chipRatio), game.currency);
+  const settled = game.status === "settled";
+
+  return (
+    <section className="mb-4 rounded-xl border border-highlight bg-surface p-3">
+      <h2 className="font-semibold">水上下不平衡</h2>
+      <p className="mt-1 mb-3 text-sm text-muted">
+        差额 {formatDifference(difference, cash)}。
+        {settled ? "已确认结算，重新打开牌局后才能修改。" : "选择怎么处理，或回到牌局核对记录。"}
+      </p>
+      <ImbalanceOptions
+        differenceChips={difference}
+        cash={cash}
+        value={game.imbalanceHandling}
+        disabled={saveGame.isPending || settled}
+        onChange={(handling) => saveGame.mutate(chooseImbalanceHandling(game, handling))}
+      />
+      {saveGame.isError && (
+        <p role="alert" className="mt-2 text-sm text-highlight">
+          保存失败，请重试。
+        </p>
+      )}
+    </section>
+  );
+}
+
 interface SettlementResultProps {
   game: Game;
-  nets: PlayerNet[];
+  outcome: SettlementOutcome;
+  differenceChips: number;
   ledger: readonly PlayerLedger[];
   nameOf: (playerId: string) => string;
 }
 
-function SettlementResult({ game, nets, ledger, nameOf }: SettlementResultProps) {
+function SettlementResult({
+  game,
+  outcome,
+  differenceChips,
+  ledger,
+  nameOf,
+}: SettlementResultProps) {
+  const { nets, difference, unresolved } = outcome;
   const {
     currency,
     status,
@@ -124,6 +163,7 @@ function SettlementResult({ game, nets, ledger, nameOf }: SettlementResultProps)
   const collectorName = (id: string) => (id === ORGANIZER_COLLECTOR ? "组织者" : nameOf(id));
   const planName = collectorId ? `代收人 ${collectorName(collectorId)}` : "最优方案";
 
+  const organizerNet = nets.find((p) => p.playerId === ORGANIZER_COLLECTOR)?.net;
   const results = nets
     .toSorted((a, b) => b.net - a.net)
     .flatMap(({ playerId, net }) => {
@@ -144,6 +184,38 @@ function SettlementResult({ game, nets, ledger, nameOf }: SettlementResultProps)
       ];
     });
 
+  const rows =
+    organizerNet === undefined
+      ? results
+      : [
+          ...results,
+          {
+            playerId: ORGANIZER_COLLECTOR,
+            name: "组织者",
+            hands: "—",
+            chips: "—",
+            netChips: -differenceChips,
+            netText: formatSignedChips(-differenceChips),
+            amount: formatGameMoney(organizerNet, currency, "exceptZero"),
+            net: organizerNet,
+          },
+        ];
+
+  function imbalanceNote() {
+    if (difference === 0) return undefined;
+    const size = formatGameMoney(cents(Math.abs(difference)), currency);
+    if (unresolved !== 0) {
+      const holder = collectorId ? "，差额留在代收人手上" : "";
+      return `未处理差额 ${size}${holder}`;
+    }
+    if (organizerNet !== undefined) return `组织者${difference > 0 ? "补齐" : "收取"} ${size}`;
+    const count = results.filter((r) => r.netChips * difference > 0).length;
+    return difference > 0
+      ? `水上多 ${size}，由 ${count} 位赢家按水上比例扣减`
+      : `水下多 ${size}，由 ${count} 位输家按水下比例少付`;
+  }
+  const note = imbalanceNote();
+
   async function handleShare() {
     setSharing(true);
     setShareFailed(false);
@@ -158,7 +230,8 @@ function SettlementResult({ game, nets, ledger, nameOf }: SettlementResultProps)
           to: collectorName(to),
           amount: formatGameMoney(amount, currency),
         })),
-        results: results.map(({ name, hands, chips, netChips, netText, amount }) => ({
+        note,
+        results: rows.map(({ name, hands, chips, netChips, netText, amount }) => ({
           name,
           hands,
           chips,
@@ -191,10 +264,10 @@ function SettlementResult({ game, nets, ledger, nameOf }: SettlementResultProps)
       <button
         type="button"
         aria-pressed={active}
-        disabled={saveGame.isPending}
+        disabled={saveGame.isPending || status === "settled"}
         onClick={() => choosePlan(next)}
         className={cn(
-          "min-h-11 rounded-xl border font-medium",
+          "min-h-11 rounded-xl border font-medium disabled:opacity-60",
           active ? "border-accent bg-accent text-accent-text" : "border-line bg-surface",
         )}
       >
@@ -228,7 +301,7 @@ function SettlementResult({ game, nets, ledger, nameOf }: SettlementResultProps)
             </tr>
           </thead>
           <tbody>
-            {results.map(({ playerId, name, hands, chips, netChips, netText, amount, net }) => (
+            {rows.map(({ playerId, name, hands, chips, netChips, netText, amount, net }) => (
               <tr key={playerId} className="h-12 border-t border-line tabular-nums">
                 <th scope="row" className="truncate text-left font-medium">
                   {name}
@@ -242,6 +315,12 @@ function SettlementResult({ game, nets, ledger, nameOf }: SettlementResultProps)
           </tbody>
         </table>
       </div>
+
+      {note && (
+        <p role="status" className="mt-2 text-sm text-highlight">
+          {note}
+        </p>
+      )}
 
       <section className="mt-4">
         <h2>
@@ -275,7 +354,7 @@ function SettlementResult({ game, nets, ledger, nameOf }: SettlementResultProps)
                 <span className="mb-1 block text-sm text-muted">由谁代收</span>
                 <select
                   value={collectorId}
-                  disabled={saveGame.isPending}
+                  disabled={saveGame.isPending || status === "settled"}
                   onChange={(event) => choosePlan(event.target.value)}
                   className="min-h-12 w-full rounded-xl border border-line bg-surface px-3"
                 >

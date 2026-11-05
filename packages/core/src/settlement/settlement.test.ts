@@ -1,7 +1,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
-import type { PlayerLedger } from "../ledger";
+import { chipsToCents, type PlayerLedger } from "../ledger";
 import { cents, sum } from "../money";
 import {
   chipDifference,
@@ -10,6 +10,7 @@ import {
   netCents,
   ORGANIZER_COLLECTOR,
   type PlayerNet,
+  settlementOutcome,
   settleTransfers,
 } from "./settlement";
 
@@ -171,5 +172,110 @@ describe("isValidCollector", () => {
     expect(isValidCollector(nets, ORGANIZER_COLLECTOR)).toBe(true);
     expect(isValidCollector(nets, "gone")).toBe(false);
     expect(isValidCollector(nets, undefined)).toBe(false);
+  });
+});
+
+describe("settlementOutcome", () => {
+  const oneToOne = { chips: 1, amount: cents(100) };
+  // Cashed out 300 chips more than were bought
+  const excess = [ledger("a", 1000, 1500), ledger("b", 1000, 800)];
+  const short = [ledger("a", 1000, 1200), ledger("b", 1000, 500)];
+  const netOf = (nets: readonly PlayerNet[], id: string) =>
+    nets.find((p) => p.playerId === id)?.net;
+
+  it("leaves balanced books alone whatever the handling", () => {
+    const players = [ledger("a", 1000, 1500), ledger("b", 1000, 500)];
+    expect(settlementOutcome(players, oneToOne, "split")).toEqual({
+      nets: netCents(players, oneToOne),
+      difference: 0,
+      unresolved: 0,
+    });
+  });
+
+  it("takes an excess off winners in proportion to their wins", () => {
+    const players = [ledger("a", 1000, 4000), ledger("b", 1000, 2000), ledger("c", 3800, 0)];
+    const { nets, difference, unresolved } = settlementOutcome(players, oneToOne, "split");
+    expect(difference).toBe(20_000);
+    expect(unresolved).toBe(0);
+    expect(netOf(nets, "a")).toBe(285_000);
+    expect(netOf(nets, "b")).toBe(95_000);
+    expect(netOf(nets, "c")).toBe(-380_000);
+  });
+
+  it("lets losers pay less in proportion when chips are left over", () => {
+    const players = [ledger("a", 3000, 0), ledger("b", 1000, 0), ledger("c", 1000, 4800)];
+    const { nets, difference } = settlementOutcome(players, oneToOne, "split");
+    expect(difference).toBe(-20_000);
+    expect(netOf(nets, "a")).toBe(-285_000);
+    expect(netOf(nets, "b")).toBe(-95_000);
+    expect(netOf(nets, "c")).toBe(380_000);
+  });
+
+  it("matches the converted chip difference when the ratio does not divide evenly", () => {
+    const players = [ledger("a", 300, 401), ledger("b", 300, 250), ledger("c", 300, 251)];
+    const ratio = { chips: 3, amount: cents(100) };
+    const { difference } = settlementOutcome([...players, ledger("d", 300, 299)], ratio, "ignore");
+    expect(difference).toBe(chipsToCents(1, ratio));
+  });
+
+  it("never moves a player past 0 when splitting", () => {
+    const players = [ledger("a", 500, 1000), ledger("b", 500, 500)];
+    const { nets } = settlementOutcome(players, oneToOne, "split");
+    expect(netOf(nets, "a")).toBe(0);
+    expect(netOf(nets, "b")).toBe(0);
+  });
+
+  it("has the organizer pay an excess", () => {
+    const { nets } = settlementOutcome(excess, oneToOne, "organizer");
+    expect(netOf(nets, ORGANIZER_COLLECTOR)).toBe(-30_000);
+    expect(netOf(nets, "a")).toBe(50_000);
+  });
+
+  it("has the organizer collect leftover chips", () => {
+    const { nets } = settlementOutcome(short, oneToOne, "organizer");
+    expect(netOf(nets, ORGANIZER_COLLECTOR)).toBe(30_000);
+  });
+
+  it("settles every transfer when the organizer covers the difference", () => {
+    const { nets } = settlementOutcome(excess, oneToOne, "organizer");
+    const balances = new Map<string, number>(nets.map((p) => [p.playerId, p.net]));
+    for (const { from, to, amount } of settleTransfers(nets)) {
+      balances.set(from, (balances.get(from) ?? 0) + amount);
+      balances.set(to, (balances.get(to) ?? 0) - amount);
+    }
+    expect([...balances.values()].every((b) => b === 0)).toBe(true);
+  });
+
+  it("reports the difference when unhandled or undecided", () => {
+    for (const handling of ["ignore", undefined] as const) {
+      const { nets, unresolved } = settlementOutcome(excess, oneToOne, handling);
+      expect(unresolved).toBe(30_000);
+      expect(netOf(nets, "a")).toBe(50_000);
+    }
+  });
+
+  it("pays as far as it can when unhandled", () => {
+    const { nets } = settlementOutcome(excess, oneToOne, "ignore");
+    expect(settleTransfers(nets)).toEqual([{ from: "b", to: "a", amount: 20_000 }]);
+  });
+
+  it("adds up to exactly 0 for any books once handled", () => {
+    const buys = fc.array(
+      fc.tuple(fc.integer({ min: 1, max: 5000 }), fc.integer({ min: 0, max: 5000 })),
+      { minLength: 1, maxLength: 9 },
+    );
+    fc.assert(
+      fc.property(
+        buys,
+        ratios,
+        fc.constantFrom("split", "organizer") as fc.Arbitrary<"split">,
+        (rows, ratio, handling) => {
+          const players = rows.map(([bought, out], i) => ledger(`p${i}`, bought, out));
+          const { nets, unresolved } = settlementOutcome(players, ratio, handling);
+          expect(sum(nets.map((p) => p.net))).toBe(0);
+          expect(unresolved).toBe(0);
+        },
+      ),
+    );
   });
 });

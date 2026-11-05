@@ -5,6 +5,8 @@
 export interface SettlementImageData {
   title: string;
   subtitle: string;
+  /** Explains how a chip difference was handled. */
+  note: string | undefined;
   transferTitle: string;
   transfers: readonly { from: string; to: string; amount: string }[];
   results: readonly {
@@ -36,6 +38,7 @@ const ROW_GAP = 16;
 const TRANSFER_NAME_MAX_WIDTH = 270;
 const RESULT_NAME_MAX_WIDTH = 230;
 const RESULT_HEADER_HEIGHT = 56;
+const NOTE_HEIGHT = 56;
 /** Right edge of each result column. */
 const COLUMN = { hands: 390, chips: 535, net: 700, amount: WIDTH - PADDING - 36 };
 
@@ -59,7 +62,13 @@ export async function renderSettlementImage(data: SettlementImageData): Promise<
   const sections = (data.transfers.length > 0 ? 1 : 0) + 1;
   const rows = data.transfers.length + data.results.length;
   const height =
-    240 + sections * 84 + RESULT_HEADER_HEIGHT + rows * (ROW_HEIGHT + ROW_GAP) + PADDING - ROW_GAP;
+    240 +
+    sections * 84 +
+    RESULT_HEADER_HEIGHT +
+    rows * (ROW_HEIGHT + ROW_GAP) +
+    (data.note ? NOTE_HEIGHT : 0) +
+    PADDING -
+    ROW_GAP;
 
   const canvas = document.createElement("canvas");
   canvas.width = WIDTH;
@@ -136,6 +145,13 @@ export async function renderSettlementImage(data: SettlementImageData): Promise<
     cellAtRight(net, COLUMN.net, center, color, font(36));
     cellAtRight(amount, COLUMN.amount, center, color, font(38, 700));
     y += ROW_HEIGHT + ROW_GAP;
+  }
+
+  if (data.note) {
+    ctx.font = font(32);
+    ctx.fillStyle = COLOR.gold;
+    ctx.fillText(data.note, PADDING, y + 16);
+    y += NOTE_HEIGHT;
   }
 
   if (data.transfers.length > 0) {
