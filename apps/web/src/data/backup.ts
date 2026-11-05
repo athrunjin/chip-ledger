@@ -76,7 +76,13 @@ const eventSchema = z.discriminatedUnion("type", [
     playerId: id,
     chips,
   }),
-  z.object({ ...eventBase, type: z.literal("stack_set"), playerId: id, chips }),
+  z.object({
+    ...eventBase,
+    type: z.literal("stack_set"),
+    playerId: id,
+    chips,
+    handId: id.optional(),
+  }),
   z.object({ ...eventBase, type: z.literal("reversal"), reversedEventId: id }),
   z.object({
     ...eventBase,
@@ -113,7 +119,7 @@ const insuranceHandSchema = z.object({
   ...owned,
   gameId: id,
   status: z.enum(["open", "done"]),
-  step: z.enum(["players", "start", "buy", "deal", "settle"]),
+  step: z.enum(["players", "start", "buy", "deal", "settle", "summary"]),
   players: z.array(
     z.object({ playerId: id, chips, cover: z.boolean(), cards: z.array(card).max(2) }),
   ),

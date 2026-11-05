@@ -10,6 +10,7 @@ import {
   insuranceTopUp,
   type LedgerEvent,
   latestCashOut,
+  playerHandResults,
   type SavedInsuranceRule,
   summarizeByPlayer,
 } from "@holdem/core";
@@ -128,6 +129,10 @@ export function useDiscardInsuranceHand(gameId: string) {
   });
 }
 
+function belongsToHand(event: LedgerEvent, handId: string) {
+  return "handId" in event && event.handId === handId;
+}
+
 interface FinishInput {
   readonly hand: InsuranceHand;
   readonly handChips: number;
@@ -140,12 +145,15 @@ export function useFinishInsuranceHand(gameId: string) {
     scope: ledgerScope(gameId),
     mutationFn: async ({ hand, handChips }: FinishInput) => {
       const events = await repository.ledger.listByGame(gameId);
-      const written = events.some(
-        (e) =>
-          (e.type === "insurance_buy" || e.type === "insurance_settle") && e.handId === hand.id,
-      );
-      if (!written && hand.purchases.length > 0) {
-        const seat = summarizeByPlayer(events).find((p) => p.playerId === INSURANCE_PLAYER_ID);
+      const written = events.some((e) => belongsToHand(e, hand.id));
+      if (!written) {
+        const ledger = summarizeByPlayer(events);
+        const stackEvents = playerHandResults(hand).flatMap(({ playerId, stackChips }) =>
+          stackChips !== null && ledger.some((p) => p.playerId === playerId && p.seated)
+            ? [{ playerId, chips: stackChips }]
+            : [],
+        );
+        const seat = ledger.find((p) => p.playerId === INSURANCE_PLAYER_ID);
         const cashOut = latestCashOut(events, INSURANCE_PLAYER_ID);
         const stack = (seat?.stackChips ?? 0) + (cashOut?.chips ?? 0);
         const { premiumChips, payoutChips } = handResult(hand);
@@ -164,6 +172,14 @@ export function useFinishInsuranceHand(gameId: string) {
                 },
               ]
             : []),
+          ...stackEvents.map(
+            (stack): LedgerEvent => ({
+              ...newEventMeta(gameId, occurredAt),
+              type: "stack_set",
+              handId,
+              ...stack,
+            }),
+          ),
           ...hand.purchases.flatMap((purchase): LedgerEvent[] => {
             const { playerId, street, oddsHundredths } = purchase;
             const bought = {
@@ -212,10 +228,7 @@ export function useUndoInsuranceHand(gameId: string) {
       const occurredAt = Date.now();
       await repository.ledger.appendAll(
         events
-          .filter(
-            (e) =>
-              (e.type === "insurance_buy" || e.type === "insurance_settle") && e.handId === handId,
-          )
+          .filter((e) => belongsToHand(e, handId))
           .map(
             ({ id }): LedgerEvent => ({
               ...newEventMeta(gameId, occurredAt),

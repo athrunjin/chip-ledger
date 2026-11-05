@@ -59,7 +59,7 @@ These are the product defaults. Rules are configurable by design, so organizers 
 | Insurance seat| 保险 is a reserved seat with one hand, always last, and cannot leave. Short of chips, it buys whole hands to pay |
 | Insurance result | Goes to the organizer by default, or a chosen player, or its own row                  |
 | Premium       | Not refunded on a hit by default. The rule can change this                               |
-| Insurance chips | Player stacks never change. The seat changes when the organizer finishes the hand: premiums in, payouts out |
+| Insurance chips | Nothing moves during a hand. Finishing it updates the seat and the stacks of all-in players, but not the cover |
 | Insurance hand | One all-in from flop or turn to the river. Resumes if the page is left, and is recorded as one entry |
 | Cover        | The deepest of the hand's players, at most one, who matches the next deepest |
 | Insured card  | The next card only. Each pot is priced apart, and tie cards are not outs by default      |

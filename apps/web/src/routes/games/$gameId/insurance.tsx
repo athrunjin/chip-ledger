@@ -119,6 +119,7 @@ function GameInsurance({ game }: { game: Game }) {
   const settleInsurance = useSettleInsurance(gameId);
   const undoInsurance = useUndoInsurance(gameId);
 
+  const navigate = Route.useNavigate();
   const editable = status === "open";
   const names = new Map(players.map(({ id, name }) => [id, name]));
   const nameOf = (playerId: string) => names.get(playerId) ?? "未知玩家";
@@ -224,9 +225,14 @@ function GameInsurance({ game }: { game: Game }) {
             save: saveHand.mutate,
             discard: discardHand.mutate,
             finish: async (hand) => {
-              if (handChips !== undefined) await finishHand.mutateAsync({ hand, handChips });
+              if (handChips === undefined) return;
+              await finishHand.mutateAsync({ hand, handChips });
+              navigate({ to: "/games/$gameId", params: { gameId } });
             },
           }}
+          seat={
+            handChips === undefined ? undefined : { stackChips: seat?.stackChips ?? 0, handChips }
+          }
           openHand={openHand}
           createHand={() => newInsuranceHand(gameId)}
         />

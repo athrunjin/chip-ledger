@@ -64,7 +64,7 @@ function unseenCards(hands: readonly AllInHand[], board: readonly Card[]): Card[
   return DECK.filter((card) => !seen.has(card));
 }
 
-function winnersOf(
+export function winnersOf(
   playerIds: readonly string[],
   cardsOf: ReadonlyMap<string, readonly Card[]>,
   board: readonly Card[],

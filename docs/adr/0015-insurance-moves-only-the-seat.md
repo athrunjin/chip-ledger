@@ -1,6 +1,6 @@
 # 0015. Insurance moves only the seat, once its card is dealt
 
-- Status: Accepted
+- Status: Superseded in part by [0017](0017-finished-hand-sets-stacks.md)
 - Date: 2026-11-05
 
 ## Context

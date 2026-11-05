@@ -19,8 +19,9 @@ Once recorded, a decision isn't edited. If it changes later, write a new record 
 | [0012](0012-settlement-collector.md) | Save the settlement collector on the game | Accepted |
 | [0013](0013-unbalanced-settlement.md) | Allow settling unbalanced books | Accepted |
 | [0014](0014-insurance-seat.md) | Insurance as a seat in the game | Superseded in part by 0015 |
-| [0015](0015-insurance-moves-only-the-seat.md) | Insurance moves only the seat, once its card is dealt | Accepted |
+| [0015](0015-insurance-moves-only-the-seat.md) | Insurance moves only the seat, once its card is dealt | Superseded in part by 0017 |
 | [0016](0016-insurance-hands.md) | An insurance hand as a draft, written to the ledger when finished | Accepted |
+| [0017](0017-finished-hand-sets-stacks.md) | A finished hand sets the stacks it knows | Accepted |
 
 ## Template
 

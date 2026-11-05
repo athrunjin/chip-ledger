@@ -7,7 +7,7 @@ import {
 import { useState } from "react";
 import { TextField } from "@/components/TextField";
 import { cn } from "@/lib/cn";
-import { type HandStore, InsuranceHandFlow } from "./InsuranceHandFlow";
+import { type HandStore, InsuranceHandFlow, type SeatChips } from "./InsuranceHandFlow";
 import { type BoughtInsurance, type Decisions, LeaderQuote } from "./LeaderQuote";
 import type { QuoteDecision } from "./QuotePanel";
 
@@ -34,6 +34,7 @@ interface InsuranceCalculatorProps {
   /** Missing for the standalone calculator, which records nothing. */
   recorder?: InsuranceRecorder;
   handStore?: HandStore;
+  seat?: SeatChips | undefined;
   /** The hand in progress, to carry on from. */
   openHand?: InsuranceHand | undefined;
   createHand: () => InsuranceHand;
@@ -189,6 +190,7 @@ function useDecisions(recorder: InsuranceRecorder | undefined): Decisions | unde
 export function InsuranceCalculator({
   recorder,
   handStore,
+  seat,
   openHand,
   createHand,
   rule,
@@ -225,6 +227,7 @@ export function InsuranceCalculator({
           open={openHand}
           createHand={createHand}
           store={handStore}
+          seat={seat}
         />
       </div>
       {mode === "outs" && (
