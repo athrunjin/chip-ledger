@@ -32,6 +32,16 @@ describe("parsePlayerName", () => {
   });
 });
 
+describe("reserved names", () => {
+  it.each(["保险", " 保险 ", "保 险"])("keeps %j for the insurance seat", (name) => {
+    expect(parsePlayerName(name, [])).toEqual({ ok: false, issue: "reserved" });
+  });
+
+  it("still allows names that only contain the word", () => {
+    expect(parsePlayerName("保险哥", []).ok).toBe(true);
+  });
+});
+
 describe("searchPlayers", () => {
   const players = [player("张三", "zs"), player("李四", "ls"), player("Alice", "alice")];
   const names = (query: string) => searchPlayers(players, query).map((p) => p.name);

@@ -54,8 +54,12 @@ These are the product defaults. Rules are configurable by design, so organizers 
 | Imbalance     | Settling is allowed: split by win/loss, organizer covers or collects, or leave unhandled |
 | Rake          | A percentage of the pot with a cap                                                       |
 | Dealer fee    | Calculated exactly by the minute                                                         |
-| Insurance     | Built-in table of common outs odds, each entry editable by the organizer                 |
+| Insurance     | Chosen per game. Two built-in tables, default 1 pays 30. Rules can be edited and saved   |
 | Break-even    | Shows both "recover your own stake" and "recover the whole pot"                          |
+| Insurance seat| 保险 is a reserved seat with one hand, always last, and cannot leave. Short of chips, it buys whole hands to pay |
+| Insurance result | Goes to the organizer by default, or a chosen player, or its own row                  |
+| Premium       | Not refunded on a hit by default. The rule can change this                               |
+| Insured card  | The next card only. Each pot is priced apart, and tie cards are not outs by default      |
 | Multi-device  | No need for several devices on one game. M1 is guest mode, Supabase arrives in M6        |
 | Workflow      | From M1 on: branch → PR → CI → merge                                                     |
 
@@ -64,7 +68,6 @@ These are the product defaults. Rules are configurable by design, so organizers 
 ## Open questions
 
 - The hourly dealer fee (M2)
-- The numbers in the built-in odds table (M3)
 - The rake percentage, the cap, and whether there's "no flop, no drop" (M4)
 - Trademark check and a permanent domain. Deployment uses a free `*.pages.dev` subdomain for now, see issue #9
 

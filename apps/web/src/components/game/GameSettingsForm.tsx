@@ -6,11 +6,18 @@ import {
   type GameSettingsField,
   type GameSettingsIssue,
   type GameSettingsIssues,
+  type InsuranceRule,
+  type InsuranceRuleIssues,
   parseChips,
   parseGameSettings,
+  parseInsuranceRule,
   tryParseMoney,
 } from "@holdem/core";
 import { type FormEvent, useState } from "react";
+import {
+  InsuranceSettings,
+  initialInsuranceChoice,
+} from "@/components/insurance/InsuranceSettings";
 import { TextField } from "@/components/TextField";
 import { CURRENCY_INFO, formatGameMoney } from "@/lib/currency";
 
@@ -44,6 +51,14 @@ interface GameSettingsFormProps {
   ratioLocked?: boolean;
   /** Hides the buy-in setting for older games that already record chips */
   showBuyIn?: boolean;
+  /** Insurance needs whole hands, so older games that record chips cannot use it */
+  showInsurance?: boolean;
+  /** This game's insurance rule. Missing means it is off. */
+  initialInsurance?: InsuranceRule | undefined;
+  /** Offered as "last time": this game's rule, or the latest game's */
+  lastInsurance?: InsuranceRule | undefined;
+  /** Once insurance has been sold in this game, it cannot be turned off */
+  insuranceLocked?: boolean;
   saving: boolean;
   saveFailed: boolean;
   onSubmit: (settings: GameSettings) => void;
@@ -54,12 +69,20 @@ export function GameSettingsForm({
   submitLabel,
   ratioLocked = false,
   showBuyIn = true,
+  showInsurance = true,
+  initialInsurance,
+  lastInsurance,
+  insuranceLocked = false,
   saving,
   saveFailed,
   onSubmit,
 }: GameSettingsFormProps) {
   const [values, setValues] = useState(initial);
   const [issues, setIssues] = useState<GameSettingsIssues>({});
+  const [insurance, setInsurance] = useState(() =>
+    initialInsuranceChoice(initialInsurance, lastInsurance),
+  );
+  const [ruleIssues, setRuleIssues] = useState<InsuranceRuleIssues>({});
   const symbol = CURRENCY_INFO[values.currency].symbol;
   const blindCash = previewBlindCash(values);
   const big = parseChips(values.bigBlindChips);
@@ -69,12 +92,11 @@ export function GameSettingsForm({
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     const result = parseGameSettings(values);
-    if (result.ok) {
-      setIssues({});
-      onSubmit(result.settings);
-    } else {
-      setIssues(result.issues);
-    }
+    const rule = showInsurance && insurance.enabled ? parseInsuranceRule(insurance.form) : null;
+    setIssues(result.ok ? {} : result.issues);
+    setRuleIssues(rule && !rule.ok ? rule.issues : {});
+    if (!result.ok || (rule && !rule.ok)) return;
+    onSubmit(rule ? { ...result.settings, insurance: rule.rule } : result.settings);
   }
 
   function field(name: GameSettingsField) {
@@ -153,6 +175,16 @@ export function GameSettingsForm({
             </p>
           )}
         </fieldset>
+      )}
+
+      {showInsurance && (
+        <InsuranceSettings
+          value={insurance}
+          issues={ruleIssues}
+          lastRule={lastInsurance}
+          locked={insuranceLocked}
+          onChange={setInsurance}
+        />
       )}
 
       {saveFailed && (

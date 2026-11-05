@@ -6,6 +6,7 @@
  */
 export * from "./domain";
 export * from "./game";
+export * from "./insurance";
 export * from "./ledger";
 export * from "./money";
 export * from "./player";

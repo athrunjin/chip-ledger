@@ -24,6 +24,41 @@ export type ImbalanceHandling = "split" | "organizer" | "ignore";
 
 export type GameStatus = "open" | "settled";
 
+/** Whether cards that split the pot count as outs. */
+export type TieOuts = "exclude" | "include";
+
+/** Insurance terms. Copied onto each game, so editing a saved rule never changes past games. */
+export interface InsuranceRule {
+  /** Payout multiples in hundredths, indexed by outs − 1: 350 means 3.5. More outs than entries cannot be insured. */
+  readonly oddsHundredths: readonly number[];
+  readonly tieOuts: TieOuts;
+  /** Whether a hit also hands back the premium. */
+  readonly refundPremium: boolean;
+  /** Whether a flop all-in can insure the turn card. The river can always be insured. */
+  readonly coverTurn: boolean;
+  /** Most players a pot can have and still be insured. Missing means no limit. */
+  readonly maxPotPlayers?: number;
+  /** Highest premium on the turn card, as a percentage of the pot. Missing means no limit. */
+  readonly turnCapPercent?: number;
+  /** Highest premium on the river card, as a percentage of the pot. Missing means no limit. */
+  readonly riverCapPercent?: number;
+}
+
+/** A named rule kept for quick use in later games. */
+export interface SavedInsuranceRule {
+  readonly id: string;
+  readonly organizerId: OrganizerId;
+  readonly name: string;
+  readonly rule: InsuranceRule;
+  readonly createdAt: Timestamp;
+}
+
+/** The insurance seat in a game. It has chips like a player but no record in the player list (ADR 0014). */
+export const INSURANCE_PLAYER_ID = "insurance";
+
+/** Reserved: no player can take this name. */
+export const INSURANCE_PLAYER_NAME = "保险";
+
 export interface Game {
   readonly id: string;
   readonly organizerId: OrganizerId;
@@ -45,6 +80,13 @@ export interface Game {
   readonly imbalanceHandling?: ImbalanceHandling;
   /** When settlement was confirmed. Cleared on reopening. */
   readonly settledAt?: Timestamp;
+  /** This game's insurance terms. Missing means insurance is off. */
+  readonly insurance?: InsuranceRule;
+  /**
+   * Who takes the insurance result at settlement: a player ID, `ORGANIZER_COLLECTOR`, or
+   * `INSURANCE_PLAYER_ID` to list it on its own. Missing means the organizer.
+   */
+  readonly insuranceOwner?: string;
 }
 
 export interface Player {
@@ -85,5 +127,33 @@ export interface ReversalEvent extends LedgerEventBase {
   readonly reversedEventId: string;
 }
 
+/** Insurance bought on one pot: the premium moves from the player to the insurance seat. */
+export interface InsuranceBuyEvent extends LedgerEventBase {
+  readonly type: "insurance_buy";
+  readonly playerId: string;
+  /** Premium in whole chips. */
+  readonly chips: number;
+  /** Paid to the player on a hit, including any refunded premium. */
+  readonly payoutChips: number;
+  readonly outs: number;
+  readonly oddsHundredths: number;
+  readonly street: "turn" | "river";
+}
+
+/** The card came: a hit moves the payout from the insurance seat to the player, a miss moves nothing. */
+export interface InsuranceSettleEvent extends LedgerEventBase {
+  readonly type: "insurance_settle";
+  readonly purchaseId: string;
+  readonly playerId: string;
+  readonly hit: boolean;
+  /** Chips paid out, 0 on a miss. */
+  readonly chips: number;
+}
+
 /** Ledger event. Append-only, never changed (ADR 0005). */
-export type LedgerEvent = ChipEvent | StackSetEvent | ReversalEvent;
+export type LedgerEvent =
+  | ChipEvent
+  | StackSetEvent
+  | ReversalEvent
+  | InsuranceBuyEvent
+  | InsuranceSettleEvent;

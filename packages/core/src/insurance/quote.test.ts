@@ -1,0 +1,144 @@
+import fc from "fast-check";
+import { describe, expect, it } from "vitest";
+
+import type { InsuranceRule } from "../domain";
+import { payoutFor, premiumFor, type QuoteInput, quoteInsurance, soldOuts } from "./quote";
+import {
+  formatOdds,
+  parseInsuranceRule,
+  parseOdds,
+  RULE_30,
+  RULE_32,
+  toInsuranceRuleForm,
+} from "./rules";
+
+const input = (overrides: Partial<QuoteInput> = {}): QuoteInput => ({
+  rule: RULE_30,
+  street: "river",
+  potChips: 1000,
+  potPlayers: 2,
+  shareChips: 1000,
+  stakeChips: 500,
+  outs: 8,
+  ...overrides,
+});
+
+describe("quoteInsurance", () => {
+  it("prices both covers, leaving a full cover level whichever way the card falls", () => {
+    const quote = quoteInsurance(input());
+    if (!quote.ok) throw new Error("Expected a quote");
+    expect(quote.oddsHundredths).toBe(350);
+    expect(quote.stake).toMatchObject({ premiumChips: 143, payoutChips: 500 });
+    expect(quote.fullPot).toEqual({
+      premiumChips: 286,
+      payoutChips: 1001,
+      ifHitChips: 715,
+      ifMissChips: 714,
+      capped: false,
+    });
+  });
+
+  it("hands the premium back on a hit when the rule says so", () => {
+    const rule = { ...RULE_30, refundPremium: true };
+    const quote = quoteInsurance(input({ rule }));
+    if (!quote.ok) throw new Error("Expected a quote");
+    expect(quote.fullPot.payoutChips).toBe(1287);
+    expect(quote.fullPot.ifHitChips).toBe(1001);
+  });
+
+  it("holds premiums at the rule's limit for the street", () => {
+    const rule = { ...RULE_30, riverCapPercent: 20 };
+    const quote = quoteInsurance(input({ rule }));
+    if (!quote.ok) throw new Error("Expected a quote");
+    expect(quote.maxPremiumChips).toBe(200);
+    expect(quote.fullPot).toMatchObject({ premiumChips: 200, capped: true });
+    expect(quote.stake).toMatchObject({ premiumChips: 143, capped: false });
+  });
+
+  it.each([
+    ["no outs", { outs: 0 }, "no-outs"],
+    ["more outs than the table", { outs: 16 }, "too-many-outs"],
+  ])("refuses %s", (_, overrides, block) => {
+    expect(quoteInsurance(input(overrides))).toEqual({ ok: false, block });
+  });
+
+  it("refuses the turn card when the rule closes it", () => {
+    const rule = { ...RULE_30, coverTurn: false };
+    expect(quoteInsurance(input({ rule, street: "turn" }))).toEqual({
+      ok: false,
+      block: "street-closed",
+    });
+    expect(quoteInsurance(input({ rule, street: "river" })).ok).toBe(true);
+  });
+
+  it("refuses pots above the rule's player limit", () => {
+    const rule = { ...RULE_30, maxPotPlayers: 3 };
+    expect(quoteInsurance(input({ rule, potPlayers: 4 }))).toEqual({
+      ok: false,
+      block: "too-many-players",
+    });
+    expect(quoteInsurance(input({ rule, potPlayers: 3 })).ok).toBe(true);
+  });
+
+  it("always covers at least the target, whatever the odds", () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1, max: 1_000_000 }),
+        fc.integer({ min: 1, max: 5000 }),
+        (cover, odds) => {
+          expect(payoutFor(premiumFor(cover, odds), odds, false)).toBeGreaterThanOrEqual(cover);
+        },
+      ),
+    );
+  });
+});
+
+describe("soldOuts", () => {
+  const leader = { outs: [1, 2, 3], tieCards: [4, 5] };
+
+  it("leaves tie cards out by default and adds them when the rule says so", () => {
+    expect(soldOuts(RULE_30, leader)).toBe(3);
+    expect(soldOuts({ ...RULE_30, tieOuts: "include" }, leader)).toBe(5);
+  });
+});
+
+describe("rule tables", () => {
+  it("keeps the two built-in tables different only at 1, 2 and 12 outs", () => {
+    const differ = RULE_30.oddsHundredths.flatMap((odds, i) =>
+      odds === RULE_32.oddsHundredths[i] ? [] : [i + 1],
+    );
+    expect(differ).toEqual([1, 2, 12]);
+  });
+
+  it("parses odds exactly", () => {
+    expect(parseOdds("2.2")).toBe(220);
+    expect(parseOdds("3.5")).toBe(350);
+    expect(parseOdds("30")).toBe(3000);
+    expect(parseOdds("1.05")).toBe(105);
+    expect(parseOdds("0")).toBeNull();
+    expect(parseOdds("1.234")).toBeNull();
+    expect(parseOdds("abc")).toBeNull();
+    expect(formatOdds(220)).toBe("2.2");
+  });
+
+  it("round-trips a rule through its form", () => {
+    const rule: InsuranceRule = {
+      ...RULE_32,
+      tieOuts: "include",
+      maxPotPlayers: 3,
+      turnCapPercent: 25,
+      riverCapPercent: 50,
+    };
+    expect(parseInsuranceRule(toInsuranceRuleForm(rule))).toEqual({ ok: true, rule });
+  });
+
+  it("leaves blank limits off the rule and reports which fields are wrong", () => {
+    const form = toInsuranceRuleForm(RULE_30);
+    expect(parseInsuranceRule(form)).toEqual({ ok: true, rule: RULE_30 });
+    const odds = form.odds.map((value, i) => (i === 1 ? "x" : value));
+    expect(parseInsuranceRule({ ...form, odds, maxPotPlayers: "1" })).toEqual({
+      ok: false,
+      issues: { odds: [2], maxPotPlayers: true },
+    });
+  });
+});

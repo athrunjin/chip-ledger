@@ -18,6 +18,7 @@ Once recorded, a decision isn't edited. If it changes later, write a new record 
 | [0011](0011-chip-blinds-and-live-stacks.md) | Blinds in chips, and live stacks as ledger events | Accepted |
 | [0012](0012-settlement-collector.md) | Save the settlement collector on the game | Accepted |
 | [0013](0013-unbalanced-settlement.md) | Allow settling unbalanced books | Accepted |
+| [0014](0014-insurance-seat.md) | Insurance as a seat in the game | Accepted |
 
 ## Template
 

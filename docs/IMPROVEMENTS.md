@@ -26,7 +26,23 @@ Records discussions of feature and process improvements: what was proposed, how 
 
 ## Decided, waiting for development
 
-(none)
+### #I-018 Insurance rules and multiway calculation
+
+- Type: feature
+- Date: proposed and decided 2026-11-05
+- Source: discussion
+- Problem: M3 needs insurance that each organizer can set up their own way, works when several players are all in, and records premiums and payouts at the table.
+- Proposal:
+  - The host turns insurance on when starting a game, and picks last time's setup, a built-in table or a saved rule. Rules can be edited and saved under a name.
+  - The rule covers odds by outs, the outs limit, whether tie cards count, whether a flop all-in can insure the turn, the pot player limit, premium caps by street, and whether a hit refunds the premium.
+  - Picking cards shows every pot with its leader, each opponent's outs, equity, odds and the price of both covers. Entering an outs count gives a quick price.
+- Settled details:
+  - 保险 is a seat in the game, not a player: the name is reserved, it starts with one hand, shows last and cannot leave.
+  - Everything is paid in chips at the table. If the seat cannot pay, it buys enough whole hands in the same step.
+  - At settlement its result goes to the organizer by default, or a chosen player, or its own row, and the result is labeled either way.
+  - A hit does not refund the premium by default. New games default to the table where 1 out pays 30.
+- Decision: do.
+- Tracking: issue #42, [ADR 0014](adr/0014-insurance-seat.md)
 
 ## Done
 

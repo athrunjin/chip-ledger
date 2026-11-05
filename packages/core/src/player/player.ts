@@ -1,10 +1,10 @@
 /** Player list: name validation and search. */
-import type { Player } from "../domain";
+import { INSURANCE_PLAYER_NAME, type Player } from "../domain";
 
 export const MAX_PLAYER_NAME_LENGTH = 30;
 
 /** Issue codes. The UI decides the wording. */
-export type PlayerNameIssue = "empty" | "too-long" | "duplicate";
+export type PlayerNameIssue = "empty" | "too-long" | "duplicate" | "reserved";
 
 export type ParsedPlayerName =
   | { readonly ok: true; readonly name: string }
@@ -24,6 +24,7 @@ export function parsePlayerName(input: string, otherNames: readonly string[]): P
   if (name === "") return { ok: false, issue: "empty" };
   if ([...name].length > MAX_PLAYER_NAME_LENGTH) return { ok: false, issue: "too-long" };
   const key = comparable(name);
+  if (key === comparable(INSURANCE_PLAYER_NAME)) return { ok: false, issue: "reserved" };
   if (otherNames.some((other) => comparable(other) === key)) {
     return { ok: false, issue: "duplicate" };
   }

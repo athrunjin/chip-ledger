@@ -1,13 +1,25 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
-import type { ChipEvent, LedgerEvent, ReversalEvent } from "../domain";
+import {
+  type ChipEvent,
+  INSURANCE_PLAYER_ID,
+  type InsuranceBuyEvent,
+  type InsuranceSettleEvent,
+  type LedgerEvent,
+  type ReversalEvent,
+} from "../domain";
+import { RULE_30 } from "../insurance";
 import { cents } from "../money";
 import {
   activeChipEvents,
   adjustHands,
   chipsToCents,
   gameRecord,
+  hasPlayerEvents,
+  insuranceRecords,
+  insuranceSeatChange,
+  insuranceTopUp,
   lastBuyChips,
   latestCashOut,
   ledgerTotals,
@@ -467,5 +479,183 @@ describe("gameRecord", () => {
       "a cash_out",
       "b cash_out",
     ]);
+  });
+});
+
+describe("insurance", () => {
+  const seat = INSURANCE_PLAYER_ID;
+  const buy = (id: string, playerId: string, chips: number, payoutChips: number) =>
+    ({
+      ...base,
+      id,
+      type: "insurance_buy",
+      playerId,
+      chips,
+      payoutChips,
+      outs: 8,
+      oddsHundredths: 350,
+      street: "river",
+    }) satisfies InsuranceBuyEvent;
+  const settle = (id: string, purchaseId: string, playerId: string, chips: number) =>
+    ({
+      ...base,
+      id,
+      type: "insurance_settle",
+      purchaseId,
+      playerId,
+      hit: chips > 0,
+      chips,
+    }) satisfies InsuranceSettleEvent;
+  const later = <T extends LedgerEvent>(event: T, occurredAt: number): T => ({
+    ...event,
+    occurredAt,
+  });
+  const stacks = (events: readonly LedgerEvent[]) =>
+    Object.fromEntries(summarizeByPlayer(events).map((p) => [p.playerId, p.stackChips]));
+
+  const start = [chip("s", "buy_in", seat, 1000), chip("a", "buy_in", "a", 1000)];
+
+  it("moves the premium to the insurance seat when bought", () => {
+    expect(stacks([...start, later(buy("b", "a", 100, 350), 2)])).toEqual({
+      insurance: 1100,
+      a: 900,
+    });
+  });
+
+  it("moves the payout back on a hit and nothing on a miss", () => {
+    const bought = [...start, later(buy("b", "a", 100, 350), 2)];
+    expect(stacks([...bought, later(settle("h", "b", "a", 350), 3)])).toEqual({
+      insurance: 750,
+      a: 1250,
+    });
+    expect(stacks([...bought, later(settle("m", "b", "a", 0), 3)])).toEqual({
+      insurance: 1100,
+      a: 900,
+    });
+  });
+
+  it("keeps the table balanced through a purchase, a hit and an undo", () => {
+    const events = [
+      ...start,
+      later(buy("b", "a", 100, 350), 2),
+      later(settle("h", "b", "a", 350), 3),
+    ];
+    expect(ledgerTotals(summarizeByPlayer(events)).balanceChips).toBe(0);
+
+    const undone = [...events, later(reversal("r1", "h"), 4), later(reversal("r2", "b"), 4)];
+    expect(stacks(undone)).toEqual({ insurance: 1000, a: 1000 });
+    expect(insuranceRecords(undone)).toEqual([]);
+  });
+
+  it("stays balanced for any purchases on a stack that can pay them", () => {
+    const purchase = fc.record({
+      premium: fc.integer({ min: 1, max: 50 }),
+      payout: fc.integer({ min: 1, max: 900 }),
+      hit: fc.boolean(),
+    });
+    fc.assert(
+      fc.property(fc.array(purchase, { maxLength: 8 }), (purchases) => {
+        const events: LedgerEvent[] = [
+          chip("s", "buy_in", seat, 100_000),
+          chip("a", "buy_in", "a", 1000),
+        ];
+        purchases.forEach(({ premium, payout, hit }, i) => {
+          events.push(later(buy(`b${i}`, "a", premium, payout), i * 2 + 2));
+          events.push(later(settle(`h${i}`, `b${i}`, "a", hit ? payout : 0), i * 2 + 3));
+        });
+        expect(ledgerTotals(summarizeByPlayer(events)).balanceChips).toBe(0);
+      }),
+    );
+  });
+
+  it("takes an all-in player's premium without a negative stack, and undoes exactly that", () => {
+    const events = [
+      chip("s", "buy_in", seat, 1000),
+      chip("a", "buy_in", "a", 1000),
+      later({ ...base, id: "t", type: "stack_set", playerId: "a", chips: 30 }, 2),
+      later(buy("b", "a", 100, 350), 3),
+    ];
+    expect(stacks(events).a).toBe(0);
+    expect(stacks([...events, later(reversal("r", "b"), 4)]).a).toBe(30);
+  });
+
+  it("reports purchases with their results", () => {
+    const events = [
+      ...start,
+      later(buy("b1", "a", 100, 350), 2),
+      later(settle("h", "b1", "a", 350), 3),
+      later(buy("b2", "a", 50, 175), 4),
+    ];
+    expect(insuranceRecords(events).map((r) => [r.purchase.id, r.status, r.settleId])).toEqual([
+      ["b1", "hit", "h"],
+      ["b2", "pending", undefined],
+    ]);
+  });
+
+  it("names insurance in the game record", () => {
+    const events = [
+      ...start,
+      later(buy("b1", "a", 100, 350), 2),
+      later(settle("h", "b1", "a", 350), 3),
+      later(buy("b2", "a", 50, 175), 4),
+      later(settle("m", "b2", "a", 0), 5),
+      later(reversal("r", "m"), 6),
+    ];
+    expect(
+      gameRecord(events)
+        .slice(2)
+        .map((e) => [e.kind, e.chips]),
+    ).toEqual([
+      ["insurance_buy", 100],
+      ["insurance_hit", 350],
+      ["insurance_buy", 50],
+      ["insurance_miss", 0],
+      ["insurance_undo", 0],
+    ]);
+  });
+
+  it("stops a player who has bought insurance being removed as a mistake", () => {
+    const events = [chip("a", "buy_in", "a", 1000), later(buy("b", "a", 100, 350), 2)];
+    expect(soleBuyIn(events, "a")).toBeUndefined();
+  });
+
+  it("adds whole hands only when the seat cannot pay", () => {
+    expect(insuranceTopUp(1000, 800, 500)).toBe(0);
+    expect(insuranceTopUp(1000, 1000, 500)).toBe(0);
+    expect(insuranceTopUp(1000, 1001, 500)).toBe(500);
+    expect(insuranceTopUp(200, 1300, 500)).toBe(1500);
+  });
+
+  describe("insuranceSeatChange", () => {
+    const on = { insurance: RULE_30, handChips: 1000 };
+    const off = { handChips: 1000 };
+
+    it("seats one hand when insurance turns on", () => {
+      expect(insuranceSeatChange(on, [])).toEqual({ reversedEventIds: [], buyInChips: 1000 });
+    });
+
+    it("does nothing once seated at the right size", () => {
+      expect(insuranceSeatChange(on, start)).toEqual({ reversedEventIds: [] });
+    });
+
+    it("resizes the seat if the hand size changed before play", () => {
+      const change = insuranceSeatChange({ ...on, handChips: 2000 }, start);
+      expect(change).toEqual({ reversedEventIds: ["s"], buyInChips: 2000 });
+    });
+
+    it("removes the seat when insurance turns off", () => {
+      expect(insuranceSeatChange(off, start)).toEqual({ reversedEventIds: ["s"] });
+    });
+
+    it("leaves a seat that has sold insurance alone", () => {
+      const events = [...start, later(buy("b", "a", 100, 350), 2)];
+      expect(insuranceSeatChange(off, events)).toEqual({ reversedEventIds: [] });
+    });
+  });
+
+  it("does not count the insurance seat as the game having started", () => {
+    expect(hasPlayerEvents([chip("s", "buy_in", seat, 1000)])).toBe(false);
+    expect(hasPlayerEvents([chip("s", "buy_in", seat, 1000), reversal("r", "s")])).toBe(false);
+    expect(hasPlayerEvents(start)).toBe(true);
   });
 });

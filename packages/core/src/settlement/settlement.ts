@@ -1,25 +1,25 @@
 /** Settlement: balance check, each player's result in cash, and transfers. */
-import type { ChipRatio, ImbalanceHandling } from "../domain";
+import { type ChipRatio, type ImbalanceHandling, INSURANCE_PLAYER_ID } from "../domain";
 import { chipsToCents, type PlayerLedger } from "../ledger";
 import { allocate, type Cents, cents, InvalidMoneyError, sum, ZERO } from "../money";
 
 export interface BalanceAdjustments {
   readonly rakeChips: number;
-  readonly insuranceChips: number;
 }
 
-const NO_ADJUSTMENTS: BalanceAdjustments = { rakeChips: 0, insuranceChips: 0 };
+const NO_ADJUSTMENTS: BalanceAdjustments = { rakeChips: 0 };
 
 /**
- * Balance difference: all players' results + rake + insurance profit, which is 0 when balanced.
- * Positive means more was cashed out than bought in. Rake and insurance stay 0 until M3 and M4.
+ * Balance difference: all players' results + rake, which is 0 when balanced. Insurance needs no
+ * term because the insurance seat is one of the players (ADR 0014).
+ * Positive means more was cashed out than bought in. Rake stays 0 until M4.
  */
 export function chipDifference(
   players: readonly PlayerLedger[],
-  { rakeChips, insuranceChips }: BalanceAdjustments = NO_ADJUSTMENTS,
+  { rakeChips }: BalanceAdjustments = NO_ADJUSTMENTS,
 ): number {
   const net = players.reduce((total, p) => total + p.cashedOutChips - p.boughtChips, 0);
-  return net + rakeChips + insuranceChips;
+  return net + rakeChips;
 }
 
 export interface PlayerNet {
@@ -116,6 +116,36 @@ export function settlementOutcome(
     return { nets: [...raw, organizer], difference, unresolved: ZERO };
   }
   return { nets: raw, difference, unresolved: difference };
+}
+
+export interface InsuranceAttribution {
+  /** Results with the insurance row moved to its owner. */
+  readonly nets: readonly PlayerNet[];
+  /** The insurance result in cash, 0 if the game had none. */
+  readonly insuranceNet: Cents;
+  /** Who it went to, or `INSURANCE_PLAYER_ID` if it stays on its own row. */
+  readonly ownerId: string;
+}
+
+/** A player no longer in the game, for example after reopening it, falls back to the organizer. */
+export function attributeInsurance(
+  nets: readonly PlayerNet[],
+  savedOwner: string | undefined,
+): InsuranceAttribution {
+  const insuranceNet = nets.find((p) => p.playerId === INSURANCE_PLAYER_ID)?.net ?? ZERO;
+  const rest = nets.filter((p) => p.playerId !== INSURANCE_PLAYER_ID);
+  const separate = savedOwner === INSURANCE_PLAYER_ID;
+  if (separate) return { nets, insuranceNet, ownerId: INSURANCE_PLAYER_ID };
+
+  const known = rest.some((p) => p.playerId === savedOwner) || savedOwner === ORGANIZER_COLLECTOR;
+  const ownerId = known && savedOwner ? savedOwner : ORGANIZER_COLLECTOR;
+  if (insuranceNet === 0) return { nets: rest, insuranceNet, ownerId };
+
+  const hasOwner = rest.some((p) => p.playerId === ownerId);
+  const moved = hasOwner
+    ? rest.map((p) => (p.playerId === ownerId ? { ...p, net: cents(p.net + insuranceNet) } : p))
+    : [...rest, { playerId: ownerId, net: insuranceNet }];
+  return { nets: moved, insuranceNet, ownerId };
 }
 
 export interface Transfer {

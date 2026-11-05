@@ -15,7 +15,9 @@ import { Route as ToolsRouteImport } from './routes/tools'
 import { Route as GamesNewRouteImport } from './routes/games/new'
 import { Route as PlayersIndexRouteImport } from './routes/players/index'
 import { Route as PlayersPlayerIdRouteImport } from './routes/players/$playerId'
+import { Route as ToolsInsuranceRouteImport } from './routes/tools_.insurance'
 import { Route as GamesGameIdIndexRouteImport } from './routes/games/$gameId/index'
+import { Route as GamesGameIdInsuranceRouteImport } from './routes/games/$gameId/insurance'
 import { Route as GamesGameIdSettingsRouteImport } from './routes/games/$gameId/settings'
 import { Route as GamesGameIdSettlementRouteImport } from './routes/games/$gameId/settlement'
 
@@ -49,9 +51,19 @@ const PlayersPlayerIdRoute = PlayersPlayerIdRouteImport.update({
   path: '/players/$playerId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ToolsInsuranceRoute = ToolsInsuranceRouteImport.update({
+  id: '/tools_/insurance',
+  path: '/tools/insurance',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GamesGameIdIndexRoute = GamesGameIdIndexRouteImport.update({
   id: '/games/$gameId/',
   path: '/games/$gameId/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GamesGameIdInsuranceRoute = GamesGameIdInsuranceRouteImport.update({
+  id: '/games/$gameId/insurance',
+  path: '/games/$gameId/insurance',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GamesGameIdSettingsRoute = GamesGameIdSettingsRouteImport.update({
@@ -71,7 +83,9 @@ export interface FileRoutesByFullPath {
   '/tools': typeof ToolsRoute
   '/games/new': typeof GamesNewRoute
   '/players/$playerId': typeof PlayersPlayerIdRoute
+  '/tools/insurance': typeof ToolsInsuranceRoute
   '/players/': typeof PlayersIndexRoute
+  '/games/$gameId/insurance': typeof GamesGameIdInsuranceRoute
   '/games/$gameId/settings': typeof GamesGameIdSettingsRoute
   '/games/$gameId/settlement': typeof GamesGameIdSettlementRoute
   '/games/$gameId/': typeof GamesGameIdIndexRoute
@@ -82,7 +96,9 @@ export interface FileRoutesByTo {
   '/tools': typeof ToolsRoute
   '/games/new': typeof GamesNewRoute
   '/players/$playerId': typeof PlayersPlayerIdRoute
+  '/tools/insurance': typeof ToolsInsuranceRoute
   '/players': typeof PlayersIndexRoute
+  '/games/$gameId/insurance': typeof GamesGameIdInsuranceRoute
   '/games/$gameId/settings': typeof GamesGameIdSettingsRoute
   '/games/$gameId/settlement': typeof GamesGameIdSettlementRoute
   '/games/$gameId': typeof GamesGameIdIndexRoute
@@ -94,7 +110,9 @@ export interface FileRoutesById {
   '/tools': typeof ToolsRoute
   '/games/new': typeof GamesNewRoute
   '/players/$playerId': typeof PlayersPlayerIdRoute
+  '/tools_/insurance': typeof ToolsInsuranceRoute
   '/players/': typeof PlayersIndexRoute
+  '/games/$gameId/insurance': typeof GamesGameIdInsuranceRoute
   '/games/$gameId/settings': typeof GamesGameIdSettingsRoute
   '/games/$gameId/settlement': typeof GamesGameIdSettlementRoute
   '/games/$gameId/': typeof GamesGameIdIndexRoute
@@ -107,7 +125,9 @@ export interface FileRouteTypes {
     | '/tools'
     | '/games/new'
     | '/players/$playerId'
+    | '/tools/insurance'
     | '/players/'
+    | '/games/$gameId/insurance'
     | '/games/$gameId/settings'
     | '/games/$gameId/settlement'
     | '/games/$gameId/'
@@ -118,7 +138,9 @@ export interface FileRouteTypes {
     | '/tools'
     | '/games/new'
     | '/players/$playerId'
+    | '/tools/insurance'
     | '/players'
+    | '/games/$gameId/insurance'
     | '/games/$gameId/settings'
     | '/games/$gameId/settlement'
     | '/games/$gameId'
@@ -129,7 +151,9 @@ export interface FileRouteTypes {
     | '/tools'
     | '/games/new'
     | '/players/$playerId'
+    | '/tools_/insurance'
     | '/players/'
+    | '/games/$gameId/insurance'
     | '/games/$gameId/settings'
     | '/games/$gameId/settlement'
     | '/games/$gameId/'
@@ -141,7 +165,9 @@ export interface RootRouteChildren {
   ToolsRoute: typeof ToolsRoute
   GamesNewRoute: typeof GamesNewRoute
   PlayersPlayerIdRoute: typeof PlayersPlayerIdRoute
+  ToolsInsuranceRoute: typeof ToolsInsuranceRoute
   PlayersIndexRoute: typeof PlayersIndexRoute
+  GamesGameIdInsuranceRoute: typeof GamesGameIdInsuranceRoute
   GamesGameIdSettingsRoute: typeof GamesGameIdSettingsRoute
   GamesGameIdSettlementRoute: typeof GamesGameIdSettlementRoute
   GamesGameIdIndexRoute: typeof GamesGameIdIndexRoute
@@ -191,11 +217,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlayersPlayerIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tools_/insurance': {
+      id: '/tools_/insurance'
+      path: '/tools/insurance'
+      fullPath: '/tools/insurance'
+      preLoaderRoute: typeof ToolsInsuranceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/games/$gameId/': {
       id: '/games/$gameId/'
       path: '/games/$gameId'
       fullPath: '/games/$gameId/'
       preLoaderRoute: typeof GamesGameIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/games/$gameId/insurance': {
+      id: '/games/$gameId/insurance'
+      path: '/games/$gameId/insurance'
+      fullPath: '/games/$gameId/insurance'
+      preLoaderRoute: typeof GamesGameIdInsuranceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/games/$gameId/settings': {
@@ -221,7 +261,9 @@ const rootRouteChildren: RootRouteChildren = {
   ToolsRoute: ToolsRoute,
   GamesNewRoute: GamesNewRoute,
   PlayersPlayerIdRoute: PlayersPlayerIdRoute,
+  ToolsInsuranceRoute: ToolsInsuranceRoute,
   PlayersIndexRoute: PlayersIndexRoute,
+  GamesGameIdInsuranceRoute: GamesGameIdInsuranceRoute,
   GamesGameIdSettingsRoute: GamesGameIdSettingsRoute,
   GamesGameIdSettlementRoute: GamesGameIdSettlementRoute,
   GamesGameIdIndexRoute: GamesGameIdIndexRoute,
