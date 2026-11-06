@@ -171,6 +171,7 @@ describe("Dexie repository", () => {
       ledgerEvents: [buyIn("e", "me", "g", 99)],
       insuranceRules: [],
       insuranceHands: [],
+      gameConfigs: [],
     });
 
     expect(result).toEqual({ added: 1, skipped: 2 });
@@ -185,6 +186,7 @@ describe("Dexie repository", () => {
       ledgerEvents: [],
       insuranceRules: [],
       insuranceHands: [],
+      gameConfigs: [],
     });
 
     await expect(restore).rejects.toThrow(ForeignOrganizerError);

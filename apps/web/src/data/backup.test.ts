@@ -45,6 +45,7 @@ const data: BackupData = {
   ],
   insuranceRules: [],
   insuranceHands: [],
+  gameConfigs: [],
 };
 
 const edit = (change: (backup: Record<string, unknown>) => void) => {
@@ -78,6 +79,30 @@ describe("backup file", () => {
       delete backup.insuranceRules;
     });
     expect(parseBackup(older)).toEqual({ ok: true, data });
+  });
+
+  it("reads version 4 backups, which have no saved configs", () => {
+    const older = edit((backup) => {
+      backup.version = 4;
+      delete backup.gameConfigs;
+    });
+    expect(parseBackup(older)).toEqual({ ok: true, data });
+  });
+
+  it("round-trips saved game configs", () => {
+    const settings = {
+      currency: "CNY",
+      smallBlindChips: 5,
+      bigBlindChips: 10,
+      chipRatio: { chips: 1, amount: cents(100) },
+      buyInBigBlinds: 100,
+      insurance: RULE_30,
+    } as const;
+    const full: BackupData = {
+      ...data,
+      gameConfigs: [{ id: "c", organizerId: "guest", name: "周五局", settings, createdAt: 1 }],
+    };
+    expect(parseBackup(serializeBackup(full, 1))).toEqual({ ok: true, data: full });
   });
 
   it("round-trips insurance rules, purchases and the insurance seat", () => {
@@ -194,7 +219,7 @@ describe("backup file", () => {
 
   it("rejects backups from a newer version", () => {
     const text = edit((backup) => {
-      backup.version = 5;
+      backup.version = 6;
     });
     expect(parseBackup(text)).toEqual({ ok: false, issue: "newer-version" });
   });

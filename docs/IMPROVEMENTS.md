@@ -355,6 +355,25 @@ Records discussions of feature and process improvements: what was proposed, how 
 - Decision: do.
 - Tracking: issue #52, PR #53
 
+### #I-022 Saved game configs and option switches on game setup
+
+- Type: feature
+- Date: proposed and decided 2026-11-06
+- Source: discussion
+- Problem: starting a game only carried over the latest game's settings, so regular setups had to be re-entered, and the options a game can have were not visible together.
+- Proposal:
+  - A small picker beside the 开局设置 title shows the config in use, 上次配置 by default.
+  - It lists 恢复默认, 上次配置 and saved configs. Picking one asks 是否使用xxxx: confirming returns to the form, cancelling returns to the list.
+  - 保险, 抽水, 台费 and 工资 follow the basic settings in that order, as switches that expand when on. All are off by default.
+- Settled details:
+  - Saved configs are whole setups: currency, chips, blinds, Buy in and insurance. 保存当前配置 in the picker stores one, a repeated name overwrites it, and each can be deleted.
+  - Using a config only fills the form, so games keep their own copy.
+  - 上次配置 stays the starting point, so insurance is on if the latest game had it. Off by default applies with no earlier game and after 恢复默认.
+  - 抽水, 台费 and 工资 show 开发中 and their switches are not saved until those settings exist.
+  - Backups include saved configs from version 5, and older backups still restore.
+- Decision: do.
+- Tracking: issue #54, PR #55
+
 ## Not doing or deferred
 
 ### #I-004 Hand size when blinds change mid-game

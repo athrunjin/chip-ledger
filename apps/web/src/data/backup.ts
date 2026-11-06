@@ -11,7 +11,7 @@ import {
 import { z } from "zod";
 
 const FORMAT = "holdem-backup";
-const VERSION = 4;
+const VERSION = 5;
 
 const id = z.string().min(1);
 const money = z
@@ -116,6 +116,20 @@ const savedRuleSchema = z.object({
 
 const card = z.number().int().min(0).max(51);
 
+const gameConfigSchema = z.object({
+  ...owned,
+  name: z.string().min(1),
+  settings: z.object({
+    currency: gameFields.currency,
+    smallBlindChips: chips.positive(),
+    bigBlindChips: chips.positive(),
+    chipRatio: gameFields.chipRatio,
+    buyInBigBlinds: chips.positive(),
+    insurance: insuranceRuleSchema.optional(),
+  }),
+  createdAt: timestamp,
+});
+
 const insuranceHandSchema = z.object({
   ...owned,
   gameId: id,
@@ -150,6 +164,8 @@ const collections = {
   insuranceRules: z.array(savedRuleSchema).default([]),
   /** Added in version 4. */
   insuranceHands: z.array(insuranceHandSchema).default([]),
+  /** Added in version 5. */
+  gameConfigs: z.array(gameConfigSchema).default([]),
 };
 
 const backupSchema = z.object({ games: z.array(gameSchema), ...collections });

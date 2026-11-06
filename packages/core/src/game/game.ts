@@ -6,8 +6,8 @@
 import type {
   Currency,
   Game,
+  GameSettings,
   ImbalanceHandling,
-  InsuranceRule,
   OrganizerId,
   Timestamp,
 } from "../domain";
@@ -16,12 +16,6 @@ import { type Cents, cents, toDecimalString, tryParseMoney } from "../money";
 export const CURRENCIES: readonly Currency[] = ["AUD", "CNY"];
 
 type BaseSettings = Pick<Game, "currency" | "smallBlindChips" | "bigBlindChips" | "chipRatio">;
-
-export type GameSettings = BaseSettings & {
-  readonly buyInBigBlinds: number;
-  /** Missing means insurance is off. Not part of the form values: it has its own editor. */
-  readonly insurance?: InsuranceRule;
-};
 
 export const DEFAULT_GAME_SETTINGS: GameSettings = {
   currency: "CNY",
