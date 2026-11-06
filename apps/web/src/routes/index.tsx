@@ -2,6 +2,7 @@ import type { Game } from "@holdem/core";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
+import { GameOptions } from "@/components/game/GameOptions";
 import { InDevelopment } from "@/components/InDevelopment";
 import { Page } from "@/components/Page";
 import { useGames } from "@/data/games";
@@ -26,13 +27,6 @@ const ROLES: readonly { readonly role: Role; readonly label: string }[] = [
   { role: "player", label: "Player" },
 ];
 
-/** The options switched on for a game. Rake, table fee and wages join here once games have them. */
-function gameOptions(game: Game) {
-  const options: { label: string; className: string }[] = [];
-  if (game.insurance) options.push({ label: "保险", className: "text-highlight" });
-  return options;
-}
-
 function GameRow({ game }: { game: Game }) {
   return (
     <li>
@@ -46,11 +40,7 @@ function GameRow({ game }: { game: Game }) {
           <span className="font-medium">
             {game.smallBlindChips} / {game.bigBlindChips}
           </span>
-          {gameOptions(game).map(({ label, className }) => (
-            <span key={label} className={cn("text-xs font-medium", className)}>
-              {label}
-            </span>
-          ))}
+          <GameOptions game={game} />
         </span>
         <span className="shrink-0 text-sm text-muted">{STARTED_AT.format(game.createdAt)}</span>
       </Link>

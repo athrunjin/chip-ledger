@@ -19,6 +19,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { AddPlayerToGame } from "@/components/game/AddPlayerToGame";
 import { ChipAmountDialog } from "@/components/game/ChipAmountDialog";
+import { GameOptions } from "@/components/game/GameOptions";
 import { HandsDialog } from "@/components/game/HandsDialog";
 import { LeaveDialog } from "@/components/game/LeaveDialog";
 import { LedgerLog } from "@/components/game/LedgerLog";
@@ -109,6 +110,7 @@ function GameLedger({ game }: { game: Game }) {
   const names = new Map(players.map(({ id, name }) => [id, name]));
   names.set(INSURANCE_PLAYER_ID, INSURANCE_PLAYER_NAME);
   const nameOf = (playerId: string) => names.get(playerId) ?? "未知玩家";
+  const money = (chips: number) => formatGameMoney(chipsToCents(chips, chipRatio), currency);
 
   function playerTotals(playerId: string) {
     const player = ledger.find((p) => p.playerId === playerId);
@@ -208,7 +210,20 @@ function GameLedger({ game }: { game: Game }) {
 
   return (
     <Page
-      title={`${smallBlindChips} / ${bigBlindChips}`}
+      title={
+        <>
+          {smallBlindChips} / {bigBlindChips}{" "}
+          <small className="text-sm font-normal tracking-normal text-muted">
+            {money(smallBlindChips)}/{money(bigBlindChips)}
+          </small>
+        </>
+      }
+      subtitle={
+        // Keeps its height with no options on, so the page does not shift
+        <p className="flex min-h-5 flex-wrap items-baseline gap-x-2">
+          <GameOptions game={game} />
+        </p>
+      }
       actions={
         <div className="flex shrink-0 items-center gap-3">
           {editable && (
@@ -236,7 +251,8 @@ function GameLedger({ game }: { game: Game }) {
       <p className="text-sm text-muted">
         {CURRENCY_INFO[currency].label} · {chipRatio.chips.toLocaleString("zh-CN")} 筹码 ={" "}
         {formatGameMoney(chipRatio.amount, currency)}
-        {handChips !== undefined && ` · 1 手 ${handChips.toLocaleString("zh-CN")}`}
+        {handChips !== undefined &&
+          ` · 1 手 ${handChips.toLocaleString("zh-CN")} 筹码/${money(handChips)}`}
       </p>
 
       <dl className="mt-2 grid grid-cols-3 gap-2 text-center">
@@ -262,15 +278,6 @@ function GameLedger({ game }: { game: Game }) {
         </div>
       </dl>
 
-      {editable && (
-        <AddPlayerToGame
-          excludedIds={new Set(people.map(({ playerId }) => playerId))}
-          onPick={({ id, name }: Player) =>
-            setPending({ kind: handChips === undefined ? "buy" : "join", playerId: id, name })
-          }
-        />
-      )}
-
       <LedgerPlayers
         gameId={gameId}
         players={ledger}
@@ -287,6 +294,16 @@ function GameLedger({ game }: { game: Game }) {
         onRemove={handleRemove}
         onReturn={handleReturn}
         onLeave={(playerId) => setPending({ kind: "leave", playerId, name: nameOf(playerId) })}
+        addPlayer={
+          editable && (
+            <AddPlayerToGame
+              excludedIds={new Set(people.map(({ playerId }) => playerId))}
+              onPick={({ id, name }: Player) =>
+                setPending({ kind: handChips === undefined ? "buy" : "join", playerId: id, name })
+              }
+            />
+          )
+        }
       />
 
       {(appendEvent.isError || adjustHands.isError || leaveTable.isError) && !pending && (

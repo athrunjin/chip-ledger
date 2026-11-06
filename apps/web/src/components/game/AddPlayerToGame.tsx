@@ -1,11 +1,11 @@
 import { type Player, parsePlayerName, searchPlayers } from "@holdem/core";
+import { Plus } from "lucide-react";
 import { useState } from "react";
+import { Modal } from "@/components/insurance/Modal";
 import { TextField } from "@/components/TextField";
 import { newPlayer, usePlayers, useSavePlayer } from "@/data/players";
 
 const MAX_SUGGESTIONS = 8;
-/** Wait briefly after the input loses focus before collapsing, or a tapped suggestion would already be gone. */
-const COLLAPSE_DELAY_MS = 150;
 
 const pillClass =
   "inline-flex min-h-11 items-center rounded-full border border-line bg-surface px-4 font-medium";
@@ -16,12 +16,12 @@ interface AddPlayerToGameProps {
   onPick: (player: Player) => void;
 }
 
-/** Pick a player from the list to buy in, or create one if the search finds nothing. */
+/** A small plus opens the search: pick a player to buy in, or create one if it finds nothing. */
 export function AddPlayerToGame({ excludedIds, onPick }: AddPlayerToGameProps) {
   const { data: players = [] } = usePlayers();
   const savePlayer = useSavePlayer();
+  const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [focused, setFocused] = useState(false);
 
   const available = players.filter(({ id }) => !excludedIds.has(id));
   const matches = searchPlayers(available, query).slice(0, MAX_SUGGESTIONS);
@@ -30,11 +30,15 @@ export function AddPlayerToGame({ excludedIds, onPick }: AddPlayerToGameProps) {
     players.map(({ name }) => name),
   );
   const newName = parsed.ok && matches.length === 0 ? parsed.name : undefined;
-  // Once the game has players, keep suggestions collapsed to leave room for the player list
-  const showMatches = query !== "" || focused || excludedIds.size === 0;
+
+  function close() {
+    setQuery("");
+    setOpen(false);
+    savePlayer.reset();
+  }
 
   function pick(player: Player) {
-    setQuery("");
+    close();
     onPick(player);
   }
 
@@ -45,40 +49,58 @@ export function AddPlayerToGame({ excludedIds, onPick }: AddPlayerToGameProps) {
   }
 
   return (
-    <section className="mt-2">
-      <TextField
-        id="add-player"
-        label="加入玩家：名字或拼音首字母"
-        value={query}
-        issue={savePlayer.isError ? "保存失败，请重试" : undefined}
-        inputMode="text"
-        onChange={setQuery}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setTimeout(() => setFocused(false), COLLAPSE_DELAY_MS)}
-      />
-      {showMatches && (matches.length > 0 || newName !== undefined) && (
-        <ul className="mt-2 flex flex-wrap gap-2">
-          {matches.map((player) => (
-            <li key={player.id}>
-              <button type="button" onClick={() => pick(player)} className={pillClass}>
-                {player.name}
-              </button>
-            </li>
-          ))}
-          {newName !== undefined && (
-            <li>
-              <button
-                type="button"
-                disabled={savePlayer.isPending}
-                onClick={handleCreate}
-                className={`${pillClass} border-accent disabled:opacity-60`}
-              >
-                新建「{newName}」
-              </button>
-            </li>
+    <>
+      <button
+        type="button"
+        aria-label="加入玩家"
+        onClick={() => setOpen(true)}
+        className="mt-2 grid size-11 place-items-center rounded-full border border-line bg-surface text-highlight"
+      >
+        <Plus className="size-5" aria-hidden />
+      </button>
+
+      {open && (
+        <Modal title="加入玩家" onClose={close}>
+          <TextField
+            id="add-player"
+            label="名字或拼音首字母"
+            value={query}
+            issue={savePlayer.isError ? "保存失败，请重试" : undefined}
+            inputMode="text"
+            onChange={setQuery}
+          />
+          {(matches.length > 0 || newName !== undefined) && (
+            <ul className="mt-2 flex flex-wrap gap-2">
+              {matches.map((player) => (
+                <li key={player.id}>
+                  <button type="button" onClick={() => pick(player)} className={pillClass}>
+                    {player.name}
+                  </button>
+                </li>
+              ))}
+              {newName !== undefined && (
+                <li>
+                  <button
+                    type="button"
+                    disabled={savePlayer.isPending}
+                    onClick={handleCreate}
+                    className={`${pillClass} border-accent disabled:opacity-60`}
+                  >
+                    新建「{newName}」
+                  </button>
+                </li>
+              )}
+            </ul>
           )}
-        </ul>
+          <button
+            type="button"
+            onClick={close}
+            className="mt-3 min-h-11 w-full rounded-xl border border-line font-medium"
+          >
+            关闭
+          </button>
+        </Modal>
       )}
-    </section>
+    </>
   );
 }
