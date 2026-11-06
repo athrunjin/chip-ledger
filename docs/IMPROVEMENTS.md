@@ -411,6 +411,24 @@ Records discussions of feature and process improvements: what was proposed, how 
 - Decision: do.
 - Tracking: issue #58, PR #59
 
+### #I-025 Seated players as a titled table
+
+- Type: feature
+- Date: proposed, decided and completed 2026-11-06
+- Source: discussion
+- Problem: seated players had no heading or column titles, the add button sat off to the left, and the hand step buttons outweighed the chip counts.
+- Proposal:
+  - Group the seated players into a 桌上玩家 section with a title row for 玩家, 筹码 and 手数.
+  - Center the add button and make it about 50% smaller.
+  - Make chip counts larger and the hand step buttons visually smaller.
+- Settled details:
+  - The add button sits at the foot of the card. Its circle is 22px, and the whole foot is the tap target.
+  - Chip counts are 20px on a soft fill, or 16px from seven digits so they fit the column.
+  - The hand step buttons draw a 24px circle, and every tap target stays 44px.
+  - The insurance seat stays outside the card but uses the same columns.
+- Decision: do.
+- Tracking: PR #60
+
 ## Not doing or deferred
 
 ### #I-004 Hand size when blinds change mid-game
