@@ -5,7 +5,13 @@ import {
   toGameSettingsForm,
 } from "@holdem/core";
 import { createFileRoute } from "@tanstack/react-router";
-import { GameSettingsForm } from "@/components/game/GameSettingsForm";
+import { useRef, useState } from "react";
+import {
+  type GameConfigChoice,
+  GameConfigPicker,
+  LAST_CONFIG,
+} from "@/components/game/GameConfigPicker";
+import { GameSettingsForm, type GameSettingsFormHandle } from "@/components/game/GameSettingsForm";
 import { Page } from "@/components/Page";
 import { GUEST_ORGANIZER_ID } from "@/data";
 import { useGames, useSaveGameSettings } from "@/data/games";
@@ -18,6 +24,15 @@ function NewGamePage() {
   const navigate = Route.useNavigate();
   const games = useGames();
   const saveGame = useSaveGameSettings();
+  const formRef = useRef<GameSettingsFormHandle>(null);
+  const [selected, setSelected] = useState<string | null>(LAST_CONFIG);
+  // A new choice remounts the form, which starts again from its initial values
+  const [applied, setApplied] = useState<{ key: number; choice?: GameConfigChoice }>({ key: 0 });
+
+  function handleApply(choice: GameConfigChoice) {
+    setSelected(choice.id);
+    setApplied({ key: applied.key + 1, choice });
+  }
 
   function handleSubmit(settings: GameSettings) {
     const game = createGame(
@@ -30,14 +45,33 @@ function NewGamePage() {
     });
   }
 
+  const latest = games.data?.[0];
+  const settings = applied.choice?.settings;
+  // Carry over the latest game's settings by default
+  const start = settings ?? latest ?? DEFAULT_GAME_SETTINGS;
+  const configRule = settings?.insurance;
+
   return (
-    <Page title="开局设置" centered>
+    <Page
+      title="开局设置"
+      centered
+      actions={
+        <GameConfigPicker
+          selected={selected}
+          onSelect={setSelected}
+          onApply={handleApply}
+          readSettings={() => formRef.current?.validate() ?? null}
+        />
+      }
+    >
       {!games.isPending && (
         <GameSettingsForm
-          // Carry over the latest game's settings by default
-          initial={toGameSettingsForm(games.data?.[0] ?? DEFAULT_GAME_SETTINGS)}
-          initialInsurance={games.data?.[0]?.insurance}
-          lastInsurance={games.data?.find((game) => game.insurance)?.insurance}
+          key={applied.key}
+          ref={formRef}
+          initial={toGameSettingsForm(start)}
+          initialInsurance={start.insurance}
+          lastInsurance={configRule ?? games.data?.find((game) => game.insurance)?.insurance}
+          lastInsuranceLabel={configRule && applied.choice?.name}
           submitLabel="开局"
           saving={saveGame.isPending}
           saveFailed={saveGame.isError}

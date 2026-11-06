@@ -4,7 +4,14 @@
  * One repository instance is bound to one organizer: reads return only that organizer's data,
  * and writing another organizer's data throws `ForeignOrganizerError`.
  */
-import type { Game, InsuranceHand, LedgerEvent, Player, SavedInsuranceRule } from "./types";
+import type {
+  Game,
+  InsuranceHand,
+  LedgerEvent,
+  Player,
+  SavedGameConfig,
+  SavedInsuranceRule,
+} from "./types";
 
 export class ForeignOrganizerError extends Error {
   override readonly name = "ForeignOrganizerError";
@@ -29,6 +36,13 @@ export interface InsuranceRuleRepository {
   list(): Promise<SavedInsuranceRule[]>;
   save(rule: SavedInsuranceRule): Promise<void>;
   /** Games keep their own copy of the rule, so deleting one changes no game. */
+  remove(id: string): Promise<void>;
+}
+
+export interface GameConfigRepository {
+  /** Oldest first. */
+  list(): Promise<SavedGameConfig[]>;
+  save(config: SavedGameConfig): Promise<void>;
   remove(id: string): Promise<void>;
 }
 
@@ -57,6 +71,7 @@ export interface BackupData {
   readonly ledgerEvents: readonly LedgerEvent[];
   readonly insuranceRules: readonly SavedInsuranceRule[];
   readonly insuranceHands: readonly InsuranceHand[];
+  readonly gameConfigs: readonly SavedGameConfig[];
 }
 
 export interface RestoreResult {
@@ -78,5 +93,6 @@ export interface Repository {
   readonly ledger: LedgerRepository;
   readonly insuranceRules: InsuranceRuleRepository;
   readonly insuranceHands: InsuranceHandRepository;
+  readonly gameConfigs: GameConfigRepository;
   readonly backup: BackupRepository;
 }

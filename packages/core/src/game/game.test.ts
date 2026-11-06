@@ -1,13 +1,13 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
+import type { GameSettings } from "../domain";
 import { cents } from "../money";
 import {
   chooseCollector,
   chooseImbalanceHandling,
   createGame,
   DEFAULT_GAME_SETTINGS,
-  type GameSettings,
   type GameSettingsForm,
   handChipsFor,
   parseGameSettings,

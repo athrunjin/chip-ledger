@@ -53,6 +53,15 @@ export interface SavedInsuranceRule {
   readonly createdAt: Timestamp;
 }
 
+/** A game's setup kept under a name. Using one only fills the form, so games never point to it. */
+export interface SavedGameConfig {
+  readonly id: string;
+  readonly organizerId: OrganizerId;
+  readonly name: string;
+  readonly settings: GameSettings;
+  readonly createdAt: Timestamp;
+}
+
 export interface InsuranceHandPlayer {
   readonly playerId: string;
   /** What they put in. Ignored for a cover player, who matches the next deepest. */
@@ -101,6 +110,16 @@ export const INSURANCE_PLAYER_ID = "insurance";
 
 /** Reserved: no player can take this name. */
 export const INSURANCE_PLAYER_NAME = "保险";
+
+/** What the organizer chooses when starting a game. */
+export type GameSettings = Pick<
+  Game,
+  "currency" | "smallBlindChips" | "bigBlindChips" | "chipRatio"
+> & {
+  readonly buyInBigBlinds: number;
+  /** Missing means insurance is off. Not part of the form values: it has its own editor. */
+  readonly insurance?: InsuranceRule;
+};
 
 export interface Game {
   readonly id: string;

@@ -10,6 +10,7 @@ import {
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { TextField } from "@/components/TextField";
+import { Toggle } from "@/components/Toggle";
 import {
   newSavedRule,
   useInsuranceRules,
@@ -29,36 +30,6 @@ const pillClass = (active: boolean) =>
     "min-h-11 rounded-full border px-4 font-medium",
     active ? "border-accent bg-accent text-accent-text" : "border-line bg-surface",
   );
-
-function Toggle({
-  label,
-  detail,
-  checked,
-  disabled = false,
-  onChange,
-}: {
-  label: string;
-  detail?: string;
-  checked: boolean;
-  disabled?: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  return (
-    <label className="flex min-h-11 items-center justify-between gap-3">
-      <span className="min-w-0">
-        <span className="block font-medium">{label}</span>
-        {detail && <span className="block text-sm text-muted">{detail}</span>}
-      </span>
-      <input
-        type="checkbox"
-        checked={checked}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.checked)}
-        className="size-6 shrink-0 accent-accent"
-      />
-    </label>
-  );
-}
 
 export interface InsuranceChoice {
   readonly enabled: boolean;
@@ -83,6 +54,8 @@ interface InsuranceSettingsProps {
   issues: InsuranceRuleIssues;
   /** The rule to offer as "last time", from this game or the latest one that had insurance */
   lastRule: InsuranceRule | undefined;
+  /** What to call that rule in the list */
+  lastRuleLabel: string;
   /** Once insurance has been sold in this game, it cannot be turned off */
   locked: boolean;
   onChange: (value: InsuranceChoice) => void;
@@ -93,6 +66,7 @@ export function InsuranceSettings({
   value,
   issues,
   lastRule,
+  lastRuleLabel,
   locked,
   onChange,
 }: InsuranceSettingsProps) {
@@ -142,9 +116,9 @@ export function InsuranceSettings({
   }
 
   return (
-    <section className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-3">
+    <section className="flex flex-col gap-3 rounded-xl border border-line bg-surface px-4 py-2">
       <Toggle
-        label="开启保险"
+        label="保险"
         detail={
           locked ? "这局已有保险记录，不能关闭" : "开启后「保险」作为一席加入牌局，默认买入 1 手"
         }
@@ -165,7 +139,7 @@ export function InsuranceSettings({
                   onClick={() => choose(LAST_RULE, lastRule)}
                   className={pillClass(source === LAST_RULE)}
                 >
-                  上次配置
+                  {lastRuleLabel}
                 </button>
               )}
               {BUILT_IN_RULES.map(({ id, name: ruleName, rule }) => (

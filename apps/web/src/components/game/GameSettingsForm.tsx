@@ -9,11 +9,12 @@ import {
   tryParseMoney,
 } from "@holdem/core";
 import { ChevronRight } from "lucide-react";
-import { type FormEvent, type ReactNode, useState } from "react";
+import { type FormEvent, type ReactNode, type Ref, useImperativeHandle, useState } from "react";
 import {
   InsuranceSettings,
   initialInsuranceChoice,
 } from "@/components/insurance/InsuranceSettings";
+import { Toggle } from "@/components/Toggle";
 import { CURRENCY_INFO } from "@/lib/currency";
 import {
   BlindsDialog,
@@ -25,6 +26,20 @@ import {
 } from "./GameSettingDialogs";
 
 type SettingDialog = "currency" | "ratio" | "blinds" | "buyIn";
+
+/** Options with no settings yet, in the order they appear after insurance. */
+const PLANNED_OPTIONS = ["抽水", "台费", "工资"];
+
+function PlannedOption({ label }: { label: string }) {
+  const [enabled, setEnabled] = useState(false);
+
+  return (
+    <section className="rounded-xl border border-line bg-surface px-4 py-2">
+      <Toggle label={label} checked={enabled} onChange={setEnabled} />
+      {enabled && <p className="pb-2 text-sm text-muted">开发中</p>}
+    </section>
+  );
+}
 
 function SettingRow({
   label,
@@ -59,7 +74,13 @@ function SettingRow({
   );
 }
 
+export interface GameSettingsFormHandle {
+  /** The settings as entered, or null with the issues shown if the insurance rule is invalid. */
+  validate: () => GameSettings | null;
+}
+
 interface GameSettingsFormProps {
+  ref?: Ref<GameSettingsFormHandle>;
   initial: FormValues;
   submitLabel: string;
   /** Whether the currency and chip ratio are locked */
@@ -72,6 +93,8 @@ interface GameSettingsFormProps {
   initialInsurance?: InsuranceRule | undefined;
   /** Offered as "last time": this game's rule, or the latest game's */
   lastInsurance?: InsuranceRule | undefined;
+  /** What to call that rule when it did not come from last time */
+  lastInsuranceLabel?: string | undefined;
   /** Once insurance has been sold in this game, it cannot be turned off */
   insuranceLocked?: boolean;
   saving: boolean;
@@ -80,6 +103,7 @@ interface GameSettingsFormProps {
 }
 
 export function GameSettingsForm({
+  ref,
   initial,
   submitLabel,
   ratioLocked = false,
@@ -87,6 +111,7 @@ export function GameSettingsForm({
   showInsurance = true,
   initialInsurance,
   lastInsurance,
+  lastInsuranceLabel = "上次配置",
   insuranceLocked = false,
   saving,
   saveFailed,
@@ -102,13 +127,20 @@ export function GameSettingsForm({
   const ratioAmount = tryParseMoney(values.ratioAmount);
   const handChips = previewHandChips(values);
 
-  function handleSubmit(event: FormEvent) {
-    event.preventDefault();
+  function validate() {
     const result = parseGameSettings(values);
     const rule = showInsurance && insurance.enabled ? parseInsuranceRule(insurance.form) : null;
     setRuleIssues(rule && !rule.ok ? rule.issues : {});
-    if (!result.ok || (rule && !rule.ok)) return;
-    onSubmit(rule ? { ...result.settings, insurance: rule.rule } : result.settings);
+    if (!result.ok || (rule && !rule.ok)) return null;
+    return rule ? { ...result.settings, insurance: rule.rule } : result.settings;
+  }
+
+  useImperativeHandle(ref, () => ({ validate }));
+
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    const settings = validate();
+    if (settings) onSubmit(settings);
   }
 
   const dialogProps = {
@@ -162,15 +194,21 @@ export function GameSettingsForm({
           )}
         </div>
 
-        {showInsurance && (
-          <InsuranceSettings
-            value={insurance}
-            issues={ruleIssues}
-            lastRule={lastInsurance}
-            locked={insuranceLocked}
-            onChange={setInsurance}
-          />
-        )}
+        <div className="flex flex-col gap-3">
+          {showInsurance && (
+            <InsuranceSettings
+              value={insurance}
+              issues={ruleIssues}
+              lastRule={lastInsurance}
+              lastRuleLabel={lastInsuranceLabel}
+              locked={insuranceLocked}
+              onChange={setInsurance}
+            />
+          )}
+          {PLANNED_OPTIONS.map((label) => (
+            <PlannedOption key={label} label={label} />
+          ))}
+        </div>
 
         {saveFailed && (
           <p role="alert" className="text-sm text-highlight">

@@ -8,6 +8,7 @@ import {
   type Player,
   type Repository,
   type RestoreResult,
+  type SavedGameConfig,
   type SavedInsuranceRule,
   upgradeLegacyGame,
 } from "@holdem/core";
@@ -19,6 +20,7 @@ export type GuestDatabase = Dexie & {
   ledgerEvents: Table<LedgerEvent, string>;
   insuranceRules: Table<SavedInsuranceRule, string>;
   insuranceHands: Table<InsuranceHand, string>;
+  gameConfigs: Table<SavedGameConfig, string>;
 };
 
 const STORES = {
@@ -43,7 +45,14 @@ export function createGuestDatabase(name = "holdem-guest"): GuestDatabase {
     );
   const insuranceRules = "id, [organizerId+createdAt]";
   db.version(3).stores({ ...STORES, insuranceRules });
-  db.version(4).stores({ ...STORES, insuranceRules, insuranceHands: "id, [gameId+createdAt]" });
+  const insuranceHands = "id, [gameId+createdAt]";
+  db.version(4).stores({ ...STORES, insuranceRules, insuranceHands });
+  db.version(5).stores({
+    ...STORES,
+    insuranceRules,
+    insuranceHands,
+    gameConfigs: "id, [organizerId+createdAt]",
+  });
   return db;
 }
 
@@ -151,6 +160,21 @@ export function createDexieRepository(db: GuestDatabase, organizerId: OrganizerI
         if (hand) await db.insuranceHands.delete(id);
       },
     },
+    gameConfigs: {
+      list: () =>
+        db.gameConfigs
+          .where("[organizerId+createdAt]")
+          .between(...ofOrganizer)
+          .toArray(),
+      save: async (config) => {
+        assertOwned(config);
+        await db.gameConfigs.put(config);
+      },
+      remove: async (id) => {
+        const config = onlyOwned(await db.gameConfigs.get(id));
+        if (config) await db.gameConfigs.delete(id);
+      },
+    },
     backup: {
       exportAll: async () => ({
         games: await db.games
@@ -169,6 +193,10 @@ export function createDexieRepository(db: GuestDatabase, organizerId: OrganizerI
         insuranceHands: await db.insuranceHands
           .filter((hand) => hand.organizerId === organizerId)
           .toArray(),
+        gameConfigs: await db.gameConfigs
+          .where("[organizerId+createdAt]")
+          .between(...ofOrganizer)
+          .toArray(),
       }),
       restore: async ({
         games,
@@ -176,23 +204,35 @@ export function createDexieRepository(db: GuestDatabase, organizerId: OrganizerI
         ledgerEvents,
         insuranceRules,
         insuranceHands,
+        gameConfigs,
       }): Promise<RestoreResult> => {
-        const rows = [...games, ...players, ...ledgerEvents, ...insuranceRules, ...insuranceHands];
+        const rows = [
+          ...games,
+          ...players,
+          ...ledgerEvents,
+          ...insuranceRules,
+          ...insuranceHands,
+          ...gameConfigs,
+        ];
         rows.forEach(assertOwned);
         const total = rows.length;
         const added = await db.transaction(
           "rw",
-          db.games,
-          db.players,
-          db.ledgerEvents,
-          db.insuranceRules,
-          db.insuranceHands,
+          [
+            db.games,
+            db.players,
+            db.ledgerEvents,
+            db.insuranceRules,
+            db.insuranceHands,
+            db.gameConfigs,
+          ],
           async () =>
             (await addMissing(db.games, games)) +
             (await addMissing(db.players, players)) +
             (await addMissing(db.ledgerEvents, ledgerEvents)) +
             (await addMissing(db.insuranceRules, insuranceRules)) +
-            (await addMissing(db.insuranceHands, insuranceHands)),
+            (await addMissing(db.insuranceHands, insuranceHands)) +
+            (await addMissing(db.gameConfigs, gameConfigs)),
         );
         return { added, skipped: total - added };
       },
