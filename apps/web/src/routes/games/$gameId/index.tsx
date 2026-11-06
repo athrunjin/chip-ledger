@@ -14,12 +14,14 @@ import {
   type Player,
   soleBuyIn,
   summarizeByPlayer,
+  toggleTimer,
 } from "@holdem/core";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { AddPlayerToGame } from "@/components/game/AddPlayerToGame";
 import { ChipAmountDialog } from "@/components/game/ChipAmountDialog";
 import { GameOptions } from "@/components/game/GameOptions";
+import { GameTimer } from "@/components/game/GameTimer";
 import { HandsDialog } from "@/components/game/HandsDialog";
 import { LeaveDialog } from "@/components/game/LeaveDialog";
 import { LedgerLog } from "@/components/game/LedgerLog";
@@ -183,6 +185,10 @@ function GameLedger({ game }: { game: Game }) {
     if (buyIn && window.confirm(`把 ${nameOf(playerId)} 移出这局？`)) appendReversal(buyIn.id);
   }
 
+  function handleToggleTimer() {
+    saveGame.mutate({ ...game, timer: toggleTimer(game.timer, Date.now()) });
+  }
+
   const seatedCount = people.filter((p) => p.seated).length;
 
   function goToSettlement() {
@@ -230,16 +236,13 @@ function GameLedger({ game }: { game: Game }) {
         </p>
       }
       actions={
-        <div className="flex shrink-0 items-center gap-3">
-          {editable && (
-            <Link
-              to="/games/$gameId/settings"
-              params={{ gameId }}
-              className="inline-flex min-h-11 items-center text-highlight"
-            >
-              设置
-            </Link>
-          )}
+        <div className="flex shrink-0 items-center gap-2">
+          <GameTimer
+            timer={game.timer}
+            editable={editable}
+            saving={saveGame.isPending}
+            onToggle={handleToggleTimer}
+          />
           {people.length > 0 &&
             (editable ? (
               <button type="button" onClick={handleSettle} className={settleClass}>
@@ -253,12 +256,23 @@ function GameLedger({ game }: { game: Game }) {
         </div>
       }
     >
-      <p className="text-sm text-muted">
-        {chipRatio.chips.toLocaleString("zh-CN")} 筹码 ={" "}
-        {formatGameMoney(chipRatio.amount, currency)}
-        {handChips !== undefined &&
-          ` · 1 手 ${handBigBlinds(handChips, bigBlindChips)} BB（${handChips.toLocaleString("zh-CN")} 筹码 / ${money(handChips)}）`}
-      </p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="min-w-0 text-sm text-muted">
+          {chipRatio.chips.toLocaleString("zh-CN")} 筹码 ={" "}
+          {formatGameMoney(chipRatio.amount, currency)}
+          {handChips !== undefined &&
+            ` · 1 手 ${handBigBlinds(handChips, bigBlindChips)} BB（${handChips.toLocaleString("zh-CN")} 筹码 / ${money(handChips)}）`}
+        </p>
+        {editable && (
+          <Link
+            to="/games/$gameId/settings"
+            params={{ gameId }}
+            className="inline-flex min-h-11 shrink-0 items-center text-sm text-highlight"
+          >
+            设置
+          </Link>
+        )}
+      </div>
 
       <dl className="mt-2 grid grid-cols-3 gap-2 text-center">
         {[
@@ -306,11 +320,15 @@ function GameLedger({ game }: { game: Game }) {
         }
       />
 
-      {(appendEvent.isError || adjustHands.isError || leaveTable.isError) && !pending && (
-        <p role="alert" className="mt-2 text-sm text-highlight">
-          保存失败，请重试。
-        </p>
-      )}
+      {(appendEvent.isError ||
+        adjustHands.isError ||
+        leaveTable.isError ||
+        (saveGame.isError && !settling)) &&
+        !pending && (
+          <p role="alert" className="mt-2 text-sm text-highlight">
+            保存失败，请重试。
+          </p>
+        )}
 
       {events.length > 0 && <LedgerLog events={events} nameOf={nameOf} />}
 

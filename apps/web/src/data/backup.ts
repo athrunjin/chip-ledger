@@ -11,7 +11,7 @@ import {
 import { z } from "zod";
 
 const FORMAT = "holdem-backup";
-const VERSION = 5;
+const VERSION = 6;
 
 const id = z.string().min(1);
 const money = z
@@ -48,6 +48,10 @@ const gameFields = {
   status: z.enum(["open", "settled"]),
   createdAt: timestamp,
   settledAt: timestamp.optional(),
+  /** Added in version 6. */
+  timer: z
+    .object({ elapsedMs: z.number().int().min(0), runningSince: timestamp.optional() })
+    .optional(),
 };
 
 const gameSchema = z.object({

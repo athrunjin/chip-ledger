@@ -119,6 +119,14 @@ export type GameSettings = Pick<
   readonly insurance?: InsuranceRule;
 };
 
+/** The game clock. Timing data stores timestamps and computes differences (ADR 0001). */
+export interface GameTimer {
+  /** Time counted up to the current run. */
+  readonly elapsedMs: number;
+  /** When the current run started. Missing while paused. */
+  readonly runningSince?: Timestamp;
+}
+
 export interface Game {
   readonly id: string;
   readonly organizerId: OrganizerId;
@@ -140,6 +148,8 @@ export interface Game {
   readonly imbalanceHandling?: ImbalanceHandling;
   /** When settlement was confirmed. Cleared on reopening. */
   readonly settledAt?: Timestamp;
+  /** Missing until the organizer starts the clock. */
+  readonly timer?: GameTimer;
   /** This game's insurance terms. Missing means insurance is off. */
   readonly insurance?: InsuranceRule;
   /**

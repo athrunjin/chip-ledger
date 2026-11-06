@@ -12,6 +12,7 @@ import type {
   Timestamp,
 } from "../domain";
 import { type Cents, cents, toDecimalString, tryParseMoney } from "../money";
+import { pauseTimer } from "./timer";
 
 export const CURRENCIES: readonly Currency[] = ["AUD", "CNY"];
 
@@ -140,9 +141,13 @@ export function createGame(meta: NewGameMeta, settings: GameSettings): Game {
   return { ...meta, ...withHandChips(settings), status: "open" };
 }
 
-/** Confirms settlement. Transfers are not saved because the ledger can always reproduce them. */
+/**
+ * Confirms settlement and stops the clock at the final time.
+ * Transfers are not saved because the ledger can always reproduce them.
+ */
 export function settleGame(game: Game, settledAt: Timestamp): Game {
-  return { ...game, status: "settled", settledAt };
+  const settled: Game = { ...game, status: "settled", settledAt };
+  return game.timer ? { ...settled, timer: pauseTimer(game.timer, settledAt) } : settled;
 }
 
 /** Saves who collects at settlement. `undefined` goes back to the optimal plan. */

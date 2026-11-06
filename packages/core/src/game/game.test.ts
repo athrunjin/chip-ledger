@@ -206,6 +206,12 @@ describe("settleGame / reopenGame", () => {
     expect(settled).toEqual({ ...game, status: "settled", settledAt: 2 });
     expect(reopenGame(settled)).toEqual(game);
   });
+
+  it("stops a running clock at settlement and leaves it paused on reopening", () => {
+    const settled = settleGame({ ...game, timer: { elapsedMs: 10, runningSince: 2 } }, 7);
+    expect(settled.timer).toEqual({ elapsedMs: 15 });
+    expect(reopenGame(settled).timer).toEqual({ elapsedMs: 15 });
+  });
 });
 
 describe("updateGameSettings", () => {
