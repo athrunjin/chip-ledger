@@ -393,6 +393,24 @@ Records discussions of feature and process improvements: what was proposed, how 
 - Decision: do.
 - Tracking: issue #56, PR #57
 
+### #I-024 Game header with options and cash, and a small add-player button
+
+- Type: feature
+- Date: proposed and decided 2026-11-06
+- Source: discussion
+- Problem: the game page did not show which options were on or what the blinds and one hand were worth, and the add-player field took a full row above the player list.
+- Proposal:
+  - A reserved line under the blinds shows the same option labels as the overview.
+  - The cash value of the blinds follows them in small muted text.
+  - One hand shows as `1 手 100 筹码/¥100`.
+  - Adding a player is a small plus under the player list and above the insurance seat, with no prompt row.
+- Settled details:
+  - The plus opens a dialog with the search, which keeps a short hint so pinyin search stays discoverable.
+  - The overview and the game page share one component for the option labels.
+  - Settled games show the same header, without the plus.
+- Decision: do.
+- Tracking: issue #58, PR #59
+
 ## Not doing or deferred
 
 ### #I-004 Hand size when blinds change mid-game

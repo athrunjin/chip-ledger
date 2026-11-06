@@ -6,6 +6,7 @@ import {
   type PlayerLedger,
 } from "@holdem/core";
 import { Link } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { formatSignedChips, netColor } from "@/lib/chips";
 import { formatGameMoney } from "@/lib/currency";
 
@@ -33,6 +34,8 @@ interface LedgerPlayersProps {
   onRemove: (playerId: string) => void;
   onReturn: (playerId: string) => void;
   onLeave: (playerId: string) => void;
+  /** Shown after the seated players, before the insurance seat */
+  addPlayer: ReactNode;
 }
 
 export function LedgerPlayers({
@@ -51,6 +54,7 @@ export function LedgerPlayers({
   onRemove,
   onReturn,
   onLeave,
+  addPlayer,
 }: LedgerPlayersProps) {
   const seat = players.find((p) => p.playerId === INSURANCE_PLAYER_ID);
   const people = players.filter((p) => p.playerId !== INSURANCE_PLAYER_ID);
@@ -147,6 +151,8 @@ export function LedgerPlayers({
           ))}
         </ul>
       )}
+
+      {addPlayer}
 
       {seat && (
         <ul aria-label="保险" className={`mt-2 ${listClass} border-highlight`}>
