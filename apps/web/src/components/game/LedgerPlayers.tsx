@@ -13,13 +13,13 @@ import { cn } from "@/lib/cn";
 import { formatGameMoney } from "@/lib/currency";
 
 const actionClass = "min-h-11 shrink-0 rounded-lg border border-line px-2 text-sm font-medium";
-/** The tap target stays 44px; only the circle drawn inside it is small. */
-const stepClass = "grid size-11 shrink-0 place-items-center disabled:opacity-40";
+/** The tap target stays 44px; the small circle drawn inside it sits against the count. */
+const stepClass = "flex size-11 shrink-0 items-center disabled:opacity-40";
 const stepIconClass = "grid size-6 place-items-center rounded-full border border-line text-muted";
 const listClass = "divide-y divide-line rounded-xl border border-line bg-surface px-2";
 const rowClass = "flex min-h-13 items-center gap-1.5 py-1";
 /** Shared by the column titles and the rows under them, so they line up. */
-const columnsClass = "grid grid-cols-[minmax(0,1fr)_5rem_8.25rem_3rem] items-center";
+const columnsClass = "grid grid-cols-[minmax(0,1fr)_4.5rem_8.25rem_3rem] items-center";
 const tableRowClass = `${columnsClass} min-h-13 py-1`;
 const tableActionClass = "min-h-11 rounded-lg border border-line text-sm font-medium";
 
@@ -73,13 +73,13 @@ export function LedgerPlayers({
   function stack({ playerId, stackChips }: PlayerLedger) {
     const chips = stackChips.toLocaleString("zh-CN");
     // Seven digits at the full size would overflow the column
-    const size = stackChips < 1_000_000 ? "text-xl" : "text-base";
+    const size = stackChips < 1_000_000 ? "text-lg" : "text-sm";
     return editable ? (
       <button
         type="button"
         aria-label={`输入${nameOf(playerId)}的筹码，现在 ${stackChips}`}
         onClick={() => onEditStack(playerId)}
-        className={`min-h-11 rounded-lg bg-bg px-1 font-semibold tabular-nums ${size}`}
+        className={`min-h-11 rounded-lg font-semibold tabular-nums ${size}`}
       >
         {chips}
       </button>
@@ -109,7 +109,7 @@ export function LedgerPlayers({
           aria-label={removable ? `${name}移出这局` : `${name}减 1 手`}
           disabled={count <= 1 && !removable}
           onClick={() => (removable ? onRemove(playerId) : onStepHands(playerId, -1))}
-          className={stepClass}
+          className={`${stepClass} justify-end`}
         >
           <span className={stepIconClass}>
             <Minus className="size-3" aria-hidden />
@@ -127,7 +127,7 @@ export function LedgerPlayers({
           type="button"
           aria-label={`${name}加 1 手`}
           onClick={() => onStepHands(playerId, 1)}
-          className={stepClass}
+          className={`${stepClass} justify-start`}
         >
           <span className={stepIconClass}>
             <Plus className="size-3" aria-hidden />

@@ -429,6 +429,23 @@ Records discussions of feature and process improvements: what was proposed, how 
 - Decision: do.
 - Tracking: PR #60
 
+### #I-026 Calmer chip counts and table balance
+
+- Type: feature
+- Date: proposed, decided and completed 2026-11-06
+- Source: real device check of #I-025
+- Problem: on a phone the boxed chip counts were too heavy, the hand step buttons sat far from the count, and the highlighted balance card drew attention even when only the number mattered.
+- Proposal:
+  - Make chip counts smaller and drop their dark box.
+  - Bring the hand step buttons closer to the count and take less width.
+  - Keep the balance card plain and highlight only the number.
+- Settled details:
+  - Chip counts are 18px, or 14px from seven digits so they fit the narrower column.
+  - The step circles sit at the inner edge of their 44px tap targets, 17px from a single-digit count.
+  - The count keeps its 44px tap target, so the gap goes no lower.
+- Decision: do.
+- Tracking: PR #62
+
 ## Not doing or deferred
 
 ### #I-004 Hand size when blinds change mid-game
