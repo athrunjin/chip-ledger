@@ -324,6 +324,20 @@ Records discussions of feature and process improvements: what was proposed, how 
 - Decision: do. Released after trials on a real device with the preview builds.
 - Tracking: issue #42, PR #43, #44, #45, #46, #47, #48, ADRs [0014](adr/0014-insurance-seat.md), [0015](adr/0015-insurance-moves-only-the-seat.md), [0016](adr/0016-insurance-hands.md), [0017](adr/0017-finished-hand-sets-stacks.md), [0018](adr/0018-short-premium-buy-in.md), [0019](adr/0019-entered-stack-updates-table.md)
 
+### #I-020 Games overview by role, status and game options
+
+- Type: feature
+- Date: proposed, decided and completed 2026-11-06
+- Source: discussion
+- Problem: the overview mixed open and settled games in one list, and each row showed blinds and status but not the game's currency or options.
+- Proposal:
+  - Host and Player switch at the top, leaving room for the player view. Player is a placeholder until M7.
+  - 进行中 starts expanded and 历史对局 starts collapsed.
+  - Each row shows currency, blinds and only the options that are on, in small colored text, plus the start time.
+  - Only 保险 exists on games today. 台费, 工资 and 抽水 join the same list once games have those settings.
+- Decision: do. Merged after checks at phone size in the browser preview.
+- Tracking: issue #50, PR #51
+
 ## Not doing or deferred
 
 ### #I-004 Hand size when blinds change mid-game

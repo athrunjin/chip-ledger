@@ -1,6 +1,12 @@
+import type { Game } from "@holdem/core";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { ChevronDown } from "lucide-react";
+import { useState } from "react";
+import { InDevelopment } from "@/components/InDevelopment";
 import { Page } from "@/components/Page";
 import { useGames } from "@/data/games";
+import { cn } from "@/lib/cn";
+import { CURRENCY_INFO } from "@/lib/currency";
 
 export const Route = createFileRoute("/")({
   component: SessionsPage,
@@ -13,11 +19,93 @@ const STARTED_AT = new Intl.DateTimeFormat("zh-CN", {
   minute: "2-digit",
 });
 
-function SessionsPage() {
-  const { data: games = [] } = useGames();
+type Role = "host" | "player";
+
+const ROLES: readonly { readonly role: Role; readonly label: string }[] = [
+  { role: "host", label: "Host" },
+  { role: "player", label: "Player" },
+];
+
+/** The options switched on for a game. Rake, table fee and wages join here once games have them. */
+function gameOptions(game: Game) {
+  const options: { label: string; className: string }[] = [];
+  if (game.insurance) options.push({ label: "保险", className: "text-highlight" });
+  return options;
+}
+
+function GameRow({ game }: { game: Game }) {
+  return (
+    <li>
+      <Link
+        to="/games/$gameId"
+        params={{ gameId: game.id }}
+        className="flex min-h-16 items-center justify-between gap-4 rounded-xl border border-line bg-surface px-4 py-2"
+      >
+        <span className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+          <span className="text-sm text-muted">{CURRENCY_INFO[game.currency].label}</span>
+          <span className="font-medium">
+            {game.smallBlindChips} / {game.bigBlindChips}
+          </span>
+          {gameOptions(game).map(({ label, className }) => (
+            <span key={label} className={cn("text-xs font-medium", className)}>
+              {label}
+            </span>
+          ))}
+        </span>
+        <span className="shrink-0 text-sm text-muted">{STARTED_AT.format(game.createdAt)}</span>
+      </Link>
+    </li>
+  );
+}
+
+interface GameSectionProps {
+  title: string;
+  games: readonly Game[];
+  defaultOpen: boolean;
+}
+
+function GameSection({ title, games, defaultOpen }: GameSectionProps) {
+  const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <Page title="牌局">
+    <section>
+      <h2>
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen(!open)}
+          className="flex min-h-11 w-full items-center justify-between px-1 font-medium"
+        >
+          <span>
+            {title}（{games.length}）
+          </span>
+          <ChevronDown
+            className={cn("size-5 text-muted transition-transform", open && "rotate-180")}
+            aria-hidden
+          />
+        </button>
+      </h2>
+      {open &&
+        (games.length > 0 ? (
+          <ul className="mt-1 flex flex-col gap-2">
+            {games.map((game) => (
+              <GameRow key={game.id} game={game} />
+            ))}
+          </ul>
+        ) : (
+          <p className="px-1 py-2 text-sm text-muted">暂无牌局</p>
+        ))}
+    </section>
+  );
+}
+
+function HostGames() {
+  const { data: games = [] } = useGames();
+  const openGames = games.filter((game) => game.status === "open");
+  const pastGames = games.filter((game) => game.status === "settled");
+
+  return (
+    <>
       <section className="flex flex-col items-center gap-6 py-10 text-center md:py-16">
         {/* The start button is drawn as a chip: the only visual focus on the page */}
         <Link
@@ -41,25 +129,48 @@ function SessionsPage() {
       </section>
 
       {games.length > 0 && (
-        <ul className="flex flex-col gap-2 pb-6">
-          {games.map(({ id, smallBlindChips, bigBlindChips, status, createdAt }) => (
-            <li key={id}>
-              <Link
-                to="/games/$gameId"
-                params={{ gameId: id }}
-                className="flex min-h-16 items-center justify-between gap-4 rounded-xl border border-line bg-surface px-4"
-              >
-                <span className="font-medium">
-                  {smallBlindChips} / {bigBlindChips}
-                </span>
-                <span className="text-sm text-muted">
-                  {status === "open" ? "进行中" : "已结算"} · {STARTED_AT.format(createdAt)}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <div className="flex flex-col gap-2 pb-6">
+          <GameSection title="进行中" games={openGames} defaultOpen />
+          <GameSection title="历史对局" games={pastGames} defaultOpen={false} />
+        </div>
       )}
+    </>
+  );
+}
+
+function PlayerGames() {
+  return (
+    <section className="flex flex-col items-center gap-3 py-16 text-center">
+      <InDevelopment milestone="M7" />
+      <p className="max-w-sm text-muted">以玩家身份参加的牌局会显示在这里。</p>
+    </section>
+  );
+}
+
+function SessionsPage() {
+  const [role, setRole] = useState<Role>("host");
+
+  return (
+    <Page title="牌局">
+      <div className="grid grid-cols-2 gap-2">
+        {ROLES.map((item) => (
+          <button
+            key={item.role}
+            type="button"
+            aria-pressed={role === item.role}
+            onClick={() => setRole(item.role)}
+            className={cn(
+              "min-h-11 rounded-xl border px-3 font-medium",
+              role === item.role
+                ? "border-accent bg-accent text-accent-text"
+                : "border-line bg-surface",
+            )}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+      {role === "host" ? <HostGames /> : <PlayerGames />}
     </Page>
   );
 }
