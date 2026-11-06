@@ -265,12 +265,7 @@ function GameLedger({ game }: { game: Game }) {
             <dd className="font-semibold">{value}</dd>
           </div>
         ))}
-        <div
-          className={cn(
-            "rounded-xl border bg-surface px-2 py-1.5",
-            balanceChips === 0 ? "border-line" : "border-highlight",
-          )}
-        >
+        <div className="rounded-xl border border-line bg-surface px-2 py-1.5">
           <dt className="text-xs text-muted">牌桌平衡</dt>
           <dd className={cn("font-semibold", balanceChips !== 0 && "text-highlight")}>
             {formatSignedChips(balanceChips)}
