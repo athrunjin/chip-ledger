@@ -79,6 +79,11 @@ const settleClass =
 
 const HANDS_TITLE = { join: "买入", edit: "调整手数" } as const;
 
+/** Display only, so a hand that is not a whole number of big blinds rounds to one decimal. */
+function handBigBlinds(handChips: number, bigBlindChips: number) {
+  return (handChips / bigBlindChips).toLocaleString("zh-CN", { maximumFractionDigits: 1 });
+}
+
 function GameLedger({ game }: { game: Game }) {
   const {
     id: gameId,
@@ -214,7 +219,7 @@ function GameLedger({ game }: { game: Game }) {
         <>
           {smallBlindChips} / {bigBlindChips}{" "}
           <small className="text-sm font-normal tracking-normal text-muted">
-            {money(smallBlindChips)}/{money(bigBlindChips)}
+            {CURRENCY_INFO[currency].label} {money(smallBlindChips)}/{money(bigBlindChips)}
           </small>
         </>
       }
@@ -249,10 +254,10 @@ function GameLedger({ game }: { game: Game }) {
       }
     >
       <p className="text-sm text-muted">
-        {CURRENCY_INFO[currency].label} · {chipRatio.chips.toLocaleString("zh-CN")} 筹码 ={" "}
+        {chipRatio.chips.toLocaleString("zh-CN")} 筹码 ={" "}
         {formatGameMoney(chipRatio.amount, currency)}
         {handChips !== undefined &&
-          ` · 1 手 ${handChips.toLocaleString("zh-CN")} 筹码/${money(handChips)}`}
+          ` · 1 手 ${handBigBlinds(handChips, bigBlindChips)} BB（${handChips.toLocaleString("zh-CN")} 筹码 / ${money(handChips)}）`}
       </p>
 
       <dl className="mt-2 grid grid-cols-3 gap-2 text-center">

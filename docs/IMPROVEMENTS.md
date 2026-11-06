@@ -446,6 +446,22 @@ Records discussions of feature and process improvements: what was proposed, how 
 - Decision: do.
 - Tracking: PR #62
 
+### #I-027 Currency in the blinds line and hands in big blinds
+
+- Type: feature
+- Date: proposed, decided and completed 2026-11-06
+- Source: real device check of #I-026
+- Problem: the currency name sat apart from the cash value of the blinds, and one hand showed no size in big blinds.
+- Proposal:
+  - Show the currency name before the cash value of the blinds, such as `人民币 ¥5/¥5`.
+  - Remove the currency name from the line under the header.
+  - Show one hand as `1 手 100 BB（500 筹码 / ¥500）`.
+- Settled details:
+  - The chip ratio stays in the line under the header.
+  - Big blinds per hand use the current big blind and round to one decimal for display.
+- Decision: do.
+- Tracking: PR #63
+
 ## Not doing or deferred
 
 ### #I-004 Hand size when blinds change mid-game
