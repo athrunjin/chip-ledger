@@ -73,6 +73,13 @@ describe("backup file", () => {
     expect(parseBackup(text)).toEqual({ ok: false, issue: "invalid" });
   });
 
+  it("keeps the game clock", () => {
+    const game = data.games[0];
+    if (!game) throw new Error("expected a game");
+    const timed = { ...data, games: [{ ...game, timer: { elapsedMs: 5, runningSince: 2 } }] };
+    expect(parseBackup(serializeBackup(timed, 1))).toEqual({ ok: true, data: timed });
+  });
+
   it("reads version 2 backups, which have no saved rules", () => {
     const older = edit((backup) => {
       backup.version = 2;
@@ -219,7 +226,7 @@ describe("backup file", () => {
 
   it("rejects backups from a newer version", () => {
     const text = edit((backup) => {
-      backup.version = 6;
+      backup.version = 7;
     });
     expect(parseBackup(text)).toEqual({ ok: false, issue: "newer-version" });
   });

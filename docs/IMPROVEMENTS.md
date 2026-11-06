@@ -462,6 +462,25 @@ Records discussions of feature and process improvements: what was proposed, how 
 - Decision: do.
 - Tracking: PR #63
 
+### #I-028 Game clock in the header
+
+- Type: feature
+- Date: proposed, decided and completed 2026-11-06
+- Source: discussion
+- Problem: nothing showed how long a game had been running, and 设置 took the space next to 结算.
+- Proposal:
+  - Move 设置 to the right of the line under the header, at that line's size.
+  - Add a clock button to the left of 结算. It shows a clock and Start, then the time with pause, then the time with play.
+  - Compare layouts before building. The options were a two-line pill, a compact pill and a full single-line pill.
+- Settled details:
+  - The compact pill was chosen, with the time as `01:23:45`.
+  - The game stores the time so far and when the current run started, so the clock survives a suspended page (ADR 0001).
+  - Settlement stops the clock at the final time. Settled games show that time with no controls, and reopening leaves the clock paused.
+  - There is no reset.
+  - Backups move to version 6 to carry the clock. Older backups still load.
+- Decision: do.
+- Tracking: PR #64
+
 ## Not doing or deferred
 
 ### #I-004 Hand size when blinds change mid-game
