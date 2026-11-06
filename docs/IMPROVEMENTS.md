@@ -338,6 +338,23 @@ Records discussions of feature and process improvements: what was proposed, how 
 - Decision: do. Merged after checks at phone size in the browser preview.
 - Tracking: issue #50, PR #51
 
+### #I-021 Compact game setup with one row per setting
+
+- Type: feature
+- Date: proposed and decided 2026-11-06
+- Source: discussion
+- Problem: the new game form showed every input at once, so currency, chip ratio, blinds and buy-in took most of a phone screen before the insurance settings.
+- Proposal:
+  - The page is titled 开局设置, centered at the top.
+  - 货币, 筹码, 盲注 and Buy in each take one row with the label on the left and the current value on the right.
+  - Tapping a row opens a dialog for that setting, with the first input selected so a number can be typed right away, and 确定 to return.
+- Settled details:
+  - 修改设置 shares the form, so it gets the same rows. Locked settings show as disabled rows.
+  - Each dialog validates before returning, so the rows only ever show valid settings. 取消 discards the change.
+  - The new 开局设置 title applies to the page only. The home button stays 开一局.
+- Decision: do.
+- Tracking: issue #52, PR #53
+
 ## Not doing or deferred
 
 ### #I-004 Hand size when blinds change mid-game

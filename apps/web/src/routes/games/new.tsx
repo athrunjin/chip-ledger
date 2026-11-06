@@ -31,7 +31,7 @@ function NewGamePage() {
   }
 
   return (
-    <Page title="开一局">
+    <Page title="开局设置" centered>
       {!games.isPending && (
         <GameSettingsForm
           // Carry over the latest game's settings by default
