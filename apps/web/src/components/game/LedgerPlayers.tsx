@@ -6,14 +6,22 @@ import {
   type PlayerLedger,
 } from "@holdem/core";
 import { Link } from "@tanstack/react-router";
+import { Minus, Plus } from "lucide-react";
 import type { ReactNode } from "react";
 import { formatSignedChips, netColor } from "@/lib/chips";
+import { cn } from "@/lib/cn";
 import { formatGameMoney } from "@/lib/currency";
 
 const actionClass = "min-h-11 shrink-0 rounded-lg border border-line px-2 text-sm font-medium";
-const stepClass = "size-11 shrink-0 rounded-lg border border-line text-lg font-semibold";
+/** The tap target stays 44px; only the circle drawn inside it is small. */
+const stepClass = "grid size-11 shrink-0 place-items-center disabled:opacity-40";
+const stepIconClass = "grid size-6 place-items-center rounded-full border border-line text-muted";
 const listClass = "divide-y divide-line rounded-xl border border-line bg-surface px-2";
 const rowClass = "flex min-h-13 items-center gap-1.5 py-1";
+/** Shared by the column titles and the rows under them, so they line up. */
+const columnsClass = "grid grid-cols-[minmax(0,1fr)_5rem_8.25rem_3rem] items-center";
+const tableRowClass = `${columnsClass} min-h-13 py-1`;
+const tableActionClass = "min-h-11 rounded-lg border border-line text-sm font-medium";
 
 interface LedgerPlayersProps {
   gameId: string;
@@ -34,7 +42,7 @@ interface LedgerPlayersProps {
   onRemove: (playerId: string) => void;
   onReturn: (playerId: string) => void;
   onLeave: (playerId: string) => void;
-  /** Shown after the seated players, before the insurance seat */
+  /** Shown at the foot of the seated players */
   addPlayer: ReactNode;
 }
 
@@ -64,17 +72,19 @@ export function LedgerPlayers({
 
   function stack({ playerId, stackChips }: PlayerLedger) {
     const chips = stackChips.toLocaleString("zh-CN");
+    // Seven digits at the full size would overflow the column
+    const size = stackChips < 1_000_000 ? "text-xl" : "text-base";
     return editable ? (
       <button
         type="button"
         aria-label={`输入${nameOf(playerId)}的筹码，现在 ${stackChips}`}
         onClick={() => onEditStack(playerId)}
-        className="min-h-11 min-w-13 shrink-0 rounded-lg border border-line px-1 text-sm font-semibold tabular-nums"
+        className={`min-h-11 rounded-lg bg-bg px-1 font-semibold tabular-nums ${size}`}
       >
         {chips}
       </button>
     ) : (
-      <span className="shrink-0 text-sm font-semibold tabular-nums">{chips}</span>
+      <span className={`text-center font-semibold tabular-nums ${size}`}>{chips}</span>
     );
   }
 
@@ -89,25 +99,27 @@ export function LedgerPlayers({
       );
     }
     const count = boughtChips / handChips;
-    if (!editable) return <span className="shrink-0 font-semibold">{count} 手</span>;
+    if (!editable) return <span className="text-center font-semibold">{count} 手</span>;
     const name = nameOf(playerId);
     const removable = count <= 1 && removableIds.has(playerId);
     return (
-      <div className="flex shrink-0 items-center">
+      <div className="flex items-center justify-center">
         <button
           type="button"
           aria-label={removable ? `${name}移出这局` : `${name}减 1 手`}
           disabled={count <= 1 && !removable}
           onClick={() => (removable ? onRemove(playerId) : onStepHands(playerId, -1))}
-          className={`${stepClass} disabled:opacity-40`}
+          className={stepClass}
         >
-          −
+          <span className={stepIconClass}>
+            <Minus className="size-3" aria-hidden />
+          </span>
         </button>
         <button
           type="button"
           aria-label={`输入${name}的手数，现在 ${count} 手`}
           onClick={() => onEditHands(playerId)}
-          className="min-h-11 min-w-11 text-lg font-semibold tabular-nums"
+          className="min-h-11 min-w-11 font-semibold tabular-nums"
         >
           {count}
         </button>
@@ -117,7 +129,9 @@ export function LedgerPlayers({
           onClick={() => onStepHands(playerId, 1)}
           className={stepClass}
         >
-          +
+          <span className={stepIconClass}>
+            <Plus className="size-3" aria-hidden />
+          </span>
         </button>
       </div>
     );
@@ -125,39 +139,54 @@ export function LedgerPlayers({
 
   return (
     <>
-      {seated.length > 0 && (
-        <ul aria-label="在局玩家" className={`mt-3 ${listClass}`}>
-          {seated.map((player) => (
-            <li key={player.playerId} className={rowClass}>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{nameOf(player.playerId)}</p>
-                <p className={`truncate text-xs tabular-nums ${netColor(player.netChips)}`}>
-                  {formatSignedChips(player.netChips)}
-                </p>
+      {(seated.length > 0 || addPlayer) && (
+        <section aria-label="桌上玩家" className="mt-3 rounded-xl border border-line bg-surface">
+          <div className="rounded-t-xl bg-accent/10 px-2 py-1.5">
+            <h2 className="text-sm font-semibold">桌上玩家（{seated.length}）</h2>
+            {seated.length > 0 && (
+              <div className={`${columnsClass} mt-1 text-xs text-muted`}>
+                <span>玩家</span>
+                <span className="text-center">筹码</span>
+                <span className="text-center">{handChips !== undefined && "手数"}</span>
               </div>
-              {stack(player)}
-              {hands(player)}
-              {editable && (
-                <button
-                  type="button"
-                  aria-label={`${nameOf(player.playerId)}离桌`}
-                  onClick={() => onLeave(player.playerId)}
-                  className={actionClass}
-                >
-                  离桌
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
+            )}
+          </div>
+          {seated.length > 0 && (
+            <ul className="divide-y divide-line px-2">
+              {seated.map((player) => (
+                <li key={player.playerId} className={tableRowClass}>
+                  <div className="min-w-0 pr-1">
+                    <p className="truncate font-medium">{nameOf(player.playerId)}</p>
+                    <p className={`truncate text-xs tabular-nums ${netColor(player.netChips)}`}>
+                      {formatSignedChips(player.netChips)}
+                    </p>
+                  </div>
+                  {stack(player)}
+                  {hands(player)}
+                  {editable && (
+                    <button
+                      type="button"
+                      aria-label={`${nameOf(player.playerId)}离桌`}
+                      onClick={() => onLeave(player.playerId)}
+                      className={tableActionClass}
+                    >
+                      离桌
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          {addPlayer && (
+            <div className={cn(seated.length > 0 && "border-t border-line")}>{addPlayer}</div>
+          )}
+        </section>
       )}
-
-      {addPlayer}
 
       {seat && (
         <ul aria-label="保险" className={`mt-2 ${listClass} border-highlight`}>
-          <li className={rowClass}>
-            <div className="min-w-0 flex-1">
+          <li className={tableRowClass}>
+            <div className="min-w-0 pr-1">
               <p className="truncate font-medium text-highlight">{nameOf(seat.playerId)}</p>
               <p className={`truncate text-xs tabular-nums ${netColor(seat.netChips)}`}>
                 {formatSignedChips(seat.netChips)}
@@ -168,7 +197,7 @@ export function LedgerPlayers({
             <Link
               to="/games/$gameId/insurance"
               params={{ gameId }}
-              className={`${actionClass} inline-flex items-center`}
+              className={`${tableActionClass} col-start-4 inline-flex items-center justify-center`}
             >
               算保险
             </Link>
