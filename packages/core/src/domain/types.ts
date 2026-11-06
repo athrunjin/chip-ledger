@@ -36,8 +36,6 @@ export interface InsuranceRule {
   readonly refundPremium: boolean;
   /** Whether a flop all-in can insure the turn card. The river can always be insured. */
   readonly coverTurn: boolean;
-  /** Most players a pot can have and still be insured. Missing means no limit. */
-  readonly maxPotPlayers?: number;
   /** Highest premium on the turn card, as a percentage of the pot. Missing means no limit. */
   readonly turnCapPercent?: number;
   /** Highest premium on the river card, as a percentage of the pot. Missing means no limit. */

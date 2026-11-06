@@ -38,7 +38,6 @@ export interface InsuranceRuleForm {
   readonly tieOuts: TieOuts;
   readonly refundPremium: boolean;
   readonly coverTurn: boolean;
-  readonly maxPotPlayers: string;
   readonly turnCapPercent: string;
   readonly riverCapPercent: string;
 }
@@ -49,7 +48,6 @@ export function toInsuranceRuleForm(rule: InsuranceRule): InsuranceRuleForm {
     tieOuts: rule.tieOuts,
     refundPremium: rule.refundPremium,
     coverTurn: rule.coverTurn,
-    maxPotPlayers: rule.maxPotPlayers?.toString() ?? "",
     turnCapPercent: rule.turnCapPercent?.toString() ?? "",
     riverCapPercent: rule.riverCapPercent?.toString() ?? "",
   };
@@ -58,7 +56,6 @@ export function toInsuranceRuleForm(rule: InsuranceRule): InsuranceRuleForm {
 export type InsuranceRuleIssues = {
   /** Outs whose odds are invalid. */
   readonly odds?: readonly number[];
-  readonly maxPotPlayers?: true;
   readonly turnCapPercent?: true;
   readonly riverCapPercent?: true;
 };
@@ -78,18 +75,15 @@ function parseLimit(input: string, min: number, max: number): number | undefined
 export function parseInsuranceRule(form: InsuranceRuleForm): ParsedInsuranceRule {
   const parsedOdds = form.odds.map(parseOdds);
   const badOuts = parsedOdds.flatMap((odds, i) => (odds === null ? [i + 1] : []));
-  const maxPotPlayers = parseLimit(form.maxPotPlayers, 2, 10);
   const turnCapPercent = parseLimit(form.turnCapPercent, 1, 1000);
   const riverCapPercent = parseLimit(form.riverCapPercent, 1, 1000);
 
   const issues: {
     odds?: number[];
-    maxPotPlayers?: true;
     turnCapPercent?: true;
     riverCapPercent?: true;
   } = {};
   if (badOuts.length > 0 || form.odds.length === 0) issues.odds = badOuts;
-  if (maxPotPlayers === null) issues.maxPotPlayers = true;
   if (turnCapPercent === null) issues.turnCapPercent = true;
   if (riverCapPercent === null) issues.riverCapPercent = true;
   if (Object.keys(issues).length > 0) return { ok: false, issues };
@@ -101,7 +95,6 @@ export function parseInsuranceRule(form: InsuranceRuleForm): ParsedInsuranceRule
       tieOuts: form.tieOuts,
       refundPremium: form.refundPremium,
       coverTurn: form.coverTurn,
-      ...(maxPotPlayers != null && { maxPotPlayers }),
       ...(turnCapPercent != null && { turnCapPercent }),
       ...(riverCapPercent != null && { riverCapPercent }),
     },

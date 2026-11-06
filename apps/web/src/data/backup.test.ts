@@ -106,7 +106,7 @@ describe("backup file", () => {
   });
 
   it("round-trips insurance rules, purchases and the insurance seat", () => {
-    const rule = { ...RULE_30, maxPotPlayers: 3, riverCapPercent: 50 };
+    const rule = { ...RULE_30, riverCapPercent: 50 };
     const [game] = data.games;
     if (!game) throw new Error("Missing sample game");
     const meta = { organizerId: "guest", gameId: "g", occurredAt: 3 };

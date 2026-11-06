@@ -24,7 +24,6 @@ const input = (overrides: Partial<QuoteInput> = {}): QuoteInput => ({
   rule: RULE_30,
   street: "river",
   potChips: 1000,
-  potPlayers: 2,
   shareChips: 1000,
   stakeChips: 500,
   outs: 8,
@@ -80,15 +79,6 @@ describe("quoteInsurance", () => {
       block: "street-closed",
     });
     expect(quoteInsurance(input({ rule, street: "river" })).ok).toBe(true);
-  });
-
-  it("refuses pots above the rule's player limit", () => {
-    const rule = { ...RULE_30, maxPotPlayers: 3 };
-    expect(quoteInsurance(input({ rule, potPlayers: 4 }))).toEqual({
-      ok: false,
-      block: "too-many-players",
-    });
-    expect(quoteInsurance(input({ rule, potPlayers: 3 })).ok).toBe(true);
   });
 
   it("leaves at least the target on a hit, with or without a refund", () => {
@@ -152,7 +142,6 @@ describe("rule tables", () => {
     const rule: InsuranceRule = {
       ...RULE_32,
       tieOuts: "include",
-      maxPotPlayers: 3,
       turnCapPercent: 25,
       riverCapPercent: 50,
     };
@@ -163,9 +152,9 @@ describe("rule tables", () => {
     const form = toInsuranceRuleForm(RULE_30);
     expect(parseInsuranceRule(form)).toEqual({ ok: true, rule: RULE_30 });
     const odds = form.odds.map((value, i) => (i === 1 ? "x" : value));
-    expect(parseInsuranceRule({ ...form, odds, maxPotPlayers: "1" })).toEqual({
+    expect(parseInsuranceRule({ ...form, odds, turnCapPercent: "0" })).toEqual({
       ok: false,
-      issues: { odds: [2], maxPotPlayers: true },
+      issues: { odds: [2], turnCapPercent: true },
     });
   });
 });

@@ -37,11 +37,22 @@ export function previewBlindCash({
   return `${cash(small)}/${cash(big)}`;
 }
 
-/** Chips per hand for the current input, or null while the input is incomplete. */
-export function previewHandChips({ bigBlindChips, buyInBigBlinds }: FormValues) {
+/** One hand in chips and cash for the current input, or null while the input is incomplete. */
+export function previewHand({
+  currency,
+  bigBlindChips,
+  buyInBigBlinds,
+  ratioChips,
+  ratioAmount,
+}: FormValues) {
   const big = parseChips(bigBlindChips);
   const multiple = parseChips(buyInBigBlinds);
-  return big && multiple ? big * multiple : null;
+  const chips = parseChips(ratioChips);
+  const amount = tryParseMoney(ratioAmount);
+  if (!big || !multiple || !chips || !amount) return null;
+  const handChips = big * multiple;
+  const cash = formatGameMoney(chipsToCents(handChips, { chips, amount }), currency);
+  return `1 手 = ${handChips.toLocaleString("zh-CN")} 筹码 = ${cash}`;
 }
 
 interface SettingDialogProps {
@@ -182,7 +193,7 @@ export function BlindsDialog(props: SettingDialogProps) {
 
 export function BuyInDialog(props: SettingDialogProps) {
   const { inputRef, draft, handleSubmit, field } = useSettingDraft(props);
-  const handChips = previewHandChips(draft);
+  const hand = previewHand(draft);
 
   return (
     <FormDialog
@@ -201,9 +212,7 @@ export function BuyInDialog(props: SettingDialogProps) {
           inputMode="numeric"
           inputRef={inputRef}
         />
-        {handChips !== null && (
-          <p className="mt-1 text-sm text-muted">1 手 = {handChips.toLocaleString("zh-CN")} 筹码</p>
-        )}
+        {hand && <p className="mt-1 text-sm text-muted">{hand}</p>}
       </div>
     </FormDialog>
   );
