@@ -54,9 +54,11 @@ export function AddPlayerToGame({ excludedIds, onPick }: AddPlayerToGameProps) {
         type="button"
         aria-label="加入玩家"
         onClick={() => setOpen(true)}
-        className="mt-2 grid size-11 place-items-center rounded-full border border-line bg-surface text-highlight"
+        className="grid min-h-11 w-full place-items-center text-highlight"
       >
-        <Plus className="size-5" aria-hidden />
+        <span className="grid size-5.5 place-items-center rounded-full border border-line">
+          <Plus className="size-3" aria-hidden />
+        </span>
       </button>
 
       {open && (
