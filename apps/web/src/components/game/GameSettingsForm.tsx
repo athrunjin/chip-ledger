@@ -9,7 +9,7 @@ import {
   tryParseMoney,
 } from "@holdem/core";
 import { ChevronRight } from "lucide-react";
-import { type FormEvent, type ReactNode, type Ref, useImperativeHandle, useState } from "react";
+import { type FormEvent, type ReactNode, useState } from "react";
 import {
   InsuranceSettings,
   initialInsuranceChoice,
@@ -22,7 +22,7 @@ import {
   ChipRatioDialog,
   CurrencyDialog,
   previewBlindCash,
-  previewHandChips,
+  previewHand,
 } from "./GameSettingDialogs";
 
 type SettingDialog = "currency" | "ratio" | "blinds" | "buyIn";
@@ -74,13 +74,7 @@ function SettingRow({
   );
 }
 
-export interface GameSettingsFormHandle {
-  /** The settings as entered, or null with the issues shown if the insurance rule is invalid. */
-  validate: () => GameSettings | null;
-}
-
 interface GameSettingsFormProps {
-  ref?: Ref<GameSettingsFormHandle>;
   initial: FormValues;
   submitLabel: string;
   /** Whether the currency and chip ratio are locked */
@@ -100,10 +94,11 @@ interface GameSettingsFormProps {
   saving: boolean;
   saveFailed: boolean;
   onSubmit: (settings: GameSettings) => void;
+  /** Offers saving the entered settings, beside the submit button */
+  onSaveConfig?: (settings: GameSettings) => void;
 }
 
 export function GameSettingsForm({
-  ref,
   initial,
   submitLabel,
   ratioLocked = false,
@@ -116,6 +111,7 @@ export function GameSettingsForm({
   saving,
   saveFailed,
   onSubmit,
+  onSaveConfig,
 }: GameSettingsFormProps) {
   const [values, setValues] = useState(initial);
   const [dialog, setDialog] = useState<SettingDialog | null>(null);
@@ -125,7 +121,6 @@ export function GameSettingsForm({
   const [ruleIssues, setRuleIssues] = useState<InsuranceRuleIssues>({});
   const currencyLabel = CURRENCY_INFO[values.currency].label;
   const ratioAmount = tryParseMoney(values.ratioAmount);
-  const handChips = previewHandChips(values);
 
   function validate() {
     const result = parseGameSettings(values);
@@ -134,8 +129,6 @@ export function GameSettingsForm({
     if (!result.ok || (rule && !rule.ok)) return null;
     return rule ? { ...result.settings, insurance: rule.rule } : result.settings;
   }
-
-  useImperativeHandle(ref, () => ({ validate }));
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -175,11 +168,7 @@ export function GameSettingsForm({
             {showBuyIn && (
               <SettingRow
                 label="Buy in"
-                detail={
-                  !ratioLocked && handChips !== null
-                    ? `1 手 = ${handChips.toLocaleString("zh-CN")} 筹码`
-                    : null
-                }
+                detail={ratioLocked ? null : previewHand(values)}
                 disabled={ratioLocked}
                 onClick={() => setDialog("buyIn")}
               >
@@ -216,13 +205,27 @@ export function GameSettingsForm({
           </p>
         )}
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="min-h-12 rounded-xl bg-accent px-6 font-semibold text-accent-text disabled:opacity-60"
-        >
-          {submitLabel}
-        </button>
+        <div className={onSaveConfig ? "grid grid-cols-[2fr_1fr] gap-2" : "grid"}>
+          <button
+            type="submit"
+            disabled={saving}
+            className="min-h-12 rounded-xl bg-accent px-6 font-semibold text-accent-text disabled:opacity-60"
+          >
+            {submitLabel}
+          </button>
+          {onSaveConfig && (
+            <button
+              type="button"
+              onClick={() => {
+                const settings = validate();
+                if (settings) onSaveConfig(settings);
+              }}
+              className="min-h-12 rounded-xl border border-line px-2 text-sm font-medium text-highlight"
+            >
+              保存当前配置
+            </button>
+          )}
+        </div>
       </form>
 
       {/* Outside the form: a dialog's own form must not nest in it or submit it */}

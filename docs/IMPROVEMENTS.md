@@ -374,6 +374,25 @@ Records discussions of feature and process improvements: what was proposed, how 
 - Decision: do.
 - Tracking: issue #54, PR #55
 
+### #I-023 Tidier game setup and no pot player limit
+
+- Type: feature
+- Date: proposed and decided 2026-11-06
+- Source: discussion
+- Problem: the setup page listed every insurance rule as a button, saving a config was hidden in the picker, the Buy in row gave no cash value, and the pot player limit went unused.
+- Proposal:
+  - The Buy in row shows one hand in chips and cash.
+  - 保存当前配置 sits beside the start button, which stays the wider of the two.
+  - Insurance rules are picked from a dropdown, and picking one opens the details.
+  - The pot player limit is removed.
+  - A 查看demo button follows 修改赔率和规则, showing 开发中 for now.
+- Settled details:
+  - The limit is gone from the rules and the calculation, so a rule that set one no longer blocks a pot. This replaces the pot player limit in #I-018.
+  - Picking a rule applies it at once. Unlike a whole config, it needs no confirmation.
+  - The details also open when the rule has errors, so they are not hidden.
+- Decision: do.
+- Tracking: issue #56, PR #57
+
 ## Not doing or deferred
 
 ### #I-004 Hand size when blinds change mid-game

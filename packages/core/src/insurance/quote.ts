@@ -35,8 +35,6 @@ export interface QuoteInput {
   readonly rule: InsuranceRule;
   readonly street: InsuranceStreet;
   readonly potChips: number;
-  /** Players who can win the pot. */
-  readonly potPlayers: number;
   /** What the buyer wins if nothing changes. */
   readonly shareChips: number;
   /** What the buyer put in. */
@@ -57,12 +55,7 @@ export interface QuoteOption {
   readonly capped: boolean;
 }
 
-export type QuoteBlock =
-  | "tied-lead"
-  | "street-closed"
-  | "too-many-players"
-  | "no-outs"
-  | "too-many-outs";
+export type QuoteBlock = "tied-lead" | "street-closed" | "no-outs" | "too-many-outs";
 
 export type InsuranceQuote =
   | { readonly ok: false; readonly block: QuoteBlock }
@@ -100,12 +93,9 @@ function capChips({ rule, street, potChips }: QuoteInput): number {
 }
 
 export function quoteInsurance(input: QuoteInput): InsuranceQuote {
-  const { rule, street, potPlayers, shareChips, stakeChips, outs } = input;
+  const { rule, street, shareChips, stakeChips, outs } = input;
   if (input.blockedTie) return { ok: false, block: "tied-lead" };
   if (street === "turn" && !rule.coverTurn) return { ok: false, block: "street-closed" };
-  if (rule.maxPotPlayers !== undefined && potPlayers > rule.maxPotPlayers) {
-    return { ok: false, block: "too-many-players" };
-  }
   if (outs === 0) return { ok: false, block: "no-outs" };
   const oddsHundredths = rule.oddsHundredths[outs - 1];
   if (oddsHundredths === undefined) return { ok: false, block: "too-many-outs" };

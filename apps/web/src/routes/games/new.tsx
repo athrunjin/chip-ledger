@@ -5,13 +5,14 @@ import {
   toGameSettingsForm,
 } from "@holdem/core";
 import { createFileRoute } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import {
   type GameConfigChoice,
   GameConfigPicker,
   LAST_CONFIG,
 } from "@/components/game/GameConfigPicker";
-import { GameSettingsForm, type GameSettingsFormHandle } from "@/components/game/GameSettingsForm";
+import { GameSettingsForm } from "@/components/game/GameSettingsForm";
+import { SaveGameConfigDialog } from "@/components/game/SaveGameConfigDialog";
 import { Page } from "@/components/Page";
 import { GUEST_ORGANIZER_ID } from "@/data";
 import { useGames, useSaveGameSettings } from "@/data/games";
@@ -24,10 +25,10 @@ function NewGamePage() {
   const navigate = Route.useNavigate();
   const games = useGames();
   const saveGame = useSaveGameSettings();
-  const formRef = useRef<GameSettingsFormHandle>(null);
   const [selected, setSelected] = useState<string | null>(LAST_CONFIG);
   // A new choice remounts the form, which starts again from its initial values
   const [applied, setApplied] = useState<{ key: number; choice?: GameConfigChoice }>({ key: 0 });
+  const [saving, setSaving] = useState<GameSettings | null>(null);
 
   function handleApply(choice: GameConfigChoice) {
     setSelected(choice.id);
@@ -56,18 +57,12 @@ function NewGamePage() {
       title="开局设置"
       centered
       actions={
-        <GameConfigPicker
-          selected={selected}
-          onSelect={setSelected}
-          onApply={handleApply}
-          readSettings={() => formRef.current?.validate() ?? null}
-        />
+        <GameConfigPicker selected={selected} onSelect={setSelected} onApply={handleApply} />
       }
     >
       {!games.isPending && (
         <GameSettingsForm
           key={applied.key}
-          ref={formRef}
           initial={toGameSettingsForm(start)}
           initialInsurance={start.insurance}
           lastInsurance={configRule ?? games.data?.find((game) => game.insurance)?.insurance}
@@ -76,6 +71,17 @@ function NewGamePage() {
           saving={saveGame.isPending}
           saveFailed={saveGame.isError}
           onSubmit={handleSubmit}
+          onSaveConfig={setSaving}
+        />
+      )}
+      {saving && (
+        <SaveGameConfigDialog
+          settings={saving}
+          onSaved={(id) => {
+            setSelected(id);
+            setSaving(null);
+          }}
+          onClose={() => setSaving(null)}
         />
       )}
     </Page>

@@ -135,7 +135,6 @@ function ByOuts({ rule, seats, saving, decisions }: ByOutsProps) {
               rule,
               street,
               potChips,
-              potPlayers: 2,
               shareChips: potChips,
               stakeChips,
               outs: outCount,

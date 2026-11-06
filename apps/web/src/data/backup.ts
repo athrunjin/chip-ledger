@@ -31,7 +31,6 @@ const insuranceRuleSchema = z.object({
   tieOuts: z.enum(["exclude", "include"]),
   refundPremium: z.boolean(),
   coverTurn: z.boolean(),
-  maxPotPlayers: z.number().int().min(2).optional(),
   turnCapPercent: percent.optional(),
   riverCapPercent: percent.optional(),
 });

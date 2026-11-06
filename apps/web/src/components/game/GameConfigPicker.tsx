@@ -1,16 +1,9 @@
 import { DEFAULT_GAME_SETTINGS, type GameSettings } from "@holdem/core";
 import { Check, ChevronDown, Trash2 } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { useState } from "react";
 import { Modal } from "@/components/insurance/Modal";
-import { TextField } from "@/components/TextField";
-import {
-  newGameConfig,
-  useGameConfigs,
-  useRemoveGameConfig,
-  useSaveGameConfig,
-} from "@/data/game-configs";
+import { useGameConfigs, useRemoveGameConfig } from "@/data/game-configs";
 import { cn } from "@/lib/cn";
-import { FormDialog } from "./FormDialog";
 
 export const LAST_CONFIG = "last";
 const DEFAULT_CONFIG = "default";
@@ -35,25 +28,14 @@ interface GameConfigPickerProps {
   onSelect: (id: string | null) => void;
   /** Fills the form with a config */
   onApply: (choice: GameConfigChoice) => void;
-  /** The form's settings, or null if they cannot be saved yet */
-  readSettings: () => GameSettings | null;
 }
 
-/** Shows the config in use, and switches to another one or saves the current setup as one. */
-export function GameConfigPicker({
-  selected,
-  onSelect,
-  onApply,
-  readSettings,
-}: GameConfigPickerProps) {
+/** Shows the config in use and switches to another one. */
+export function GameConfigPicker({ selected, onSelect, onApply }: GameConfigPickerProps) {
   const { data: saved = [] } = useGameConfigs();
-  const saveConfig = useSaveGameConfig();
   const removeConfig = useRemoveGameConfig();
   const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState<GameConfigChoice | null>(null);
-  const [naming, setNaming] = useState(false);
-  const [name, setName] = useState("");
-  const [nameIssue, setNameIssue] = useState<string>();
   const choices = [LAST_CHOICE, DEFAULT_CHOICE, ...saved];
   const selectedName = choices.find((choice) => choice.id === selected)?.name;
 
@@ -68,29 +50,6 @@ export function GameConfigPicker({
     removeConfig.mutate(id, {
       onSuccess: () => {
         if (selected === id) onSelect(null);
-      },
-    });
-  }
-
-  function handleSave(event: FormEvent) {
-    event.preventDefault();
-    const trimmed = name.trim();
-    if (trimmed === "") {
-      setNameIssue("请输入配置名称");
-      return;
-    }
-    const settings = readSettings();
-    if (!settings) {
-      setNameIssue("请先修正保险规则里的错误");
-      return;
-    }
-    const existing = saved.find((config) => config.name === trimmed);
-    const config = existing ? { ...existing, settings } : newGameConfig(trimmed, settings);
-    saveConfig.mutate(config, {
-      onSuccess: () => {
-        onSelect(config.id);
-        setName("");
-        setNaming(false);
       },
     });
   }
@@ -159,25 +118,13 @@ export function GameConfigPicker({
               </li>
             ))}
           </ul>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="min-h-11 rounded-xl border border-line font-medium"
-            >
-              关闭
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setNameIssue(undefined);
-                setNaming(true);
-              }}
-              className="min-h-11 rounded-xl border border-line font-medium text-highlight"
-            >
-              保存当前配置
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="mt-3 min-h-11 w-full rounded-xl border border-line font-medium"
+          >
+            关闭
+          </button>
         </Modal>
       )}
 
@@ -201,29 +148,6 @@ export function GameConfigPicker({
             </button>
           </div>
         </Modal>
-      )}
-
-      {naming && (
-        <FormDialog
-          title="保存当前配置"
-          submitLabel="保存"
-          saving={saveConfig.isPending}
-          saveFailed={saveConfig.isError}
-          onSubmit={handleSave}
-          onClose={() => setNaming(false)}
-        >
-          <TextField
-            id="config-name"
-            label="配置名称，同名会覆盖"
-            value={name}
-            issue={nameIssue}
-            inputMode="text"
-            onChange={(next) => {
-              setName(next);
-              setNameIssue(undefined);
-            }}
-          />
-        </FormDialog>
       )}
     </>
   );

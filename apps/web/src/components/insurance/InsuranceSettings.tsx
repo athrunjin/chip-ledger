@@ -7,7 +7,7 @@ import {
   RULE_30,
   toInsuranceRuleForm,
 } from "@holdem/core";
-import { ChevronDown } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { TextField } from "@/components/TextField";
 import { Toggle } from "@/components/Toggle";
@@ -18,18 +18,13 @@ import {
   useSaveInsuranceRule,
 } from "@/data/insurance";
 import { cn } from "@/lib/cn";
+import { Modal } from "./Modal";
 
 const LAST_RULE = "last";
 const CUSTOM_RULE = "custom";
 
 /** The default odds for a row added past the end of the table: the last row's. */
 const lastOdds = (odds: readonly string[]) => odds.at(-1) ?? "1";
-
-const pillClass = (active: boolean) =>
-  cn(
-    "min-h-11 rounded-full border px-4 font-medium",
-    active ? "border-accent bg-accent text-accent-text" : "border-line bg-surface",
-  );
 
 export interface InsuranceChoice {
   readonly enabled: boolean;
@@ -75,15 +70,27 @@ export function InsuranceSettings({
   const saveRule = useSaveInsuranceRule();
   const removeRule = useRemoveInsuranceRule();
   const [editing, setEditing] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const [showingDemo, setShowingDemo] = useState(false);
   const [name, setName] = useState("");
   const [nameIssue, setNameIssue] = useState<string>();
 
   const setForm = (next: Partial<InsuranceRuleForm>) =>
     onChange({ ...value, source: CUSTOM_RULE, form: { ...form, ...next } });
-  const choose = (id: string, rule: InsuranceRule) =>
+  function choose(id: string, rule: InsuranceRule) {
     onChange({ ...value, source: id, form: toInsuranceRuleForm(rule) });
+    setPicking(false);
+    setEditing(true);
+  }
 
   const selectedSaved = saved.find((rule) => rule.id === source);
+  const choices = [
+    ...(lastRule ? [{ id: LAST_RULE, name: lastRuleLabel, rule: lastRule }] : []),
+    ...BUILT_IN_RULES,
+    ...saved,
+  ];
+  // Issues would stay out of sight in a closed panel
+  const expanded = editing || Object.keys(issues).length > 0;
 
   function handleSave() {
     const trimmed = name.trim();
@@ -129,61 +136,44 @@ export function InsuranceSettings({
 
       {enabled && (
         <>
-          <div>
-            <span className="mb-2 block text-sm text-muted">赔率规则</span>
-            <div className="flex flex-wrap gap-2">
-              {lastRule && (
-                <button
-                  type="button"
-                  aria-pressed={source === LAST_RULE}
-                  onClick={() => choose(LAST_RULE, lastRule)}
-                  className={pillClass(source === LAST_RULE)}
-                >
-                  {lastRuleLabel}
-                </button>
-              )}
-              {BUILT_IN_RULES.map(({ id, name: ruleName, rule }) => (
-                <button
-                  key={id}
-                  type="button"
-                  aria-pressed={source === id}
-                  onClick={() => choose(id, rule)}
-                  className={pillClass(source === id)}
-                >
-                  {ruleName}
-                </button>
-              ))}
-              {saved.map(({ id, name: ruleName, rule }) => (
-                <button
-                  key={id}
-                  type="button"
-                  aria-pressed={source === id}
-                  onClick={() => choose(id, rule)}
-                  className={pillClass(source === id)}
-                >
-                  {ruleName}
-                </button>
-              ))}
-              {source === CUSTOM_RULE && (
-                <span className={cn(pillClass(true), "inline-flex items-center")}>自定义</span>
-              )}
-            </div>
-          </div>
-
           <button
             type="button"
-            aria-expanded={editing}
-            onClick={() => setEditing(!editing)}
-            className="flex min-h-11 w-full items-center justify-between font-medium text-highlight"
+            aria-haspopup="dialog"
+            onClick={() => setPicking(true)}
+            className="flex min-h-11 w-full items-center justify-between gap-3 text-left"
           >
-            修改赔率和规则
-            <ChevronDown
-              className={cn("size-5 transition-transform", editing && "rotate-180")}
-              aria-hidden
-            />
+            <span className="font-medium">赔率配置</span>
+            <span className="flex min-w-0 items-center gap-0.5 text-sm text-muted">
+              <span className="truncate">
+                {choices.find((choice) => choice.id === source)?.name ?? "自定义"}
+              </span>
+              <ChevronDown className="size-4 shrink-0" aria-hidden />
+            </span>
           </button>
 
-          {editing && (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-expanded={expanded}
+              onClick={() => setEditing(!editing)}
+              className="flex min-h-11 min-w-0 flex-1 items-center justify-between font-medium text-highlight"
+            >
+              修改赔率和规则
+              <ChevronDown
+                className={cn("size-5 transition-transform", expanded && "rotate-180")}
+                aria-hidden
+              />
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowingDemo(true)}
+              className="min-h-11 shrink-0 rounded-xl border border-line px-3 text-sm font-medium"
+            >
+              查看demo
+            </button>
+          </div>
+
+          {expanded && (
             <div className="flex flex-col gap-4">
               <div>
                 <span className="mb-1 block text-sm text-muted">
@@ -243,15 +233,7 @@ export function InsuranceSettings({
                 onChange={(coverTurn) => setForm({ coverTurn })}
               />
 
-              <div className="grid grid-cols-3 items-start gap-2">
-                <TextField
-                  id="max-pot-players"
-                  label="底池人数上限"
-                  value={form.maxPotPlayers}
-                  issue={issues.maxPotPlayers && "2–10 或留空"}
-                  inputMode="numeric"
-                  onChange={(maxPotPlayers) => setForm({ maxPotPlayers })}
-                />
+              <div className="grid grid-cols-2 items-start gap-2">
                 <TextField
                   id="turn-cap"
                   label="转牌保费上限"
@@ -313,6 +295,48 @@ export function InsuranceSettings({
             </div>
           )}
         </>
+      )}
+
+      {picking && (
+        <Modal title="赔率配置" onClose={() => setPicking(false)}>
+          <ul className="divide-y divide-line rounded-xl border border-line">
+            {choices.map(({ id, name: ruleName, rule }) => (
+              <li key={id}>
+                <button
+                  type="button"
+                  onClick={() => choose(id, rule)}
+                  className={cn(
+                    "flex min-h-12 w-full items-center justify-between gap-2 px-3 text-left font-medium",
+                    source === id && "text-highlight",
+                  )}
+                >
+                  <span className="truncate">{ruleName}</span>
+                  {source === id && <Check className="size-5 shrink-0" aria-label="当前选中" />}
+                </button>
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            onClick={() => setPicking(false)}
+            className="mt-3 min-h-11 w-full rounded-xl border border-line font-medium"
+          >
+            关闭
+          </button>
+        </Modal>
+      )}
+
+      {showingDemo && (
+        <Modal title="查看demo" onClose={() => setShowingDemo(false)}>
+          <p className="py-6 text-center text-muted">开发中</p>
+          <button
+            type="button"
+            onClick={() => setShowingDemo(false)}
+            className="min-h-11 w-full rounded-xl border border-line font-medium"
+          >
+            关闭
+          </button>
+        </Modal>
       )}
     </section>
   );

@@ -101,7 +101,6 @@ export function handOffers(hand: InsuranceHand, rule: InsuranceRule): HandOffer[
         rule,
         street,
         potChips: pot.amountChips,
-        potPlayers: pot.playerIds.length,
         shareChips: leader.shareChips,
         stakeChips: leader.stakeChips,
         outs: soldOuts(rule, leader),
