@@ -34,7 +34,19 @@ Records discussions of feature and process improvements: what was proposed, how 
 
 ## Decided, waiting for development
 
-(none)
+### #I-020 Games overview by role, status and game options
+
+- Type: feature
+- Date: proposed and decided 2026-11-06
+- Source: discussion
+- Problem: the overview mixed open and settled games in one list, and each row showed blinds and status but not the game's currency or options.
+- Proposal:
+  - Host and Player switch at the top, leaving room for the player view. Player is a placeholder until M7.
+  - 进行中 starts expanded and 历史对局 starts collapsed.
+  - Each row shows currency, blinds and only the options that are on, in small colored text, plus the start time.
+  - Only 保险 exists on games today. 台费, 工资 and 抽水 join the same list once games have those settings.
+- Decision: do. Implemented locally, not yet tried on a real device.
+- Tracking: issue #50
 
 ## Done
 
