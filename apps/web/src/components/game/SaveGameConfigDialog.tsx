@@ -1,4 +1,4 @@
-import type { GameSettings } from "@holdem/core";
+import type { GameSettings } from "@holdem-knight/core";
 import { type FormEvent, useState } from "react";
 import { TextField } from "@/components/TextField";
 import { newGameConfig, useGameConfigs, useSaveGameConfig } from "@/data/game-configs";

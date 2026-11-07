@@ -19,7 +19,7 @@ import {
   reviseOffer,
   soldOuts,
   undoDeal,
-} from "@holdem/core";
+} from "@holdem-knight/core";
 import { Plus, X } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
 import { formatCardText } from "@/lib/cards";

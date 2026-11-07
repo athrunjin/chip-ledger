@@ -4,7 +4,7 @@ import {
   chipsToCents,
   INSURANCE_PLAYER_ID,
   type PlayerLedger,
-} from "@holdem/core";
+} from "@holdem-knight/core";
 import { Link } from "@tanstack/react-router";
 import { Minus, Plus } from "lucide-react";
 import type { ReactNode } from "react";

@@ -3,7 +3,7 @@ import {
   type InsuranceRule,
   type InsuranceStreet,
   parseChips,
-} from "@holdem/core";
+} from "@holdem-knight/core";
 import { useState } from "react";
 import { TextField } from "@/components/TextField";
 import { cn } from "@/lib/cn";

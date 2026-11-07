@@ -1,4 +1,4 @@
-import { type Player, type PlayerNameIssue, parsePlayerName } from "@holdem/core";
+import { type Player, type PlayerNameIssue, parsePlayerName } from "@holdem-knight/core";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { Page } from "@/components/Page";

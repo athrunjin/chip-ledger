@@ -1,4 +1,4 @@
-import type { Game } from "@holdem/core";
+import type { Game } from "@holdem-knight/core";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";

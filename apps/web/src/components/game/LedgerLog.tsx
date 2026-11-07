@@ -1,4 +1,4 @@
-import { gameRecord, type LedgerEvent, type RecordKind } from "@holdem/core";
+import { gameRecord, type LedgerEvent, type RecordKind } from "@holdem-knight/core";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/cn";

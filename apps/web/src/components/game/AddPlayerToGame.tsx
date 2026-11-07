@@ -1,4 +1,4 @@
-import { type Player, parsePlayerName, searchPlayers } from "@holdem/core";
+import { type Player, parsePlayerName, searchPlayers } from "@holdem-knight/core";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { Modal } from "@/components/insurance/Modal";

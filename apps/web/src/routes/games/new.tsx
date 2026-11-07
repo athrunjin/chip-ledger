@@ -3,7 +3,7 @@ import {
   DEFAULT_GAME_SETTINGS,
   type GameSettings,
   toGameSettingsForm,
-} from "@holdem/core";
+} from "@holdem-knight/core";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import {

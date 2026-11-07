@@ -27,7 +27,9 @@ function MePage() {
         </div>
       </section>
       <BackupSection />
-      <p className="mt-6 text-center text-xs text-muted">德州之王 · 开发版 {__APP_VERSION__}</p>
+      <p className="mt-6 text-center text-xs text-muted">
+        Hold’em Knight · 开发版 {__APP_VERSION__}
+      </p>
     </Page>
   );
 }

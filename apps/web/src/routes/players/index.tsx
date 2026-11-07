@@ -1,4 +1,4 @@
-import { parsePlayerName, searchPlayers } from "@holdem/core";
+import { parsePlayerName, searchPlayers } from "@holdem-knight/core";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Search } from "lucide-react";
 import { useState } from "react";

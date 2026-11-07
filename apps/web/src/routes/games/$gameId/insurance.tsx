@@ -8,7 +8,7 @@ import {
   type InsuranceStatus,
   insuranceRecords,
   summarizeByPlayer,
-} from "@holdem/core";
+} from "@holdem-knight/core";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import {

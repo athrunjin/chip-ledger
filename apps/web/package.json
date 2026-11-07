@@ -1,5 +1,5 @@
 {
-  "name": "@holdem/web",
+  "name": "@holdem-knight/web",
   "version": "0.1.0",
   "private": true,
   "license": "UNLICENSED",
@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@fontsource-variable/archivo": "^5.3.0",
-    "@holdem/core": "workspace:*",
+    "@holdem-knight/core": "workspace:*",
     "@tanstack/react-query": "5.105.0",
     "@tanstack/react-router": "1.170.46",
     "clsx": "2.1.1",

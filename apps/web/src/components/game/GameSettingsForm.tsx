@@ -7,7 +7,7 @@ import {
   parseInsuranceRule,
   toDecimalString,
   tryParseMoney,
-} from "@holdem/core";
+} from "@holdem-knight/core";
 import { ChevronRight } from "lucide-react";
 import { type FormEvent, type ReactNode, useState } from "react";
 import {

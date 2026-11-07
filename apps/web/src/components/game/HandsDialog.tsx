@@ -1,4 +1,4 @@
-import { type ChipRatio, type Currency, chipsToCents, parseChips } from "@holdem/core";
+import { type ChipRatio, type Currency, chipsToCents, parseChips } from "@holdem-knight/core";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { formatGameMoney } from "@/lib/currency";
 import { FormDialog } from "./FormDialog";

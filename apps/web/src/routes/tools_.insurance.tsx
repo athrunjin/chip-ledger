@@ -1,4 +1,4 @@
-import { BUILT_IN_RULES, blankInsuranceHand, RULE_30 } from "@holdem/core";
+import { BUILT_IN_RULES, blankInsuranceHand, RULE_30 } from "@holdem-knight/core";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { useState } from "react";

@@ -1,4 +1,8 @@
-import { INSURANCE_PLAYER_NAME, MAX_PLAYER_NAME_LENGTH, type PlayerNameIssue } from "@holdem/core";
+import {
+  INSURANCE_PLAYER_NAME,
+  MAX_PLAYER_NAME_LENGTH,
+  type PlayerNameIssue,
+} from "@holdem-knight/core";
 
 export const PLAYER_NAME_ISSUE_TEXT: Record<PlayerNameIssue, string> = {
   empty: "请输入名字",

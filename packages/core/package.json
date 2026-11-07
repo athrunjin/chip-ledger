@@ -1,5 +1,5 @@
 {
-  "name": "@holdem/core",
+  "name": "@holdem-knight/core",
   "version": "0.0.0",
   "private": true,
   "description": "Pure business logic: money, settlement, insurance, rake and timing. No UI or database dependencies.",

@@ -1,4 +1,4 @@
-import { type Card, cardRank, cardSuit, type Suit } from "@holdem/core";
+import { type Card, cardRank, cardSuit, type Suit } from "@holdem-knight/core";
 
 const SUIT_SYMBOL: Record<Suit, string> = { s: "♠", h: "♥", d: "♦", c: "♣" };
 

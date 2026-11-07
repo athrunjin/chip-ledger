@@ -1,4 +1,4 @@
-# 德州之王 · King in Texas
+# Hold’em Knight · Tablebook
 
 An assistant for organizers of live Texas Hold'em games. It handles these jobs at the table:
 

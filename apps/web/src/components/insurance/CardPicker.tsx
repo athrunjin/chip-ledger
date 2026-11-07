@@ -1,4 +1,4 @@
-import { type Card, makeCard, RANKS, SUITS } from "@holdem/core";
+import { type Card, makeCard, RANKS, SUITS } from "@holdem-knight/core";
 import { useState } from "react";
 import { formatCardText, isRedSuit, suitSymbol } from "@/lib/cards";
 import { cn } from "@/lib/cn";

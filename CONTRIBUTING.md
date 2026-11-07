@@ -38,7 +38,7 @@ exercise Chinese names.
 ## Code
 
 - TypeScript strict mode, no `any`.
-- Money always uses `Cents` (integer cents) from `@holdem/core`, never floating-point arithmetic. See [ADR 0004](docs/adr/0004-money-as-integer-cents.md).
+- Money always uses `Cents` (integer cents) from `@holdem-knight/core`, never floating-point arithmetic. See [ADR 0004](docs/adr/0004-money-as-integer-cents.md).
 - Business rules go in `packages/core`. UI components only handle display and interaction.
 - Calculations in `core` must have unit tests. Anything that conserves money also gets a fast-check property test.
 - Run `pnpm check` before committing. `pnpm format` fixes formatting.

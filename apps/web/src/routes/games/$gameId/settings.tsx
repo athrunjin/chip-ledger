@@ -3,7 +3,7 @@ import {
   insuranceActive,
   toGameSettingsForm,
   updateGameSettings,
-} from "@holdem/core";
+} from "@holdem-knight/core";
 import { createFileRoute } from "@tanstack/react-router";
 import { GameSettingsForm } from "@/components/game/GameSettingsForm";
 import { Page } from "@/components/Page";

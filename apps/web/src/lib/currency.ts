@@ -1,4 +1,4 @@
-import { type Cents, type Currency, formatMoney } from "@holdem/core";
+import { type Cents, type Currency, formatMoney } from "@holdem-knight/core";
 
 export const CURRENCY_INFO: Record<
   Currency,

@@ -1,4 +1,4 @@
-import type { Game } from "@holdem/core";
+import type { Game } from "@holdem-knight/core";
 import { cn } from "@/lib/cn";
 
 /** The options switched on for a game. Rake, table fee and wages join here once games have them. */

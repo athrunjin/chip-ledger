@@ -1,4 +1,4 @@
-import { parseChips } from "@holdem/core";
+import { parseChips } from "@holdem-knight/core";
 import { useEffect, useRef, useState } from "react";
 import { TextField } from "@/components/TextField";
 import { cn } from "@/lib/cn";

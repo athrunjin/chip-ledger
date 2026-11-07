@@ -6,7 +6,7 @@ import {
   type PremiumBuyIn,
   playerHandResults,
   premiumBuyIns,
-} from "@holdem/core";
+} from "@holdem-knight/core";
 import { type ReactNode, useState } from "react";
 import { formatSignedChips } from "@/lib/chips";
 import { BoardCards, CardFace, type SeatChips } from "./InsuranceHandFlow";

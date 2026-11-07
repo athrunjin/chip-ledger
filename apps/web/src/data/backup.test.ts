@@ -4,7 +4,7 @@ import {
   INSURANCE_PLAYER_ID,
   type LedgerEvent,
   RULE_30,
-} from "@holdem/core";
+} from "@holdem-knight/core";
 import { describe, expect, it } from "vitest";
 
 import { parseBackup, serializeBackup } from "./backup";

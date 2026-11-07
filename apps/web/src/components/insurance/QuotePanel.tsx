@@ -6,7 +6,7 @@ import {
   type QuoteInput,
   type QuoteOption,
   quoteInsurance,
-} from "@holdem/core";
+} from "@holdem-knight/core";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/cn";

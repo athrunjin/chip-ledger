@@ -11,9 +11,15 @@ For technology comparisons see the [ADRs](adr/), and for scheduling see the [roa
 
 ## Product name
 
-- Chinese name: **德州之王**. English name: **King in Texas**.
-- The repository name `chip-ledger` and the package scope `@holdem/*` stay neutral and don't follow the product name.
-- The English name doesn't say it's a poker product, so add a subtitle wherever it's shown publicly.
+The English name leads for now, including on the home screen. The Chinese names are on record only and aren't shown in the app yet. See [ADR 0020](adr/0020-holdem-knight-naming.md).
+
+| Where | English | Chinese |
+| --- | --- | --- |
+| Brand (everyday name, logo) | Hold’em Knight | 有局 |
+| Full name (app stores, page title) | Hold’em Knight · Tablebook | 有局·德州账本 |
+| Home screen icon | Knight | 有局 |
+| Slogan (optional) | — | 你的守局骑士 |
+| Code, domain, packages | `holdem-knight` (no apostrophe) | — |
 
 ## Original requirements
 
