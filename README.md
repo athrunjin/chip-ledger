@@ -11,7 +11,7 @@ An assistant for organizers of live Texas Hold'em games. It handles these jobs a
 
 It works on phones, tablets and computers, and can be added to the home screen to open like an app. The app's interface is in Simplified Chinese.
 
-> Live site: <https://king-in-texas.pages.dev/>. The project is in the **M1 core ledger** phase; see the [roadmap](docs/ROADMAP.md).
+> Live site: <https://holdem-knight.pages.dev/>. The project is in the **M1 core ledger** phase; see the [roadmap](docs/ROADMAP.md).
 
 ## Tech stack
 
