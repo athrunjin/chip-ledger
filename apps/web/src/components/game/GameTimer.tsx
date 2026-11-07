@@ -1,4 +1,4 @@
-import { type GameTimer as Timer, timerElapsedMs } from "@holdem/core";
+import { type GameTimer as Timer, timerElapsedMs } from "@holdem-knight/core";
 import { Clock, Pause, Play } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";

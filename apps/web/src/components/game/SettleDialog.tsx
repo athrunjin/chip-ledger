@@ -1,4 +1,4 @@
-import type { ImbalanceHandling } from "@holdem/core";
+import type { ImbalanceHandling } from "@holdem-knight/core";
 import { type FormEvent, useState } from "react";
 import { formatDifference } from "@/lib/chips";
 import { FormDialog } from "./FormDialog";

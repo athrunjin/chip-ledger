@@ -7,7 +7,7 @@ import {
   INSURANCE_PLAYER_ID,
   type LegacyGame,
   upgradeLegacyGame,
-} from "@holdem/core";
+} from "@holdem-knight/core";
 import { z } from "zod";
 
 const FORMAT = "holdem-backup";

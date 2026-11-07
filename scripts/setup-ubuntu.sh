@@ -3,7 +3,7 @@
 #
 # Usage:
 #   bash setup-ubuntu.sh                       # Check the environment and install Node 22 / pnpm / git
-#   bash setup-ubuntu.sh <project-folder>      # Also unpack holdem-assistant.tar.gz from this folder into it,
+#   bash setup-ubuntu.sh <project-folder>      # Also unpack holdem-knight.tar.gz from this folder into it,
 #                                              # install dependencies and run the full check
 #
 # Example: bash setup-ubuntu.sh ~/Desktop/holdem
@@ -12,7 +12,7 @@ set -euo pipefail
 NODE_MAJOR=22
 NVM_VERSION=v0.40.3
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TARBALL="${SCRIPT_DIR}/holdem-assistant.tar.gz"
+TARBALL="${SCRIPT_DIR}/holdem-knight.tar.gz"
 TARGET="${1:-}"
 
 section() { printf '\n\033[1;32m== %s ==\033[0m\n' "$1"; }
@@ -62,7 +62,7 @@ fi
 
 section "Unpacking the project into ${TARGET}"
 if [ ! -f "$TARBALL" ]; then
-  echo "Could not find ${TARBALL}. Put holdem-assistant.tar.gz in the same folder as this script." >&2
+  echo "Could not find ${TARBALL}. Put holdem-knight.tar.gz in the same folder as this script." >&2
   exit 1
 fi
 mkdir -p "$TARGET"

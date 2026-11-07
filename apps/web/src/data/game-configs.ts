@@ -1,4 +1,4 @@
-import type { GameSettings, SavedGameConfig } from "@holdem/core";
+import type { GameSettings, SavedGameConfig } from "@holdem-knight/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { GUEST_ORGANIZER_ID, repository } from ".";

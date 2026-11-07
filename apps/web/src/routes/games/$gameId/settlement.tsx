@@ -19,7 +19,7 @@ import {
   settlementOutcome,
   settleTransfers,
   summarizeByPlayer,
-} from "@holdem/core";
+} from "@holdem-knight/core";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight, ChevronDown, Share2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
@@ -249,7 +249,7 @@ function SettlementResult({
     try {
       const date = new Date(createdAt);
       const image = await renderSettlementImage({
-        title: "德州之王 · 结算",
+        title: "Hold’em Knight · 结算",
         subtitle: `${date.toLocaleDateString("zh-CN")} · 盲注 ${smallBlindChips} / ${bigBlindChips}`,
         transferTitle: `转账方案 · ${planName}`,
         transfers: transfers.map(({ from, to, amount }) => ({

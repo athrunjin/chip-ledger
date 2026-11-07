@@ -1,4 +1,4 @@
-import { DEFAULT_GAME_SETTINGS, type GameSettings } from "@holdem/core";
+import { DEFAULT_GAME_SETTINGS, type GameSettings } from "@holdem-knight/core";
 import { Check, ChevronDown, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Modal } from "@/components/insurance/Modal";

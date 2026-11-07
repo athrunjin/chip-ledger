@@ -7,7 +7,7 @@ import {
   type LedgerEvent,
   type Player,
   type Repository,
-} from "@holdem/core";
+} from "@holdem-knight/core";
 import Dexie from "dexie";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 

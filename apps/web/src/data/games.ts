@@ -1,4 +1,4 @@
-import { type Game, hasPlayerEvents } from "@holdem/core";
+import { type Game, hasPlayerEvents } from "@holdem-knight/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { repository } from ".";

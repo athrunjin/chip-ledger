@@ -1,5 +1,5 @@
 {
-  "name": "holdem-assistant",
+  "name": "holdem-knight",
   "private": true,
   "description": "Assistant for organizers of live Texas Hold'em games: buy-in ledger, settlement, insurance, rake, timing and player reports",
   "author": "Cheng Jin",
@@ -10,7 +10,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "pnpm --filter @holdem/web dev",
+    "dev": "pnpm --filter @holdem-knight/web dev",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",

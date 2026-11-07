@@ -1,4 +1,4 @@
-import type { ImbalanceHandling } from "@holdem/core";
+import type { ImbalanceHandling } from "@holdem-knight/core";
 import { cn } from "@/lib/cn";
 
 interface ImbalanceOptionsProps {

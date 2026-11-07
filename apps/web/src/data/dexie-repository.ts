@@ -11,7 +11,7 @@ import {
   type SavedGameConfig,
   type SavedInsuranceRule,
   upgradeLegacyGame,
-} from "@holdem/core";
+} from "@holdem-knight/core";
 import Dexie, { type Table } from "dexie";
 
 export type GuestDatabase = Dexie & {

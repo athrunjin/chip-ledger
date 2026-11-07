@@ -1,4 +1,4 @@
-import type { InsuranceStreet, QuoteInput } from "@holdem/core";
+import type { InsuranceStreet, QuoteInput } from "@holdem-knight/core";
 import { type QuoteDecision, QuotePanel, type QuotePurchase } from "./QuotePanel";
 
 export interface BoughtInsurance extends QuotePurchase {

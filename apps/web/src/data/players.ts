@@ -1,4 +1,4 @@
-import type { Player } from "@holdem/core";
+import type { Player } from "@holdem-knight/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { toInitials } from "@/lib/pinyin";

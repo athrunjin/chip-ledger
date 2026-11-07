@@ -8,7 +8,7 @@ import {
   parseChips,
   parseGameSettings,
   tryParseMoney,
-} from "@holdem/core";
+} from "@holdem-knight/core";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { TextField } from "@/components/TextField";
 import { CURRENCY_INFO, formatGameMoney } from "@/lib/currency";

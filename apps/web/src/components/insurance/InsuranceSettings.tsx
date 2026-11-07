@@ -6,7 +6,7 @@ import {
   parseInsuranceRule,
   RULE_30,
   toInsuranceRuleForm,
-} from "@holdem/core";
+} from "@holdem-knight/core";
 import { Check, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { TextField } from "@/components/TextField";

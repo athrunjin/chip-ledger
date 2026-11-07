@@ -24,6 +24,7 @@ Once recorded, a decision isn't edited. If it changes later, write a new record 
 | [0017](0017-finished-hand-sets-stacks.md) | A finished hand sets the stacks it knows | Superseded in part by 0018 |
 | [0018](0018-short-premium-buy-in.md) | A premium a player cannot pay buys whole hands, once confirmed | Accepted |
 | [0019](0019-entered-stack-updates-table.md) | An all-in player's entered chips update the table at once | Accepted |
+| [0020](0020-holdem-knight-naming.md)        | The product is named Hold’em Knight                       | Accepted |
 
 ## Template
 

@@ -1,4 +1,4 @@
-import { parseChips } from "@holdem/core";
+import { parseChips } from "@holdem-knight/core";
 import { Plus, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { TextField } from "@/components/TextField";

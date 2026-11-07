@@ -1,4 +1,4 @@
-import { ForeignOrganizerError, type RestoreResult } from "@holdem/core";
+import { ForeignOrganizerError, type RestoreResult } from "@holdem-knight/core";
 import { useQueryClient } from "@tanstack/react-query";
 import { type ChangeEvent, useRef, useState } from "react";
 import { repository } from "@/data";
@@ -31,7 +31,10 @@ export function BackupSection() {
       const now = new Date();
       const text = serializeBackup(await backup, now.getTime());
       const day = [now.getFullYear(), now.getMonth() + 1, now.getDate()].join("-");
-      await shareFile(new Blob([text], { type: "application/json" }), `德州之王备份-${day}.json`);
+      await shareFile(
+        new Blob([text], { type: "application/json" }),
+        `holdem-knight-backup-${day}.json`,
+      );
     } catch (error) {
       const reason = error instanceof Error ? `（${error.name}）` : "";
       setStatus({ tone: "error", text: `导出失败${reason}，请重试。` });
@@ -54,7 +57,7 @@ export function BackupSection() {
           text:
             parsed.issue === "newer-version"
               ? "这个备份来自更新的版本，请先刷新应用。"
-              : "文件无法识别，请选择德州之王导出的备份。",
+              : "文件无法识别，请选择 Hold’em Knight 导出的备份。",
         });
         return;
       }

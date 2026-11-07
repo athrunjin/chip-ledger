@@ -1,4 +1,9 @@
-import { adjustHands, type HandChange, type LedgerEvent, summarizeByPlayer } from "@holdem/core";
+import {
+  adjustHands,
+  type HandChange,
+  type LedgerEvent,
+  summarizeByPlayer,
+} from "@holdem-knight/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { GUEST_ORGANIZER_ID, repository } from ".";

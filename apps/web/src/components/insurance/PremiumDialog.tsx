@@ -1,4 +1,4 @@
-import { parseChips, priceOption, type QuoteInput } from "@holdem/core";
+import { parseChips, priceOption, type QuoteInput } from "@holdem-knight/core";
 import { useEffect, useRef, useState } from "react";
 import { TextField } from "@/components/TextField";
 import { Modal } from "./Modal";

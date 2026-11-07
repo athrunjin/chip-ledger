@@ -20,8 +20,8 @@ export default defineConfig({
       registerType: "prompt",
       includeAssets: ["favicon.svg", "apple-touch-icon.png"],
       manifest: {
-        name: "德州之王",
-        short_name: "德州之王",
+        name: "Hold’em Knight · Tablebook",
+        short_name: "Knight",
         description: "线下德州扑克组局助手：买入记账、结算、保险、抽水、计时",
         lang: "zh-CN",
         theme_color: "#13241e",

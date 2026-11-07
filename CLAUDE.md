@@ -5,7 +5,7 @@ Project notes for AI coding assistants (Claude Code and others). Human developer
 ## Project
 
 An assistant (PWA) for organizers of live Texas Hold'em games: buy-in ledger, settlement, insurance, rake, timing and player reports.
-The product name is 德州之王 (King in Texas). It is built for organizers, phone and tablet first. Interface text is in Simplified Chinese.
+The product name is Hold’em Knight (Chinese name, on record only: 有局). It is built for organizers, phone and tablet first. Interface text is in Simplified Chinese.
 The roadmap is in docs/ROADMAP.md, confirmed rules and background are in docs/CONTEXT.md,
 and discussions of feature and process improvements are in docs/IMPROVEMENTS.md.
 
@@ -30,7 +30,7 @@ pnpm check            # Full pre-commit check: lint + typecheck + test + build
 
 ## Rules
 
-- Money always uses `Cents` (integer cents) from `@holdem/core`. Multiply with `multiply` and an explicit rounding mode,
+- Money always uses `Cents` (integer cents) from `@holdem-knight/core`. Multiply with `multiply` and an explicit rounding mode,
   and split with `allocate`. Never use floating-point arithmetic for money (ADR 0004).
 - Timers record timestamps and compute differences. They never rely on a running interval (ADR 0001).
 - The ledger is append-only events. To undo, append a reversal event; never change old records (ADR 0005).

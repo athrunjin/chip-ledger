@@ -15,7 +15,7 @@ import {
   soleBuyIn,
   summarizeByPlayer,
   toggleTimer,
-} from "@holdem/core";
+} from "@holdem-knight/core";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { AddPlayerToGame } from "@/components/game/AddPlayerToGame";
